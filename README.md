@@ -1,12 +1,14 @@
 # HICC Media API
 
-FastAPI + Supabase + Redis backend for a scheduling application (specifically for a volunteer church media team)
+FastAPI + Railway Postgres DB + Redis backend for a scheduling application (specifically for a volunteer church media team)
 
 ## Architecture
 
 -   [Fast API](https://fastapi.tiangolo.com/) - Python web framework for the API
--   [Supabase](https://supabase.com/) - Hosted PostgreSQL database
--   [Redis](https://redis.io/) via [Upstash](https://upstash.com/) - Hosted caching database
+-   [Railway](https://railway.com/) - Infrastructure
+    -   [Postgres](https://www.postgresql.org/) - Database
+    -   [Redis](https://redis.io/) - Cache (coming soon)
+-   ~~[Supabase](https://supabase.com/) - Hosted PostgreSQL database~~
 
 ## Getting Started / Installation
 
@@ -18,12 +20,12 @@ FastAPI + Supabase + Redis backend for a scheduling application (specifically fo
     ```
 4. Configure environment variables
     - `.env`
-        - `SUPABASE_URL`
-        - `SUPABASE_API_KEY`
+        - ~~`SUPABASE_URL`~~
+        - ~~`SUPABASE_API_KEY`~~
         - `FAST_API_KEY` - `x-api-key` header is used for auth
     - `test.env`
-        - `SUPABASE_TEST_URL`
-        - `SUPABASE_TEST_API_KEY`
+        - ~~`SUPABASE_TEST_URL`~~
+        - ~~`SUPABASE_TEST_API_KEY`~~
         - `FAST_API_KEY` - `x-api-key` header is used for auth
 5. Run tests (optional)
     ```bash
@@ -38,8 +40,12 @@ FastAPI + Supabase + Redis backend for a scheduling application (specifically fo
 
 ## Roadmap
 
--   [x] Design and launch PostgreSQL database on Supabase
--   [x] Create FastAPI that runs CRUDs on Supabase DB
--   [x] Implement unit testing and integration testing for all routes
+-   [x] ~~Design and launch PostgreSQL database on Supabase~~
+-   [x] ~~Create FastAPI that runs CRUDs on Supabase DB~~
+-   [x] ~~Implement unit testing and integration testing with Supabase DB~~
+-   [x] Refactor to Railway Postgres DB
+-   [ ] Refactor FastAPI that runs CRUDs on Railway DB
+        routes
+-   [ ] Refactor unit testing and integration testing with Railway DB
 -   [ ] Implement Redis as a cache
 -   [ ] Create an auto-scheduling algorithm
