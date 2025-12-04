@@ -37,7 +37,7 @@ CREATE TABLE public.team_users (
     team_id uuid NOT NULL REFERENCES public.teams(team_id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
     is_active boolean DEFAULT true NOT NULL,
-    CONSTRAINT team_users_user_id_team_id_ukey UNIQUE (user_id, team_id)
+    CONSTRAINT team_users_ukey UNIQUE (user_id, team_id)
 );
 
 --
@@ -85,7 +85,8 @@ CREATE TABLE public.proficiency_levels (
     proficiency_level_name character varying(50) NOT NULL,
     proficiency_level_number smallint,
     is_active boolean DEFAULT true NOT NULL,
-    proficiency_level_code character varying(50) NOT NULL
+    proficiency_level_code character varying(50) NOT NULL,
+    is_assignable boolean DEFAULT false NOT NULL
 );
 
 --
@@ -97,7 +98,7 @@ CREATE TABLE public.user_roles (
     user_id uuid NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
     media_role_id uuid NOT NULL REFERENCES public.media_roles(media_role_id) ON DELETE CASCADE,
     proficiency_level_id uuid NOT NULL REFERENCES public.proficiency_levels(proficiency_level_id),
-    CONSTRAINT user_roles_user_id_media_role_id_ukey UNIQUE (user_id, media_role_id)
+    CONSTRAINT user_roles_ukey UNIQUE (user_id, media_role_id)
 );
 
 --
@@ -134,7 +135,7 @@ CREATE TABLE public.schedule_dates (
     schedule_date_type_id uuid NOT NULL REFERENCES public.schedule_date_types(schedule_date_type_id),
     notes text,
     is_active boolean DEFAULT true NOT NULL,
-    CONSTRAINT schedule_dates_schedule_id_date_ukey UNIQUE (schedule_id, date)
+    CONSTRAINT schedule_dates_ukey UNIQUE (schedule_id, date, schedule_date_type_id)
 );
 
 --
@@ -149,7 +150,7 @@ CREATE TABLE public.schedule_date_roles (
     is_preferred boolean DEFAULT false NOT NULL,
     assigned_user_id uuid REFERENCES public.users(user_id),
     is_active boolean DEFAULT true NOT NULL,
-    CONSTRAINT schedule_date_roles_media_role_id_schedule_date_id_ukey UNIQUE (media_role_id, schedule_date_id)
+    CONSTRAINT schedule_date_roles_ukey UNIQUE (media_role_id, schedule_date_id, assigned_user_id)
 );
 
 --
@@ -160,6 +161,6 @@ CREATE TABLE public.user_availability (
     user_availability_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL REFERENCES public.users(user_id),
     date date NOT NULL REFERENCES public.dates(date),
-    CONSTRAINT user_availability_date_user_id_ukey UNIQUE (date, user_id)
+    CONSTRAINT user_availability_ukey UNIQUE (date, user_id)
 );
 
