@@ -1,5 +1,6 @@
 from datetime import date
 
+from uuid import UUID
 from pydantic import BaseModel
 
 class ScheduleBase(BaseModel):
@@ -16,4 +17,4 @@ class ScheduleUpdate(ScheduleBase):
     pass
 
 class ScheduleOut(ScheduleBase):
-    schedule_id: str
+    schedule_id: UUID

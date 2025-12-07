@@ -1,8 +1,6 @@
-from fastapi import APIRouter, Request, Depends, status
+from fastapi import APIRouter, Depends, status
 
 from app.models.user import UserCreate, UserUpdate, UserOut
-# from app.utils.supabase import SupabaseService
-# from app.dependencies import get_supabase_service
 from app.db.queries import fetch_all, fetch_one
 from app.db.db import get_db_pool
 

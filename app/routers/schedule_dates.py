@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Depends, status
 
 from app.models.schedule_date import ScheduleDateCreate, ScheduleDateUpdate, ScheduleDateOut 
-# from app.utils.supabase import SupabaseService
-# from app.dependencies import get_supabase_service
+from app.db.queries import fetch_all, fetch_one
+from app.db.db import get_db_pool
 
 router = APIRouter(prefix="/schedule_dates")
 
-# @router.get("/", response_model=list[ScheduleDateOut])
-# async def get_schedule_dates(service: SupabaseService = Depends(get_supabase_service)):
-#     return service.get_all(table="schedule_dates")
+@router.get("/", response_model=list[ScheduleDateOut])
+async def get_schedule_dates(pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await fetch_all(conn, table="schedule_dates")
 
-# @router.get("/{id}", response_model=ScheduleDateOut)
-# async def get_schedule_date(id: str, service: SupabaseService = Depends(get_supabase_service)):
-#     return service.get_single(table="schedule_dates", id=id)
+@router.get("/{id}", response_model=ScheduleDateOut)
+async def get_schedule_date(id: str, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await fetch_one(conn, table="schedule_dates", id=id)
 
 # @router.post("/", response_model=ScheduleDateOut, status_code=status.HTTP_201_CREATED)
 # async def post_schedule_dates(schedule_date: ScheduleDateCreate, service: SupabaseService = Depends(get_supabase_service)):
