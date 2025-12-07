@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, status
-
-from app.models.proficiency_level import ProficiencyLevelCreate, ProficiencyLevelUpdate, ProficiencyLevelOut 
-from app.db.queries import fetch_all, fetch_one
-from app.db.db import get_db_pool
+from app.models import ProficiencyLevelCreate, ProficiencyLevelUpdate, ProficiencyLevelOut 
+from app.db.queries import fetch_all, fetch_one, delete_one
+from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/proficiency_levels")
 
@@ -24,6 +23,7 @@ async def get_proficiency_level(id: str, pool=Depends(get_db_pool)):
 # async def update_proficiency_level(id: str, proficiency_level: ProficiencyLevelUpdate, service: SupabaseService = Depends(get_supabase_service)):
 #     return service.update(table="proficiency_levels", body=proficiency_level.model_dump(exclude_none=True), id=id)
 
-# @router.delete("/{id}", response_model=ProficiencyLevelOut)
-# async def delete_proficiency_level(id: str, service: SupabaseService = Depends(get_supabase_service)):
-#     return service.delete(table="proficiency_levels", id=id)
+@router.delete("/{id}", response_model=ProficiencyLevelOut)
+async def delete_proficiency_level(id: str, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await delete_one(conn, table="proficiency_levels", id=id)

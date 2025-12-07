@@ -1,5 +1,4 @@
 import asyncpg
-
 from fastapi import FastAPI, Request
 from app.utils.env import RAILWAY_DATABASE_URL
 

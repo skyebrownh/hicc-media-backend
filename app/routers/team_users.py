@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, status
-
-from app.models.team_user import TeamUserCreate, TeamUserUpdate, TeamUserOut 
-from app.db.queries import fetch_all, fetch_one
-from app.db.db import get_db_pool
+from app.models import TeamUserCreate, TeamUserUpdate, TeamUserOut 
+from app.db.queries import fetch_all, fetch_one, delete_one
+from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/team_users")
 
@@ -24,6 +23,7 @@ async def get_team_user(id: str, pool=Depends(get_db_pool)):
 # async def update_team_user(id: str, team_user: TeamUserUpdate, service: SupabaseService = Depends(get_supabase_service)):
 #     return service.update(table="team_users", body=team_user.model_dump(exclude_none=True), id=id)
 
-# @router.delete("/{id}", response_model=TeamUserOut)
-# async def delete_team_user(id: str, service: SupabaseService = Depends(get_supabase_service)):
-#     return service.delete(table="team_users", id=id)
+@router.delete("/{id}", response_model=TeamUserOut)
+async def delete_team_user(id: str, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await delete_one(conn, table="team_users", id=id)
