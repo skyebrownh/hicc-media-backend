@@ -1,3 +1,4 @@
+from uuid import UUID
 from pydantic import BaseModel
 
 class MediaRoleBase(BaseModel):
@@ -19,4 +20,4 @@ class MediaRoleUpdate(MediaRoleBase):
     pass
 
 class MediaRoleOut(MediaRoleBase):
-    media_role_id: str
+    media_role_id: UUID

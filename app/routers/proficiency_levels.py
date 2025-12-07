@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Depends, status
 
 from app.models.proficiency_level import ProficiencyLevelCreate, ProficiencyLevelUpdate, ProficiencyLevelOut 
-# from app.utils.supabase import SupabaseService
-# from app.dependencies import get_supabase_service
+from app.db.queries import fetch_all, fetch_one
+from app.db.db import get_db_pool
 
 router = APIRouter(prefix="/proficiency_levels")
 
-# @router.get("/", response_model=list[ProficiencyLevelOut])
-# async def get_proficiency_levels(service: SupabaseService = Depends(get_supabase_service)):
-#     return service.get_all(table="proficiency_levels")
+@router.get("/", response_model=list[ProficiencyLevelOut])
+async def get_proficiency_levels(pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await fetch_all(conn, table="proficiency_levels")
 
-# @router.get("/{id}", response_model=ProficiencyLevelOut)
-# async def get_proficiency_level(id: str, service: SupabaseService = Depends(get_supabase_service)):
-#     return service.get_single(table="proficiency_levels", id=id)
+@router.get("/{id}", response_model=ProficiencyLevelOut)
+async def get_proficiency_level(id: str, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await fetch_one(conn, table="proficiency_levels", id=id)
 
 # @router.post("/", response_model=ProficiencyLevelOut, status_code=status.HTTP_201_CREATED)
 # async def post_proficiency_levels(proficiency_level: ProficiencyLevelCreate, service: SupabaseService = Depends(get_supabase_service)):

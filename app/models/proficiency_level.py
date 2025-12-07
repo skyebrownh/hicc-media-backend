@@ -1,3 +1,4 @@
+from uuid import UUID
 from pydantic import BaseModel
 
 class ProficiencyLevelBase(BaseModel):
@@ -19,4 +20,4 @@ class ProficiencyLevelUpdate(ProficiencyLevelBase):
     pass
 
 class ProficiencyLevelOut(ProficiencyLevelBase):
-    proficiency_level_id: str
+    proficiency_level_id: UUID

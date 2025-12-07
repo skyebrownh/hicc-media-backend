@@ -1,3 +1,4 @@
+from uuid import UUID
 from pydantic import BaseModel
 
 class TeamBase(BaseModel):
@@ -15,4 +16,4 @@ class TeamUpdate(TeamBase):
     pass
 
 class TeamOut(TeamBase):
-    team_id: str
+    team_id: UUID
