@@ -14,19 +14,19 @@ async def lifespan(app: FastAPI):
     # Close the database connection when the application shuts down
     await close_db(app)
 
-# Create the FastAPI application with the defined lifespan
-app = FastAPI(lifespan=lifespan)
+# Create the FastAPI application with the defined lifespan and global dependencies
+app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_api_key)])
 
-# Include routers with API key verification dependency
-app.include_router(user_router, dependencies=[Depends(verify_api_key)])
-app.include_router(team_router, dependencies=[Depends(verify_api_key)])
-app.include_router(media_role_router, dependencies=[Depends(verify_api_key)])
-app.include_router(proficiency_level_router, dependencies=[Depends(verify_api_key)])
-app.include_router(schedule_date_type_router, dependencies=[Depends(verify_api_key)])
-app.include_router(date_router, dependencies=[Depends(verify_api_key)])
-app.include_router(schedule_router, dependencies=[Depends(verify_api_key)])
-app.include_router(user_availability_router, dependencies=[Depends(verify_api_key)])
-app.include_router(team_user_router, dependencies=[Depends(verify_api_key)])
-app.include_router(user_role_router, dependencies=[Depends(verify_api_key)])
-app.include_router(schedule_date_router, dependencies=[Depends(verify_api_key)])
-app.include_router(schedule_date_role_router, dependencies=[Depends(verify_api_key)])
+# Include routers for different resources
+app.include_router(user_router)
+app.include_router(team_router)
+app.include_router(media_role_router)
+app.include_router(proficiency_level_router)
+app.include_router(schedule_date_type_router)
+app.include_router(date_router)
+app.include_router(schedule_router)
+app.include_router(user_availability_router)
+app.include_router(team_user_router)
+app.include_router(user_role_router)
+app.include_router(schedule_date_router)
+app.include_router(schedule_date_role_router)

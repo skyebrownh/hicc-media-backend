@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from app.models import DateCreate, DateUpdate, DateOut 
-from app.db.queries import fetch_all, fetch_one, delete_one
+from app.db.queries import fetch_all, fetch_one, delete_one, insert_date
 from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/dates")
@@ -15,12 +15,10 @@ async def get_date(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="dates", id=id)
 
-# @router.post("/", response_model=DateOut, status_code=status.HTTP_201_CREATED)
-# async def post_dates(date: DateCreate, service: SupabaseService = Depends(get_supabase_service)):
-#     payload = date.model_dump(exclude_none=True)
-#     payload["date"] = payload["date"].isoformat()
-#     raw = service.post(table="dates", body=payload)
-#     return DateOut(**raw)
+@router.post("/", response_model=DateOut, status_code=status.HTTP_201_CREATED)
+async def post_date(date: DateCreate, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await insert_date(conn, date_obj=date)
 
 # @router.patch("/{id}", response_model=DateOut)
 # async def update_date(id: str, date: DateUpdate, service: SupabaseService = Depends(get_supabase_service)):
