@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from app.models import UserCreate, UserUpdate, UserOut
-from app.db.queries import fetch_all, fetch_one, delete_one
+from app.db.queries import fetch_all, fetch_one, delete_one, insert_user
 from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/users")
@@ -15,9 +15,10 @@ async def get_user(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="users", id=id)
 
-# @router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-# async def post_users(user: UserCreate, service: SupabaseService = Depends(get_supabase_service)):
-#     return service.post(table="users", body=user.model_dump(exclude_none=True))
+@router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+async def post_user(user: UserCreate, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await insert_user(conn, user=user)
 
 # @router.patch("/{id}", response_model=UserOut)
 # async def update_user(id: str, user: UserUpdate, service: SupabaseService = Depends(get_supabase_service)):

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from app.models import MediaRoleCreate, MediaRoleUpdate, MediaRoleOut 
-from app.db.queries import fetch_all, fetch_one, delete_one
+from app.db.queries import fetch_all, fetch_one, delete_one, insert_media_role
 from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/media_roles")
@@ -15,9 +15,10 @@ async def get_media_role(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="media_roles", id=id)
 
-# @router.post("/", response_model=MediaRoleOut, status_code=status.HTTP_201_CREATED)
-# async def post_media_roles(media_role: MediaRoleCreate, service: SupabaseService = Depends(get_supabase_service)):
-#     return service.post(table="media_roles", body=media_role.model_dump(exclude_none=True))
+@router.post("/", response_model=MediaRoleOut, status_code=status.HTTP_201_CREATED)
+async def post_media_role(media_role: MediaRoleCreate, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await insert_media_role(conn, media_role=media_role)
 
 # @router.patch("/{id}", response_model=MediaRoleOut)
 # async def update_media_role(id: str, media_role: MediaRoleUpdate, service: SupabaseService = Depends(get_supabase_service)):

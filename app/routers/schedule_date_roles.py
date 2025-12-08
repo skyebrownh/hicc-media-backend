@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from app.models import ScheduleDateRoleCreate, ScheduleDateRoleUpdate, ScheduleDateRoleOut 
-from app.db.queries import fetch_all, fetch_one, delete_one
+from app.db.queries import fetch_all, fetch_one, delete_one, insert_schedule_date_role
 from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/schedule_date_roles")
@@ -15,9 +15,10 @@ async def get_schedule_date_role(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="schedule_date_roles", id=id)
 
-# @router.post("/", response_model=ScheduleDateRoleOut, status_code=status.HTTP_201_CREATED)
-# async def post_schedule_date_roles(schedule_date_role: ScheduleDateRoleCreate, service: SupabaseService = Depends(get_supabase_service)):
-#     return service.post(table="schedule_date_roles", body=schedule_date_role.model_dump(exclude_none=True))
+@router.post("/", response_model=ScheduleDateRoleOut, status_code=status.HTTP_201_CREATED)
+async def post_schedule_date_role(schedule_date_role: ScheduleDateRoleCreate, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await insert_schedule_date_role(conn, schedule_date_role=schedule_date_role)
 
 # @router.patch("/{id}", response_model=ScheduleDateRoleOut)
 # async def update_schedule_date_role(id: str, schedule_date_role: ScheduleDateRoleUpdate, service: SupabaseService = Depends(get_supabase_service)):
