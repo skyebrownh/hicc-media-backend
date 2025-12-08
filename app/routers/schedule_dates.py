@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from app.models import ScheduleDateCreate, ScheduleDateUpdate, ScheduleDateOut 
-from app.db.queries import fetch_all, fetch_one, delete_one, insert_schedule_date
+from app.db.queries import fetch_all, fetch_one, delete_one, insert_schedule_date, update_schedule_date
 from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/schedule_dates")
@@ -20,15 +20,10 @@ async def post_schedule_date(schedule_date: ScheduleDateCreate, pool=Depends(get
     async with pool.acquire() as conn:
         return await insert_schedule_date(conn, schedule_date=schedule_date)
 
-# @router.patch("/{id}", response_model=ScheduleDateOut)
-# async def update_schedule_date(id: str, schedule_date: ScheduleDateUpdate, service: SupabaseService = Depends(get_supabase_service)):
-#     payload = schedule_date.model_dump(exclude_none=True)
-
-#     if "date" in payload:
-#         payload["date"] = payload["date"].isoformat()
-
-#     raw = service.update(table="schedule_dates", body=payload, id=id)
-#     return ScheduleDateOut(**raw) 
+@router.patch("/{id}", response_model=ScheduleDateOut)
+async def patch_schedule_date(id: str, schedule_date: ScheduleDateUpdate, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await update_schedule_date(conn, schedule_date_id=id, payload=schedule_date)
 
 @router.delete("/{id}", response_model=ScheduleDateOut)
 async def delete_schedule_date(id: str, pool=Depends(get_db_pool)):
