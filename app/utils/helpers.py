@@ -1,4 +1,6 @@
 import datetime
+from asyncpg import Connection, Record
+from fastapi import HTTPException
 
 # Return the primary key column name for a given table
 def table_id(table: str) -> str:
@@ -35,8 +37,7 @@ def get_date_details(date: datetime.date) -> dict:
 
 # Helper function to build dynamic update queries
 def build_update_query(table: str, id_column: str, id_value: str, payload: dict) -> tuple[str, list]:
-    if not payload:
-        raise ValueError("Payload for update cannot be empty.")  # TODO: error handling and logging
+    raise_bad_request_empty_payload(payload)
 
     updates = []
     values = []
@@ -61,8 +62,7 @@ def build_update_query(table: str, id_column: str, id_value: str, payload: dict)
 
 # Helper function to build dynamic insert queries
 def build_insert_query(table: str, payload: dict) -> tuple[str, list]:
-    if not payload:
-        raise ValueError("Payload for insert cannot be empty.")  # TODO: error handling and logging
+    raise_bad_request_empty_payload(payload)
 
     columns = list(payload.keys())
     values = list(payload.values())
@@ -75,3 +75,21 @@ def build_insert_query(table: str, payload: dict) -> tuple[str, list]:
     """
 
     return query, values
+
+# Helper functions to fetch record or raise 404
+async def fetch_or_404(conn: Connection, query: str, params: list) -> Record:
+    rows = await conn.fetch(query, *params)
+    if not rows:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return rows
+
+async def fetch_row_or_404(conn: Connection, query: str, params: list) -> Record:
+    row = await conn.fetchrow(query, *params)
+    if not row:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return row
+
+# Helper to check payload and raise Bad Request if empty
+def raise_bad_request_empty_payload(payload):
+    if not payload:
+        raise HTTPException(status_code=400, detail="Payload cannot be empty")

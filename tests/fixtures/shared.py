@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.utils.supabase import SupabaseService
 from .helpers import SUPABASE_TEST_URL, SUPABASE_TEST_API_KEY, FAST_API_KEY
-from app.dependencies import get_supabase_service 
+from app.utils.dependencies import get_supabase_service 
 
 __all__ = [
     "supabase_service",
