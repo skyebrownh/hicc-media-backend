@@ -4,8 +4,6 @@ from fastapi.exceptions import RequestValidationError
 import asyncpg
 import logging
 
-import app
-
 logger = logging.getLogger(__name__)
 
 def register_exception_handlers(app: FastAPI):
