@@ -32,3 +32,46 @@ def get_date_details(date: datetime.date) -> dict:
         "calendar_quarter": (date.month - 1) // 3 + 1,
         "weekday_of_month": (date.day - 1) // 7 + 1
     }
+
+# Helper function to build dynamic update queries
+def build_update_query(table: str, id_column: str, id_value: str, payload: dict) -> tuple[str, list]:
+    if not payload:
+        raise ValueError("Payload for update cannot be empty.")  # TODO: error handling and logging
+
+    updates = []
+    values = []
+    index = 1
+
+    # Build the SET clause dynamically
+    for key, value in payload.items():
+        updates.append(f"{key} = ${index}")
+        values.append(value)
+        index += 1
+
+    values.append(id_value)  # Add the ID value for the WHERE clause
+
+    query = f"""
+    UPDATE {table}
+    SET {', '.join(updates)}
+    WHERE {id_column} = ${index}
+    RETURNING *;
+    """
+
+    return query, values
+
+# Helper function to build dynamic insert queries
+def build_insert_query(table: str, payload: dict) -> tuple[str, list]:
+    if not payload:
+        raise ValueError("Payload for insert cannot be empty.")  # TODO: error handling and logging
+
+    columns = list(payload.keys())
+    values = list(payload.values())
+    placeholders = [f"${i+1}" for i in range(len(columns))]
+
+    query = f"""
+    INSERT INTO {table} ({', '.join(columns)})
+    VALUES ({', '.join(placeholders)})
+    RETURNING *;
+    """
+
+    return query, values

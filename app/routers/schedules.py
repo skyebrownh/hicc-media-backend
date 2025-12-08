@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from app.models import ScheduleCreate, ScheduleUpdate, ScheduleOut 
-from app.db.queries import fetch_all, fetch_one, delete_one, insert_schedule
+from app.db.queries import fetch_all, fetch_one, delete_one, insert_schedule, update_schedule
 from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/schedules")
@@ -20,15 +20,10 @@ async def post_schedule(schedule: ScheduleCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_schedule(conn, schedule=schedule)
 
-# @router.patch("/{id}", response_model=ScheduleOut)
-# async def update_schedule(id: str, schedule: ScheduleUpdate, service: SupabaseService = Depends(get_supabase_service)):
-#     payload = schedule.model_dump(exclude_none=True)
-
-#     if "month_start_date" in payload:
-#         payload["month_start_date"] = payload["month_start_date"].isoformat()
-
-#     raw = service.update(table="schedules", body=payload, id=id)
-#     return ScheduleOut(**raw) 
+@router.patch("/{id}", response_model=ScheduleOut)
+async def patch_schedule(id: str, schedule: ScheduleUpdate, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await update_schedule(conn, schedule_id=id, payload=schedule)
 
 @router.delete("/{id}", response_model=ScheduleOut)
 async def delete_schedule(id: str, pool=Depends(get_db_pool)):
