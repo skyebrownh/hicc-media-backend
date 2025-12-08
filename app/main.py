@@ -1,21 +1,26 @@
 from fastapi import FastAPI, Depends
 from contextlib import asynccontextmanager
-from app.dependencies import verify_api_key
+from app.utils.dependencies import verify_api_key
+from app.utils.logging_config import setup_logging
+from app.utils.exception_handlers import register_exception_handlers
 from app.routers import *
 from app.db.database import connect_db, close_db
 
-# Define the lifespan event to manage startup and shutdown tasks
+# Set up logging configuration
+setup_logging()
+
+# Define the lifespan event to manage startup and shutdown tasks, such as database connections
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Connect to the database when the application starts
     await connect_db(app)
-    # Yield control to the application
     yield
-    # Close the database connection when the application shuts down
     await close_db(app)
 
 # Create the FastAPI application with the defined lifespan and global dependencies
 app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_api_key)])
+
+# Register exception handlers
+register_exception_handlers(app)
 
 # Include routers for different resources
 app.include_router(user_router)

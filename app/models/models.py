@@ -174,9 +174,9 @@ class DateBase(BaseModel):
     calendar_quarter: int | None = None
     weekday_of_month: int | None = None 
 
-class DateCreate(DateBase):
+class DateCreate(BaseModel):
     date: datetime.date
-    # all other fields are either optional or defaulted
+    # do not inherit from DateBase, all other fields will be automatically calculated
 
 class DateUpdate(DateBase):
     pass
