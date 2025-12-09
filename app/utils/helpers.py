@@ -28,7 +28,7 @@ def get_date_details(date: datetime.date) -> dict:
         "is_weekend": date.weekday() >= 5,
         "is_weekday": date.weekday() < 5,
         "is_holiday": False,
-        "week_number": int(date.strftime("%U")),
+        "week_number": date.isocalendar()[1],
         "is_first_of_month": date.day == 1,
         "is_last_of_month": (date + datetime.timedelta(days=1)).month != date.month,
         "calendar_quarter": (date.month - 1) // 3 + 1,
