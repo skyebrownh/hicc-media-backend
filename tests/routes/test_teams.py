@@ -3,8 +3,8 @@ import pytest
 @pytest.mark.asyncio
 async def test_create_team(async_client):
     payload = {
-        "team_name": "Test Team",
-        "team_code": "test_team"
+        "team_name": "New Team",
+        "team_code": "new_team"
     }
 
     response = await async_client.post("/teams", json=payload)
@@ -12,8 +12,8 @@ async def test_create_team(async_client):
 
     response_json = response.json()
     assert response_json["team_id"] is not None
-    assert response_json["team_name"] == "Test Team"
-    assert response_json["team_code"] == "test_team"
+    assert response_json["team_name"] == "New Team"
+    assert response_json["team_code"] == "new_team"
     assert response_json["is_active"] is True
 
 # def test_get_all_teams(test_client, setup_team):
