@@ -5,7 +5,7 @@ from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/user_availability")
 
-@router.get("/", response_model=list[UserAvailabilityOut])
+@router.get("", response_model=list[UserAvailabilityOut])
 async def get_user_availability(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="user_availability")
@@ -15,7 +15,7 @@ async def get_user_availability(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="user_availability", id=id)
 
-@router.post("/", response_model=UserAvailabilityOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserAvailabilityOut, status_code=status.HTTP_201_CREATED)
 async def post_user_availability(user_availability: UserAvailabilityCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_user_availability(conn, user_availability=user_availability)

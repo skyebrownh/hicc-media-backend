@@ -5,7 +5,7 @@ from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/media_roles")
 
-@router.get("/", response_model=list[MediaRoleOut])
+@router.get("", response_model=list[MediaRoleOut])
 async def get_media_roles(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="media_roles")
@@ -15,7 +15,7 @@ async def get_media_role(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="media_roles", id=id)
 
-@router.post("/", response_model=MediaRoleOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=MediaRoleOut, status_code=status.HTTP_201_CREATED)
 async def post_media_role(media_role: MediaRoleCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_media_role(conn, media_role=media_role)

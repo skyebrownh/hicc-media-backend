@@ -5,7 +5,7 @@ from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/schedule_dates")
 
-@router.get("/", response_model=list[ScheduleDateOut])
+@router.get("", response_model=list[ScheduleDateOut])
 async def get_schedule_dates(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="schedule_dates")
@@ -15,7 +15,7 @@ async def get_schedule_date(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="schedule_dates", id=id)
 
-@router.post("/", response_model=ScheduleDateOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ScheduleDateOut, status_code=status.HTTP_201_CREATED)
 async def post_schedule_date(schedule_date: ScheduleDateCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_schedule_date(conn, schedule_date=schedule_date)
