@@ -1,5 +1,6 @@
 DROP SCHEMA IF EXISTS test_schema CASCADE;
 CREATE SCHEMA test_schema;
+SET search_path TO test_schema;
 
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
