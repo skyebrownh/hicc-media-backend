@@ -5,7 +5,7 @@ from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/teams")
 
-@router.get("/", response_model=list[TeamOut])
+@router.get("", response_model=list[TeamOut])
 async def get_teams(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="teams")
@@ -15,7 +15,7 @@ async def get_team(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="teams", id=id)
 
-@router.post("/", response_model=TeamOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TeamOut, status_code=status.HTTP_201_CREATED)
 async def post_team(team: TeamCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_team(conn, team=team)

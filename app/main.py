@@ -22,6 +22,11 @@ app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_api_key)])
 # Register exception handlers
 register_exception_handlers(app)
 
+# Health check endpoint
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # Include routers for different resources
 app.include_router(user_router)
 app.include_router(team_router)

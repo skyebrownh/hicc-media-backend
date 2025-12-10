@@ -5,7 +5,7 @@ from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/user_roles")
 
-@router.get("/", response_model=list[UserRoleOut])
+@router.get("", response_model=list[UserRoleOut])
 async def get_user_roles(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="user_roles")
@@ -15,7 +15,7 @@ async def get_user_role(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="user_roles", id=id)
 
-@router.post("/", response_model=UserRoleOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserRoleOut, status_code=status.HTTP_201_CREATED)
 async def post_user_role(user_role: UserRoleCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_user_role(conn, user_role=user_role)
