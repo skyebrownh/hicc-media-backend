@@ -2,19 +2,27 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_create_team(async_client):
-    payload = {
+    bad_payload_1 = {}
+    bad_payload_2 = {"team_name": "Incomplete Team"}
+    good_payload = {
         "team_name": "New Team",
         "team_code": "new_team"
     }
 
-    response = await async_client.post("/teams", json=payload)
-    assert response.status_code == 201
+    response1 = await async_client.post("/teams", json=bad_payload_1)
+    assert response1.status_code == 422
 
-    response_json = response.json()
-    assert response_json["team_id"] is not None
-    assert response_json["team_name"] == "New Team"
-    assert response_json["team_code"] == "new_team"
-    assert response_json["is_active"] is True
+    response2 = await async_client.post("/teams", json=bad_payload_2)
+    assert response2.status_code == 422
+
+    response3 = await async_client.post("/teams", json=good_payload)
+    assert response3.status_code == 201
+
+    response3_json = response3.json()
+    assert response3_json["team_id"] is not None
+    assert response3_json["team_name"] == "New Team"
+    assert response3_json["team_code"] == "new_team"
+    assert response3_json["is_active"] is True
 
 # def test_get_all_teams(test_client, setup_team):
 #     response = test_client.get("/teams")
@@ -31,23 +39,6 @@ async def test_create_team(async_client):
 #     response_json = response.json()
 #     assert response_json.get("team_id") == setup_team.get("team_id")
 #     assert response_json.get("team_name") == "TEST TEAM"
-
-# def test_post_team(test_client, clean_teams_table):
-#     invalid_json1 = {}
-#     invalid_json2 = {"team_name": "INVALID TEAM"}
-#     valid_json = {"team_name": "NEW TEAM", "lookup": "newteam"}
-
-#     response1 = test_client.post("/teams", json=invalid_json1)
-#     assert response1.status_code == 422 
-
-#     response2 = test_client.post("/teams", json=invalid_json2)
-#     assert response2.status_code == 422 
-
-#     response = test_client.post("/teams", json=valid_json)
-#     response_json = response.json()
-#     assert response.status_code == 201
-#     assert response_json.get("team_name") == "NEW TEAM"
-#     assert response_json.get("is_active") == True 
 
 # def test_update_team(test_client, setup_team):
 #     setup_team_id = setup_team.get("team_id")
