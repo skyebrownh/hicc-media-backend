@@ -2,6 +2,7 @@ pytest_plugins = ("pytest_asyncio",)
 
 # Shared configurations and fixtures for tests
 from contextlib import asynccontextmanager
+import asyncio
 import pytest
 import pytest_asyncio
 import asyncpg
@@ -25,30 +26,71 @@ def disable_app_lifespan():
     app.router.lifespan_context = _noop_lifespan
 
 # =============================
-# ASYNC CLIENT FIXTURE
+# ASYNC CLIENT FIXTURES
 # =============================
-# Fixture to provide an async HTTP client for testing
-@pytest_asyncio.fixture(scope="function")
-async def async_client():
-    # Load schema SQL file
-    schema_sql = Path("tests/test_schema.sql").read_text()
+# Use a single loop for session-scoped async fixtures to avoid cross-loop issues.
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
-    # Ensure every connection uses the test schema (falls back to public if needed)
+# Apply schema once per session on the same loop pytest-asyncio uses
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def ensure_schema():
+    schema_sql = Path("tests/test_schema.sql").read_text()
+    conn = await asyncpg.connect(settings.local_test_db_url)
+    try:
+        await conn.execute(schema_sql)
+    finally:
+        await conn.close()
+
+
+# Fixture to create and teardown a test database pool, session-scoped
+@pytest_asyncio.fixture(scope="session")
+async def test_db_pool(ensure_schema):
     pool = await asyncpg.create_pool(
         settings.local_test_db_url,
         min_size=1,
         max_size=5,
-        # Reset test schema
-        init=lambda conn: conn.execute(schema_sql)
+        # Ensure every pooled connection uses the test schema where tables live.
+        init=lambda conn: conn.execute("SET search_path TO test_schema;"),
     )
 
-    headers = {"x-api-key": settings.fast_api_key}
-    # Override the get_db_pool dependency to use the test database pool
-    app.dependency_overrides[get_db_pool] = lambda: pool
+    yield pool
+    await pool.close()
 
-    # Create an AsyncClient for testing
+
+# Fixture to provide an async HTTP client for testing
+@pytest_asyncio.fixture(scope="function")
+async def async_client(test_db_pool):
+    headers = {"x-api-key": settings.fast_api_key}
+    app.dependency_overrides[get_db_pool] = lambda: test_db_pool
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as client:
         yield client
 
-    await pool.close()
+
+# Truncate tables before each test to keep state isolated without recreating schema/pool
+# @pytest_asyncio.fixture(autouse=True, scope="function")
+# async def truncate_tables(test_db_pool):
+#     async with test_db_pool.acquire() as conn:
+#         await conn.execute(
+#             """
+#             TRUNCATE TABLE
+#                 user_availability,
+#                 schedule_date_roles,
+#                 schedule_dates,
+#                 schedules,
+#                 dates,
+#                 team_users,
+#                 user_roles,
+#                 users,
+#                 teams,
+#                 media_roles,
+#                 proficiency_levels
+#             RESTART IDENTITY CASCADE;
+#             """
+#         )
+#     yield
