@@ -13,7 +13,7 @@ async def get_media_roles(pool=Depends(get_db_pool)):
 @router.get("/{id}", response_model=MediaRoleOut)
 async def get_media_role(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="media_roles", id=id)
+        return await fetch_one(conn, table="media_roles", filters={"media_role_id": id})
 
 @router.post("", response_model=MediaRoleOut, status_code=status.HTTP_201_CREATED)
 async def post_media_role(media_role: MediaRoleCreate, pool=Depends(get_db_pool)):
@@ -21,11 +21,11 @@ async def post_media_role(media_role: MediaRoleCreate, pool=Depends(get_db_pool)
         return await insert_media_role(conn, media_role=media_role)
 
 @router.patch("/{id}", response_model=MediaRoleOut)
-async def patch_media_role(id: str, media_role: MediaRoleUpdate, pool=Depends(get_db_pool)):
+async def patch_media_role(id: str, media_role_update: MediaRoleUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await update_media_role(conn, media_role_id=id, payload=media_role)
+        return await update_media_role(conn, media_role_id=id, payload=media_role_update)
 
 @router.delete("/{id}", response_model=MediaRoleOut)
 async def delete_media_role(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="media_roles", id=id)
+        return await delete_one(conn, table="media_roles", filters={"media_role_id": id})

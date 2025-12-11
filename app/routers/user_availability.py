@@ -5,27 +5,34 @@ from app.db.database import get_db_pool
 
 router = APIRouter(prefix="/user_availability")
 
+# Get all user availabilities
 @router.get("", response_model=list[UserAvailabilityOut])
 async def get_user_availability(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="user_availability")
 
+# Get single user availability
 @router.get("/{id}", response_model=UserAvailabilityOut)
 async def get_user_availability(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="user_availability", id=id)
+        return await fetch_one(conn, table="user_availability", filters={"user_availability_id": id})
 
+# TODO: Insert user availabilities in bulk for a user
+
+# Insert new user availability
 @router.post("", response_model=UserAvailabilityOut, status_code=status.HTTP_201_CREATED)
 async def post_user_availability(user_availability: UserAvailabilityCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_user_availability(conn, user_availability=user_availability)
 
+# Update user availability date
 @router.patch("/{id}", response_model=UserAvailabilityOut)
-async def patch_user_availability(id: str, user_availability: UserAvailabilityUpdate, pool=Depends(get_db_pool)):
+async def patch_user_availability(id: str, user_availability_update: UserAvailabilityUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await update_user_availability(conn, user_availability_id=id, payload=user_availability)
+        return await update_user_availability(conn, user_availability_id=id, payload=user_availability_update)
 
+# Delete user availability
 @router.delete("/{id}", response_model=UserAvailabilityOut)
 async def delete_user_availability(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="user_availability", id=id)
+        return await delete_one(conn, table="user_availability", filters={"user_availability_id": id})

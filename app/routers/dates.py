@@ -10,22 +10,24 @@ async def get_dates(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="dates")
 
-@router.get("/{id}", response_model=DateOut)
-async def get_date(id: str, pool=Depends(get_db_pool)):
+@router.get("/{date}", response_model=DateOut)
+async def get_date(date: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="dates", id=id)
+        return await fetch_one(conn, table="dates", filters={"date": date})
+    
+# TODO: Insert all dates for a given year
 
 @router.post("", response_model=DateOut, status_code=status.HTTP_201_CREATED)
 async def post_date(date: DateCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_date(conn, date_obj=date)
 
-@router.patch("/{id}", response_model=DateOut)
-async def patch_date(id: str, date: DateUpdate, pool=Depends(get_db_pool)):
+@router.patch("/{date}", response_model=DateOut)
+async def patch_date(date: str, date_update: DateUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await update_date(conn, date=id, payload=date)
+        return await update_date(conn, date=date, payload=date_update)
 
-@router.delete("/{id}", response_model=DateOut)
-async def delete_date(id: str, pool=Depends(get_db_pool)):
+@router.delete("/{date}", response_model=DateOut)
+async def delete_date(date: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="dates", id=id)
+        return await delete_one(conn, table="dates", filters={"date": date})

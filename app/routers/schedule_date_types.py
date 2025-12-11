@@ -13,7 +13,7 @@ async def get_schedule_date_types(pool=Depends(get_db_pool)):
 @router.get("/{id}", response_model=ScheduleDateTypeOut)
 async def get_schedule_date_type(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="schedule_date_types", id=id)
+        return await fetch_one(conn, table="schedule_date_types", filters={"schedule_date_type_id": id})
 
 @router.post("", response_model=ScheduleDateTypeOut, status_code=status.HTTP_201_CREATED)
 async def post_schedule_date_type(schedule_date_type: ScheduleDateTypeCreate, pool=Depends(get_db_pool)):
@@ -21,11 +21,11 @@ async def post_schedule_date_type(schedule_date_type: ScheduleDateTypeCreate, po
         return await insert_schedule_date_type(conn, schedule_date_type=schedule_date_type)
 
 @router.patch("/{id}", response_model=ScheduleDateTypeOut)
-async def patch_schedule_date_type(id: str, schedule_date_type: ScheduleDateTypeUpdate, pool=Depends(get_db_pool)):
+async def patch_schedule_date_type(id: str, schedule_date_type_update: ScheduleDateTypeUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await update_schedule_date_type(conn, schedule_date_type_id=id, payload=schedule_date_type)
+        return await update_schedule_date_type(conn, schedule_date_type_id=id, payload=schedule_date_type_update)
 
 @router.delete("/{id}", response_model=ScheduleDateTypeOut)
 async def delete_schedule_date_type(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="schedule_date_types", id=id)
+        return await delete_one(conn, table="schedule_date_types", filters={"schedule_date_type_id": id})

@@ -1,7 +1,7 @@
 import logging
 import asyncpg
 from fastapi import FastAPI, Request, HTTPException
-from app.utils.env import RAILWAY_DATABASE_URL
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +9,7 @@ async def connect_db(app: FastAPI):
     # Create a connection pool and store it in the app state
     try:
         app.state.db_pool = await asyncpg.create_pool(
-            dsn=RAILWAY_DATABASE_URL,
+            dsn=settings.railway_database_url,
             min_size=1,
             max_size=5
         )

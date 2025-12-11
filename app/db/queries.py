@@ -1,30 +1,78 @@
 from datetime import date
 from asyncpg import Connection
 from app.utils.helpers import (
-    table_id, convert_id_for_table, get_date_details, build_update_query, build_insert_query,
-    fetch_or_404, fetch_row_or_404, raise_bad_request_empty_payload
+    get_date_details, 
+    build_update_query, 
+    build_insert_query, 
+    build_where_clause,
+    fetch_or_404, 
+    fetch_row_or_404, 
+    raise_bad_request_empty_payload
 )
-from app.models import MediaRoleCreate, ProficiencyLevelCreate, ScheduleDateTypeCreate, TeamCreate, UserCreate, TeamUserCreate, UserRoleCreate, DateCreate, ScheduleCreate, ScheduleDateCreate, ScheduleDateRoleCreate, UserAvailabilityCreate
-from app.models import MediaRoleUpdate, ProficiencyLevelUpdate, ScheduleDateTypeUpdate, TeamUpdate, UserUpdate, TeamUserUpdate, UserRoleUpdate, DateUpdate, ScheduleUpdate, ScheduleDateUpdate, ScheduleDateRoleUpdate, UserAvailabilityUpdate
+from app.models import (
+    MediaRoleCreate, MediaRoleUpdate,
+    ProficiencyLevelCreate, ProficiencyLevelUpdate,
+    ScheduleDateTypeCreate, ScheduleDateTypeUpdate,
+    TeamCreate, TeamUpdate,
+    UserCreate, UserUpdate,
+    TeamUserCreate, TeamUserUpdate,
+    UserRoleCreate, UserRoleUpdate,
+    DateCreate, DateUpdate,
+    ScheduleCreate, ScheduleUpdate,
+    ScheduleDateCreate, ScheduleDateUpdate,
+    ScheduleDateRoleCreate, ScheduleDateRoleUpdate,
+    UserAvailabilityCreate,UserAvailabilityUpdate
+)
 
 # =============================
 # GETS AND DELETES
 # =============================
-async def fetch_all(conn: Connection, table: str) -> list[dict]:
-    query = f"SELECT * FROM {table};"
-    rows = await fetch_or_404(conn, query, [])
+async def fetch_all(
+    conn: Connection,
+    table: str,
+    filters: dict[str, str | date] = None
+) -> list[dict]:
+    if filters is None:
+        filters = {}
+    where_clause, converted_filters = build_where_clause(table, filters)
+    query = f"SELECT * FROM {table}{where_clause};"
+    rows = await fetch_or_404(conn, query, converted_filters)
     return [dict(row) for row in rows]
 
-async def fetch_one(conn: Connection, table: str, id: str | date) -> dict | None:
-    id = convert_id_for_table(table, id)
-    query = f"SELECT * FROM {table} WHERE {table_id(table)} = $1;"
-    row = await fetch_row_or_404(conn, query, [id])
+async def fetch_one(
+    conn: Connection,
+    table: str,
+    filters: dict[str, str | date] = None
+) -> dict | None:
+    if filters is None:
+        filters = {}
+    where_clause, converted_filters = build_where_clause(table, filters)
+    query = f"SELECT * FROM {table}{where_clause};"
+    row = await fetch_row_or_404(conn, query, converted_filters)
     return dict(row)
 
-async def delete_one(conn: Connection, table: str, id: str | date) -> dict | None:
-    id = convert_id_for_table(table, id)
-    query = f"DELETE FROM {table} WHERE {table_id(table)} = $1 RETURNING *;"
-    row = await fetch_row_or_404(conn, query, [id])
+async def delete_all(
+    conn: Connection,
+    table: str,
+    filters: dict[str, str | date] = None
+) -> dict | None:
+    if filters is None:
+        filters = {}
+    where_clause, converted_filters = build_where_clause(table, filters)
+    query = f"DELETE FROM {table}{where_clause} RETURNING *;"
+    row = await fetch_or_404(conn, query, converted_filters)
+    return dict(row)
+
+async def delete_one(
+    conn: Connection,
+    table: str,
+    filters: dict[str, str | date] = None
+) -> dict | None:
+    if filters is None:
+        filters = {}
+    where_clause, converted_filters = build_where_clause(table, filters)
+    query = f"DELETE FROM {table}{where_clause} RETURNING *;"
+    row = await fetch_row_or_404(conn, query, converted_filters)
     return dict(row)
 
 # =============================
