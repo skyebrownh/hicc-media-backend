@@ -3,29 +3,41 @@ from app.models import TeamUserCreate, TeamUserUpdate, TeamUserOut
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_team_user, update_team_user
 from app.db.database import get_db_pool
 
-router = APIRouter(prefix="/team_users")
+router = APIRouter()
 
-@router.get("", response_model=list[TeamUserOut])
+# Get all team users
+@router.get("/team_users", response_model=list[TeamUserOut])
 async def get_team_users(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="team_users")
 
-@router.get("/{id}", response_model=TeamUserOut)
-async def get_team_user(id: str, pool=Depends(get_db_pool)):
+# Get all users for a team
+@router.get("/teams/{team_id}/users", response_model=list[TeamUserOut])
+async def get_team_users_for_team(team_id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="team_users", id=id)
+        return await fetch_all(conn, table="team_users", filters={"team_id": team_id})
+    
+# Get single team user
+@router.get("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
+async def get_team_user(team_id: str, user_id: str, pool=Depends(get_db_pool)):
+    async with pool.acquire() as conn:
+        return await fetch_one(conn, table="team_users", filters={"team_id": team_id, "user_id": user_id})
 
-@router.post("", response_model=TeamUserOut, status_code=status.HTTP_201_CREATED)
+# Insert new team user
+@router.post("/team_users", response_model=TeamUserOut, status_code=status.HTTP_201_CREATED)
 async def post_team_user(team_user: TeamUserCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
+        # TODO: Refactor to insert based on join IDs in the path
         return await insert_team_user(conn, team_user=team_user)
 
-@router.patch("/{id}", response_model=TeamUserOut)
-async def patch_team_user(id: str, team_user: TeamUserUpdate, pool=Depends(get_db_pool)):
+# Update is_active for a team user
+@router.patch("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
+async def patch_team_user(team_id: str, user_id: str, team_user: TeamUserUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
+        # TODO: Refactor to update based on join IDs in the path
         return await update_team_user(conn, team_user_id=id, payload=team_user)
 
-@router.delete("/{id}", response_model=TeamUserOut)
-async def delete_team_user(id: str, pool=Depends(get_db_pool)):
+@router.delete("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
+async def delete_team_user(team_id: str, user_id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="team_users", id=id)
+        return await delete_one(conn, table="team_users", filters={"team_id": team_id, "user_id": user_id})

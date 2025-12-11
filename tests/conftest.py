@@ -9,7 +9,8 @@ from pathlib import Path
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.db.database import get_db_pool
-from app.utils.env import FAST_API_KEY, LOCAL_TEST_DB_URL
+from app.settings import settings
+
 # =============================
 # LIFESPAN OVERRIDE
 # =============================
@@ -34,14 +35,14 @@ async def async_client():
 
     # Ensure every connection uses the test schema (falls back to public if needed)
     pool = await asyncpg.create_pool(
-        LOCAL_TEST_DB_URL,
+        settings.local_test_db_url,
         min_size=1,
         max_size=5,
         # Reset test schema
         init=lambda conn: conn.execute(schema_sql)
     )
 
-    headers = {"x-api-key": FAST_API_KEY}
+    headers = {"x-api-key": settings.fast_api_key}
     # Override the get_db_pool dependency to use the test database pool
     app.dependency_overrides[get_db_pool] = lambda: pool
 

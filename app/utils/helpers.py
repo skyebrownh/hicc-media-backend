@@ -76,6 +76,15 @@ def build_insert_query(table: str, payload: dict) -> tuple[str, list]:
 
     return query, values
 
+# Helper function to build WHERE clause from filters
+def build_where_clause(table: str, filters: dict[str, str | datetime.date]) -> tuple[str, list]:
+        converted_filters = {k: convert_id_for_table(table, v) for k, v in filters.items()}
+        if not converted_filters:
+            return "", []
+        where_clauses = [f"{k} = ${i+1}" for i, k in enumerate(converted_filters.keys())]
+        clause = f" WHERE {' AND '.join(where_clauses)}"
+        return clause, list(converted_filters.values())
+
 # Helper functions to fetch record or raise 404
 async def fetch_or_404(conn: Connection, query: str, params: list) -> Record:
     rows = await conn.fetch(query, *params)

@@ -13,7 +13,7 @@ async def get_users(pool=Depends(get_db_pool)):
 @router.get("/{id}", response_model=UserOut)
 async def get_user(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="users", id=id)
+        return await fetch_one(conn, table="users", filters={"user_id": id})
 
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def post_user(user: UserCreate, pool=Depends(get_db_pool)):
@@ -21,11 +21,11 @@ async def post_user(user: UserCreate, pool=Depends(get_db_pool)):
         return await insert_user(conn, user=user)
 
 @router.patch("/{id}", response_model=UserOut)
-async def patch_user(id: str, user: UserUpdate, pool=Depends(get_db_pool)):
+async def patch_user(id: str, user_update: UserUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await update_user(conn, user_id=id, payload=user)
+        return await update_user(conn, user_id=id, payload=user_update)
 
 @router.delete("/{id}", response_model=UserOut)
 async def delete_user(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="users", id=id)
+        return await delete_one(conn, table="users", filters={"user_id": id})

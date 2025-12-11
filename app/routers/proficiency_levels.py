@@ -13,7 +13,7 @@ async def get_proficiency_levels(pool=Depends(get_db_pool)):
 @router.get("/{id}", response_model=ProficiencyLevelOut)
 async def get_proficiency_level(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="proficiency_levels", id=id)
+        return await fetch_one(conn, table="proficiency_levels", filters={"proficiency_level_id": id})
 
 @router.post("", response_model=ProficiencyLevelOut, status_code=status.HTTP_201_CREATED)
 async def post_proficiency_level(proficiency_level: ProficiencyLevelCreate, pool=Depends(get_db_pool)):
@@ -21,11 +21,11 @@ async def post_proficiency_level(proficiency_level: ProficiencyLevelCreate, pool
         return await insert_proficiency_level(conn, proficiency_level=proficiency_level)
 
 @router.patch("/{id}", response_model=ProficiencyLevelOut)
-async def patch_proficiency_level(id: str, proficiency_level: ProficiencyLevelUpdate, pool=Depends(get_db_pool)):
+async def patch_proficiency_level(id: str, proficiency_level_update: ProficiencyLevelUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await update_proficiency_level(conn, proficiency_level_id=id, payload=proficiency_level)
+        return await update_proficiency_level(conn, proficiency_level_id=id, payload=proficiency_level_update)
 
 @router.delete("/{id}", response_model=ProficiencyLevelOut)
 async def delete_proficiency_level(id: str, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="proficiency_levels", id=id)
+        return await delete_one(conn, table="proficiency_levels", filters={"proficiency_level_id": id})
