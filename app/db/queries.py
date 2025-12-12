@@ -178,7 +178,7 @@ async def update_schedule_date_type(conn: Connection, schedule_date_type_id: str
     return dict(row)
 
 async def update_team(conn: Connection, team_id: str, payload: TeamUpdate) -> dict | None:
-    data = payload.model_dump(exclude_none=True)
+    data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
     query, values = build_update_query("teams", "team_id", team_id, data)
     row = await fetch_single_row(conn, query, values)

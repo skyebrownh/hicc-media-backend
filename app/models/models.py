@@ -22,6 +22,7 @@ class MediaRoleCreate(MediaRoleBase):
     # is_active is defaulted by the DB
 
 class MediaRoleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     media_role_name: str | None = None
     description: str | None = None
     sort_order: int | None = None
@@ -51,6 +52,7 @@ class ProficiencyLevelCreate(ProficiencyLevelBase):
     # is_assignable is defaulted by the DB
 
 class ProficiencyLevelUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     proficiency_level_name: str | None = None
     proficiency_level_number: int | None = None
     is_active: bool = True
@@ -76,6 +78,7 @@ class ScheduleDateTypeCreate(ScheduleDateTypeBase):
     # is_active is defaulted by the DB
 
 class ScheduleDateTypeUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     schedule_date_type_name: str | None = None
     is_active: bool = True
     # schedule_date_type_code is not updatable, delete and recreate if needed
@@ -99,6 +102,7 @@ class TeamCreate(TeamBase):
     # is_active is defaulted by the DB
 
 class TeamUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     team_name: str | None = None
     is_active: bool = True
     # team_code is not updatable, delete and recreate if needed
@@ -126,7 +130,7 @@ class UserCreate(UserBase):
     # is_active is defaulted by the DB
 
 class UserUpdate(UserBase):
-    pass
+    model_config = ConfigDict(extra="forbid")
 
 class UserOut(UserBase):
     user_id: UUID
@@ -147,6 +151,7 @@ class TeamUserCreate(TeamUserBase):
     # is_active is defaulted by the DB
 
 class TeamUserUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     is_active: bool
 
 class TeamUserOut(TeamUserBase):
@@ -168,6 +173,7 @@ class UserRoleCreate(UserRoleBase):
     proficiency_level_id: UUID
 
 class UserRoleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     proficiency_level_id: UUID
 
 class UserRoleOut(UserRoleBase):
@@ -199,7 +205,7 @@ class DateCreate(BaseModel):
     # do not inherit from DateBase, all other fields will be automatically calculated
 
 class DateUpdate(DateBase):
-    pass
+    model_config = ConfigDict(extra="forbid")
 
 class DateOut(DateBase):
     date: datetime.date
@@ -219,6 +225,7 @@ class ScheduleCreate(ScheduleBase):
     # is_active is defaulted by the DB
 
 class ScheduleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     is_active: bool = True
     notes: str | None = None
 
@@ -247,7 +254,7 @@ class ScheduleDateCreate(ScheduleDateBase):
     # is_active is defaulted by the DB
 
 class ScheduleDateUpdate(ScheduleDateBase):
-    pass
+    model_config = ConfigDict(extra="forbid")
 
 class ScheduleDateOut(ScheduleDateBase):
     schedule_date_id: UUID
@@ -274,7 +281,7 @@ class ScheduleDateRoleCreate(ScheduleDateRoleBase):
     # is_active is defaulted by the DB
 
 class ScheduleDateRoleUpdate(ScheduleDateRoleBase):
-    pass
+    model_config = ConfigDict(extra="forbid")
 
 class ScheduleDateRoleOut(ScheduleDateRoleBase):
     schedule_date_role_id: UUID
@@ -293,6 +300,7 @@ class UserAvailabilityCreate(UserAvailabilityBase):
     date: datetime.date
 
 class UserAvailabilityUpdate(UserAvailabilityBase):
+    model_config = ConfigDict(extra="forbid")
     date: datetime.date
 
 class UserAvailabilityOut(UserAvailabilityBase):
