@@ -1,6 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
-from app.models import TeamCreate, TeamUpdate, TeamOut 
+from fastapi import APIRouter, Depends, Body, status
+from app.models import TeamCreate, TeamUpdate, TeamOut
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_team, update_team
 from app.db.database import get_db_pool
 
@@ -22,7 +22,7 @@ async def post_team(team: TeamCreate, pool=Depends(get_db_pool)):
         return await insert_team(conn, team=team)
 
 @router.patch("/{team_id}", response_model=TeamOut)
-async def patch_team(team_id: UUID, team_update: TeamUpdate, pool=Depends(get_db_pool)):
+async def patch_team(team_id: UUID, team_update: TeamUpdate | None = Body(default=None), pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await update_team(conn, team_id=team_id, payload=team_update)
 

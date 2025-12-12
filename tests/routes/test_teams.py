@@ -67,12 +67,12 @@ async def test_get_single_team(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_create_team(async_client, test_db_pool):
+async def test_insert_team(async_client, test_db_pool):
     # Set up payloads
     bad_payload_1 = {}
     bad_payload_2 = {"team_name": "Incomplete Team"}
     bad_payload_3 = {"team_name": "Bad Team", "team_code": 12345}  # team_code should be str
-    good_payload_1 = {
+    good_payload = {
         "team_name": "New Team",
         "team_code": "new_team"
     }
@@ -108,8 +108,8 @@ async def test_create_team(async_client, test_db_pool):
     response3 = await async_client.post("/teams", json=bad_payload_3)
     assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-    # 4. Test valid payloads
-    response4 = await async_client.post("/teams", json=good_payload_1)
+    # 4. Test valid payload
+    response4 = await async_client.post("/teams", json=good_payload)
     assert response4.status_code == status.HTTP_201_CREATED
     response4_json = response4.json()
     assert response4_json["team_id"] is not None
@@ -126,39 +126,104 @@ async def test_create_team(async_client, test_db_pool):
     response6 = await async_client.post("/teams", json=bad_payload_5)
     assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# TODO: Update - full, partial, invalid, nonexistent
+@pytest.mark.asyncio
+async def test_update_team(async_client, test_db_pool):
+    # Seed team data directly into test DB
+    async with test_db_pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO teams (team_id, team_name, team_code)
+            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', 'Team 1', 'team_1'),
+                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', 'Team 2', 'team_2'),
+                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', 'Team 3', 'team_3');
+            """
+        )
 
-# TODO: Delete - nonexistent, referential integrity
+    # Set up payloads
+    bad_payload_1 = {}
+    bad_payload_2 = {"team_name": 12345}  # team_name should be str
+    bad_payload_3 = {"team_name": "Invalid", "team_code": "invalid"}  # team_code is not updatable
+    good_payload_full = {
+        "team_name": "Updated Team Name",
+        "is_active": False
+    }
+    good_payload_partial_1 = {
+        "is_active": False
+    }
+    good_payload_partial_2 = {
+        "team_name": "Partially Updated Team"
+    }
 
-# def test_update_team(test_client, setup_team):
-#     setup_team_id = setup_team.get("team_id")
+    # 1. Test team not found
+    response1 = await async_client.patch("/teams/00000000-0000-0000-0000-000000000000", json=good_payload_full)
+    assert response1.status_code == status.HTTP_404_NOT_FOUND
 
-#     empty_json = {}
-#     invalid_json2 = {"team_id": "00000000-0000-0000-0000-000000000000"}
-#     valid_json = {"team_name": "UPDATED", "lookup": "updated"}
+    # 2. Test invalid UUID format
+    response2 = await async_client.patch("/teams/invalid-uuid-format", json=good_payload_full)
+    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-#     response1 = test_client.patch(f"/teams/{setup_team_id}", json=empty_json)
-#     assert response1.status_code == 404 
-#     assert setup_team.get("team_name") == "TEST TEAM"
+    # 3. Test empty payload
+    response3 = await async_client.patch("/teams/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_1)
+    assert response3.status_code == status.HTTP_400_BAD_REQUEST
 
-#     response2 = test_client.patch(f"/teams/{setup_team_id}", json=invalid_json2)
-#     assert response2.status_code == 404
+    # 4. Test invalid data types
+    response4 = await async_client.patch("/teams/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_2)
+    assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-#     response3 = test_client.patch(f"/teams/00000000-0000-0000-0000-000000000000", json=valid_json)
-#     assert response3.status_code == 404
-    
-#     response = test_client.patch(f"/teams/{setup_team_id}", json=valid_json)
-#     response_json = response.json()
-#     assert response.status_code == 200
-#     assert response_json.get("team_name") == "UPDATED"
-#     assert response_json.get("lookup") == "updated"
+    # 5. Test non-updatable field
+    response5 = await async_client.patch("/teams/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_3)
+    assert response5.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# def test_delete_team(test_client, setup_team):
-#     response1 = test_client.delete(f"/teams/00000000-0000-0000-0000-000000000000")
-#     assert response1.status_code == 404
+    # 6. Test valid payload to update full record
+    response6 = await async_client.patch("/teams/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=good_payload_full)
+    assert response6.status_code == status.HTTP_200_OK
+    response6_json = response6.json()
+    assert response6_json["team_name"] == "Updated Team Name"
+    assert response6_json["team_code"] == "team_3"
+    assert response6_json["is_active"] is False
 
-#     response = test_client.delete(f"/teams/{setup_team.get("team_id")}")
-#     response_json = response.json()
-#     assert response.status_code == 200
-#     assert response_json.get("team_id") == setup_team.get("team_id")
-#     assert test_client.get(f"/teams/{setup_team.get("team_id")}").status_code == 404
+    # 7. Test valid payload to update partial record (is_active only)
+    response7 = await async_client.patch("/teams/fb4d832f-6a45-473e-b9e2-c0495938d005", json=good_payload_partial_1)
+    assert response7.status_code == status.HTTP_200_OK
+    response7_json = response7.json()
+    assert response7_json["team_name"] == "Team 2"
+    assert response7_json["team_code"] == "team_2"
+    assert response7_json["is_active"] is False 
+
+    # 8. Test valid payload to update partial record (team_name only)
+    response8 = await async_client.patch("/teams/58a6929c-f40d-4363-984c-4c221f41d4f0", json=good_payload_partial_2)
+    assert response8.status_code == status.HTTP_200_OK
+    response8_json = response8.json()
+    assert response8_json["team_name"] == "Partially Updated Team"
+    assert response8_json["team_code"] == "team_1"
+    assert response8_json["is_active"] is True
+
+@pytest.mark.asyncio
+async def test_delete_team(async_client, test_db_pool):
+    # Seed teams data directly into test DB
+    async with test_db_pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO teams (team_id, team_name, team_code)
+            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', 'Team 1', 'team_1'),
+                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', 'Team 2', 'team_2'),
+                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', 'Team 3', 'team_3');
+            """
+        )
+
+    # 1. Test team not found
+    response1 = await async_client.delete("/teams/00000000-0000-0000-0000-000000000000")
+    assert response1.status_code == status.HTTP_404_NOT_FOUND
+
+    # 2. Test invalid UUID format
+    response2 = await async_client.delete("/teams/invalid-uuid-format")
+    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    # 3. Test when teams exist
+    response3 = await async_client.delete("/teams/fb4d832f-6a45-473e-b9e2-c0495938d005")
+    assert response3.status_code == status.HTTP_200_OK
+    response3_json = response3.json()
+    assert isinstance(response3_json, dict)
+    assert response3_json["team_name"] == "Team 2"
+    assert response3_json["team_code"] == "team_2"
+    assert response3_json["is_active"] is True
