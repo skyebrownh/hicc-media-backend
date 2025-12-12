@@ -12,7 +12,8 @@ CREATE TABLE public.teams (
     team_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     team_name character varying(50) NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
-    team_code character varying(50) NOT NULL
+    team_code character varying(50) NOT NULL,
+    CONSTRAINT teams_ukey UNIQUE (team_code)
 );
 
 --
@@ -73,7 +74,8 @@ CREATE TABLE public.media_roles (
     description text,
     sort_order smallint NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
-    media_role_code character varying(50) NOT NULL
+    media_role_code character varying(50) NOT NULL,
+    CONSTRAINT media_roles_ukey UNIQUE (media_role_code)
 );
 
 --
@@ -86,7 +88,8 @@ CREATE TABLE public.proficiency_levels (
     proficiency_level_number smallint,
     is_active boolean DEFAULT true NOT NULL,
     proficiency_level_code character varying(50) NOT NULL,
-    is_assignable boolean DEFAULT false NOT NULL
+    is_assignable boolean DEFAULT false NOT NULL,
+    CONSTRAINT proficiency_levels_ukey UNIQUE (proficiency_level_code)
 );
 
 --
@@ -109,7 +112,8 @@ CREATE TABLE public.schedule_date_types (
     schedule_date_type_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     schedule_date_type_name character varying(50) NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
-    schedule_date_type_code character varying(50) NOT NULL
+    schedule_date_type_code character varying(50) NOT NULL,
+    CONSTRAINT schedule_date_types_ukey UNIQUE (schedule_date_type_code)
 );
 
 --

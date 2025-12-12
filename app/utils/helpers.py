@@ -1,5 +1,5 @@
 import datetime
-from asyncpg import Connection, Record
+from asyncpg import Connection, Record, exceptions
 from fastapi import HTTPException
 
 # Return the primary key column name for a given table
@@ -8,12 +8,6 @@ def table_id(table: str) -> str:
         return "date"
 
     return f"{table[0:len(table) - 1] if table.endswith("s") else table}_id"
-
-# Convert id to a date object if the table is 'dates'
-def convert_id_for_table(table: str, id: str | datetime.date) -> str | datetime.date:
-    if table == "dates" and isinstance(id, str):
-        return datetime.date.fromisoformat(id)  # Convert ISO string to date object
-    return id
 
 # Return a dict of detailed date information
 def get_date_details(date: datetime.date) -> dict:
@@ -78,22 +72,31 @@ def build_insert_query(table: str, payload: dict) -> tuple[str, list]:
 
 # Helper function to build WHERE clause from filters
 def build_where_clause(table: str, filters: dict[str, str | datetime.date]) -> tuple[str, list]:
-        converted_filters = {k: convert_id_for_table(table, v) for k, v in filters.items()}
-        if not converted_filters:
+        if not filters:
             return "", []
-        where_clauses = [f"{k} = ${i+1}" for i, k in enumerate(converted_filters.keys())]
+        where_clauses = [f"{k} = ${i+1}" for i, k in enumerate(filters.keys())]
         clause = f" WHERE {' AND '.join(where_clauses)}"
-        return clause, list(converted_filters.values())
+        return clause, list(filters.values())
 
 # Helper functions to fetch record or raise 404
-async def fetch_or_404(conn: Connection, query: str, params: list) -> Record:
-    rows = await conn.fetch(query, *params)
-    if not rows:
-        raise HTTPException(status_code=404, detail="Record not found")
-    return rows
+async def fetch_many(conn: Connection, query: str, params: list) -> Record:
+    return await conn.fetch(query, *params)
+    # Do not raise 404 if no rows found; return 200 OK with empty list instead
 
-async def fetch_row_or_404(conn: Connection, query: str, params: list) -> Record:
-    row = await conn.fetchrow(query, *params)
+async def fetch_single_row(conn: Connection, query: str, params: list) -> Record:
+    try:
+        row = await conn.fetchrow(query, *params)
+    except exceptions.UniqueViolationError:
+        raise HTTPException(
+            status_code=409, 
+            detail="Conflict: Duplicate record"
+        )
+    except exceptions.ForeignKeyViolationError:
+        raise HTTPException(
+            status_code=400, 
+            detail="Bad Request: Foreign key constraint violation"
+        )
+
     if not row:
         raise HTTPException(status_code=404, detail="Record not found")
     return row

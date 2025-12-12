@@ -9,21 +9,6 @@ def test_table_id():
     assert table_id("user_availability") == "user_availability_id"
     assert table_id("dates") == "date"
 
-def test_convert_id_for_table():
-    assert convert_id_for_table("users", "d01e5c6f-58db-4349-984e-c7cf190915a0") == "d01e5c6f-58db-4349-984e-c7cf190915a0"
-    assert convert_id_for_table("schedule_date_types", "3face5e5-36da-4c25-a6f5-1bc822644d70") == "3face5e5-36da-4c25-a6f5-1bc822644d70"
-    assert convert_id_for_table("user_availability", "8df3aa3a-2ca0-4af4-a3e8-3ebd943f35b5") == "8df3aa3a-2ca0-4af4-a3e8-3ebd943f35b5"
-    # For 'dates' table, string input returns datetime.date
-    date_str = "2024-06-01"
-    result = convert_id_for_table("dates", date_str)
-    assert isinstance(result, datetime.date)
-    assert result == datetime.date(2024, 6, 1)
-    # For 'dates' table, datetime.date input returns same datetime.date
-    date_obj = datetime.date(2024, 6, 1)
-    result2 = convert_id_for_table("dates", date_obj)
-    assert isinstance(result2, datetime.date)
-    assert result2 == date_obj
-
 def test_get_date_details():
     test_cases = {
         # Regular date

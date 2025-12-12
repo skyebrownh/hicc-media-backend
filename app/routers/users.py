@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from app.models import UserCreate, UserUpdate, UserOut
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_user, update_user
@@ -10,22 +11,22 @@ async def get_users(pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="users")
 
-@router.get("/{id}", response_model=UserOut)
-async def get_user(id: str, pool=Depends(get_db_pool)):
+@router.get("/{user_id}", response_model=UserOut)
+async def get_user(user_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="users", filters={"user_id": id})
+        return await fetch_one(conn, table="users", filters={"user_id": user_id})
 
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def post_user(user: UserCreate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await insert_user(conn, user=user)
 
-@router.patch("/{id}", response_model=UserOut)
-async def patch_user(id: str, user_update: UserUpdate, pool=Depends(get_db_pool)):
+@router.patch("/{user_id}", response_model=UserOut)
+async def patch_user(user_id: UUID, user_update: UserUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await update_user(conn, user_id=id, payload=user_update)
+        return await update_user(conn, user_id=user_id, payload=user_update)
 
-@router.delete("/{id}", response_model=UserOut)
-async def delete_user(id: str, pool=Depends(get_db_pool)):
+@router.delete("/{user_id}", response_model=UserOut)
+async def delete_user(user_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="users", filters={"user_id": id})
+        return await delete_one(conn, table="users", filters={"user_id": user_id})

@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from app.models import TeamUserCreate, TeamUserUpdate, TeamUserOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_team_user, update_team_user
@@ -13,13 +14,13 @@ async def get_team_users(pool=Depends(get_db_pool)):
 
 # Get all users for a team
 @router.get("/teams/{team_id}/users", response_model=list[TeamUserOut])
-async def get_team_users_for_team(team_id: str, pool=Depends(get_db_pool)):
+async def get_team_users_for_team(team_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_all(conn, table="team_users", filters={"team_id": team_id})
     
 # Get single team user
 @router.get("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
-async def get_team_user(team_id: str, user_id: str, pool=Depends(get_db_pool)):
+async def get_team_user(team_id: UUID, user_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="team_users", filters={"team_id": team_id, "user_id": user_id})
 
@@ -32,12 +33,12 @@ async def post_team_user(team_user: TeamUserCreate, pool=Depends(get_db_pool)):
 
 # Update is_active for a team user
 @router.patch("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
-async def patch_team_user(team_id: str, user_id: str, team_user: TeamUserUpdate, pool=Depends(get_db_pool)):
+async def patch_team_user(team_id: UUID, user_id: UUID, team_user: TeamUserUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         # TODO: Refactor to update based on join IDs in the path
         return await update_team_user(conn, team_user_id=id, payload=team_user)
 
 @router.delete("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
-async def delete_team_user(team_id: str, user_id: str, pool=Depends(get_db_pool)):
+async def delete_team_user(team_id: UUID, user_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await delete_one(conn, table="team_users", filters={"team_id": team_id, "user_id": user_id})
