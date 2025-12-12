@@ -1,3 +1,4 @@
+import datetime
 from fastapi import APIRouter, Depends, status
 from app.models import DateCreate, DateUpdate, DateOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_date, update_date
@@ -11,7 +12,7 @@ async def get_dates(pool=Depends(get_db_pool)):
         return await fetch_all(conn, table="dates")
 
 @router.get("/{date}", response_model=DateOut)
-async def get_date(date: str, pool=Depends(get_db_pool)):
+async def get_date(date: datetime.date, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await fetch_one(conn, table="dates", filters={"date": date})
     
@@ -23,11 +24,11 @@ async def post_date(date: DateCreate, pool=Depends(get_db_pool)):
         return await insert_date(conn, date_obj=date)
 
 @router.patch("/{date}", response_model=DateOut)
-async def patch_date(date: str, date_update: DateUpdate, pool=Depends(get_db_pool)):
+async def patch_date(date: datetime.date, date_update: DateUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await update_date(conn, date=date, payload=date_update)
 
 @router.delete("/{date}", response_model=DateOut)
-async def delete_date(date: str, pool=Depends(get_db_pool)):
+async def delete_date(date: datetime.date, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         return await delete_one(conn, table="dates", filters={"date": date})

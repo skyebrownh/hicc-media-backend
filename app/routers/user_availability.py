@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from app.models import UserAvailabilityCreate, UserAvailabilityUpdate, UserAvailabilityOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_user_availability, update_user_availability
@@ -12,10 +13,10 @@ async def get_user_availability(pool=Depends(get_db_pool)):
         return await fetch_all(conn, table="user_availability")
 
 # Get single user availability
-@router.get("/{id}", response_model=UserAvailabilityOut)
-async def get_user_availability(id: str, pool=Depends(get_db_pool)):
+@router.get("/{user_availability_id}", response_model=UserAvailabilityOut)
+async def get_user_availability(user_availability_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await fetch_one(conn, table="user_availability", filters={"user_availability_id": id})
+        return await fetch_one(conn, table="user_availability", filters={"user_availability_id": user_availability_id})
 
 # TODO: Insert user availabilities in bulk for a user
 
@@ -26,13 +27,13 @@ async def post_user_availability(user_availability: UserAvailabilityCreate, pool
         return await insert_user_availability(conn, user_availability=user_availability)
 
 # Update user availability date
-@router.patch("/{id}", response_model=UserAvailabilityOut)
-async def patch_user_availability(id: str, user_availability_update: UserAvailabilityUpdate, pool=Depends(get_db_pool)):
+@router.patch("/{user_availability_id}", response_model=UserAvailabilityOut)
+async def patch_user_availability(user_availability_id: UUID, user_availability_update: UserAvailabilityUpdate, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await update_user_availability(conn, user_availability_id=id, payload=user_availability_update)
+        return await update_user_availability(conn, user_availability_id=user_availability_id, payload=user_availability_update)
 
 # Delete user availability
-@router.delete("/{id}", response_model=UserAvailabilityOut)
-async def delete_user_availability(id: str, pool=Depends(get_db_pool)):
+@router.delete("/{user_availability_id}", response_model=UserAvailabilityOut)
+async def delete_user_availability(user_availability_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
-        return await delete_one(conn, table="user_availability", filters={"user_availability_id": id})
+        return await delete_one(conn, table="user_availability", filters={"user_availability_id": user_availability_id})
