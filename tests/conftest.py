@@ -53,7 +53,8 @@ async def test_db_pool(ensure_schema):
         settings.local_test_db_url,
         min_size=1,
         max_size=5,
-        # Ensure every pooled connection uses the test schema where tables live.
+        # Keep every pooled connection pinned to test_schema.
+        server_settings={"search_path": "test_schema"},
         init=lambda conn: conn.execute("SET search_path TO test_schema;"),
     )
 
@@ -73,24 +74,24 @@ async def async_client(test_db_pool):
 
 
 # Truncate tables before each test to keep state isolated without recreating schema/pool
-# @pytest_asyncio.fixture(autouse=True, scope="function")
-# async def truncate_tables(test_db_pool):
-#     async with test_db_pool.acquire() as conn:
-#         await conn.execute(
-#             """
-#             TRUNCATE TABLE
-#                 user_availability,
-#                 schedule_date_roles,
-#                 schedule_dates,
-#                 schedules,
-#                 dates,
-#                 team_users,
-#                 user_roles,
-#                 users,
-#                 teams,
-#                 media_roles,
-#                 proficiency_levels
-#             RESTART IDENTITY CASCADE;
-#             """
-#         )
-#     yield
+@pytest_asyncio.fixture(autouse=True, scope="function")
+async def truncate_tables(test_db_pool):
+    async with test_db_pool.acquire() as conn:
+        await conn.execute(
+            """
+            TRUNCATE TABLE
+                user_availability,
+                schedule_date_roles,
+                schedule_dates,
+                schedules,
+                dates,
+                team_users,
+                user_roles,
+                users,
+                teams,
+                media_roles,
+                proficiency_levels
+            RESTART IDENTITY CASCADE;
+            """
+        )
+    yield
