@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import UserAvailabilityCreate, UserAvailabilityUpdate, UserAvailabilityOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_user_availability, update_user_availability
 from app.db.database import get_db_pool
@@ -28,7 +28,11 @@ async def post_user_availability(user_availability: UserAvailabilityCreate, pool
 
 # Update user availability date
 @router.patch("/{user_availability_id}", response_model=UserAvailabilityOut)
-async def patch_user_availability(user_availability_id: UUID, user_availability_update: UserAvailabilityUpdate, pool=Depends(get_db_pool)):
+async def patch_user_availability(
+    user_availability_id: UUID,
+    user_availability_update: UserAvailabilityUpdate | None = Body(default=None),
+    pool=Depends(get_db_pool),
+):
     async with pool.acquire() as conn:
         return await update_user_availability(conn, user_availability_id=user_availability_id, payload=user_availability_update)
 

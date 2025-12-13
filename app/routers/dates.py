@@ -1,5 +1,5 @@
 import datetime
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import DateCreate, DateUpdate, DateOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_date, update_date
 from app.db.database import get_db_pool
@@ -24,7 +24,11 @@ async def post_date(date: DateCreate, pool=Depends(get_db_pool)):
         return await insert_date(conn, date_obj=date)
 
 @router.patch("/{date}", response_model=DateOut)
-async def patch_date(date: datetime.date, date_update: DateUpdate, pool=Depends(get_db_pool)):
+async def patch_date(
+    date: datetime.date,
+    date_update: DateUpdate | None = Body(default=None),
+    pool=Depends(get_db_pool),
+):
     async with pool.acquire() as conn:
         return await update_date(conn, date=date, payload=date_update)
 

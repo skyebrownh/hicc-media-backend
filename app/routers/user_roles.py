@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import UserRoleCreate, UserRoleUpdate, UserRoleOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_user_role, update_user_role
 from app.db.database import get_db_pool
@@ -47,7 +47,7 @@ async def post_user_role(user_role: UserRoleCreate, pool=Depends(get_db_pool)):
 
 # Update proficiency level of a user role
 @router.patch("/users/{user_id}/roles/{role_id}", response_model=UserRoleOut)
-async def patch_user_role(user_id: UUID, role_id: UUID, user_role_update: UserRoleUpdate, pool=Depends(get_db_pool)):
+async def patch_user_role(user_id: UUID, role_id: UUID, user_role_update: UserRoleUpdate | None = Body(default=None), pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
         # TODO: Refactor to update based on join IDs in the path
         return await update_user_role(conn, user_role_id=id, payload=user_role_update)

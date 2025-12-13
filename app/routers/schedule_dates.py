@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import ScheduleDateCreate, ScheduleDateUpdate, ScheduleDateOut, ScheduleDateRoleOut, UserAvailabilityOut
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_schedule_date, update_schedule_date
 from app.db.database import get_db_pool
@@ -41,7 +41,11 @@ async def post_schedule_date(schedule_date: ScheduleDateCreate, pool=Depends(get
 
 # Update schedule date
 @router.patch("/{schedule_date_id}", response_model=ScheduleDateOut)
-async def patch_schedule_date(schedule_date_id: UUID, schedule_date_update: ScheduleDateUpdate, pool=Depends(get_db_pool)):
+async def patch_schedule_date(
+    schedule_date_id: UUID,
+    schedule_date_update: ScheduleDateUpdate | None = Body(default=None),
+    pool=Depends(get_db_pool),
+):
     async with pool.acquire() as conn:
         return await update_schedule_date(conn, schedule_date_id=schedule_date_id, payload=schedule_date_update)
 
