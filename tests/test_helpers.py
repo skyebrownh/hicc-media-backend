@@ -110,18 +110,17 @@ def test_get_date_details():
 
 def test_build_update_query():
     table = "users"
-    id_column = "user_id"
-    id_value = "4843a172-52d9-4378-a766-0d342b4ce095"
+    id_columns = {"user_id": "4843a172-52d9-4378-a766-0d342b4ce095"}
 
     # Test empty payload triggers HTTPException (bad request)
     with pytest.raises(HTTPException) as exc_info:
-        build_update_query(table, id_column, id_value, {})
+        build_update_query(table, id_columns, {})
     assert exc_info.value.status_code == 400
     assert "Payload cannot be empty" in str(exc_info.value.detail)
 
     # Test single-field payload
     payload1 = {"name": "John"}
-    query1, values1 = build_update_query(table, id_column, id_value, payload1)
+    query1, values1 = build_update_query(table, id_columns, payload1)
     assert "UPDATE users" in query1
     assert "SET name = $1" in query1
     assert "WHERE user_id = $2" in query1
@@ -129,7 +128,7 @@ def test_build_update_query():
 
     # Test two-field payload
     payload2 = {"name": "John", "email": "john@example.com"}
-    query2, values2 = build_update_query(table, id_column, id_value, payload2)
+    query2, values2 = build_update_query(table, id_columns, payload2)
     assert "UPDATE users" in query2
     assert "SET name = $1, email = $2" in query2
     assert "WHERE user_id = $3" in query2
@@ -137,7 +136,7 @@ def test_build_update_query():
 
     # Test three-field payload
     payload3 = {"name": "John", "email": "john@example.com", "phone": "555-1234"}
-    query3, values3 = build_update_query(table, id_column, id_value, payload3)
+    query3, values3 = build_update_query(table, id_columns, payload3)
     assert "UPDATE users" in query3
     assert "SET name = $1, email = $2, phone = $3" in query3
     assert "WHERE user_id = $4" in query3

@@ -30,25 +30,45 @@ def get_date_details(date: datetime.date) -> dict:
     }
 
 # Helper function to build dynamic update queries
-def build_update_query(table: str, id_column: str, id_value: str, payload: dict) -> tuple[str, list]:
+def build_update_query(
+    table: str,
+    id_columns: dict[str, str],
+    payload: dict
+) -> tuple[str, list]:
+    """
+    Build a parameterized SQL update query for arbitrary number of ID columns in the WHERE clause.
+
+    Args:
+        table: table name
+        id_columns: dict mapping id column name(s) to their value(s)
+        payload: data to update
+
+    Returns:
+        (query, values)
+    """
     raise_bad_request_empty_payload(payload)
 
     updates = []
     values = []
     index = 1
 
-    # Build the SET clause dynamically
+    # SET clause
     for key, value in payload.items():
         updates.append(f"{key} = ${index}")
         values.append(value)
         index += 1
 
-    values.append(id_value)  # Add the ID value for the WHERE clause
+    # WHERE clause (with potentially multiple id columns)
+    where_clauses = []
+    for id_col, id_value in id_columns.items():
+        where_clauses.append(f"{id_col} = ${index}")
+        values.append(id_value)
+        index += 1
 
     query = f"""
     UPDATE {table}
     SET {', '.join(updates)}
-    WHERE {id_column} = ${index}
+    WHERE {' AND '.join(where_clauses)}
     RETURNING *;
     """
 
