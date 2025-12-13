@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import ProficiencyLevelCreate, ProficiencyLevelUpdate, ProficiencyLevelOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_proficiency_level, update_proficiency_level
 from app.db.database import get_db_pool
@@ -22,7 +22,11 @@ async def post_proficiency_level(proficiency_level: ProficiencyLevelCreate, pool
         return await insert_proficiency_level(conn, proficiency_level=proficiency_level)
 
 @router.patch("/{proficiency_level_id}", response_model=ProficiencyLevelOut)
-async def patch_proficiency_level(proficiency_level_id: UUID, proficiency_level_update: ProficiencyLevelUpdate, pool=Depends(get_db_pool)):
+async def patch_proficiency_level(
+    proficiency_level_id: UUID,
+    proficiency_level_update: ProficiencyLevelUpdate | None = Body(default=None),
+    pool=Depends(get_db_pool),
+):
     async with pool.acquire() as conn:
         return await update_proficiency_level(conn, proficiency_level_id=proficiency_level_id, payload=proficiency_level_update)
 

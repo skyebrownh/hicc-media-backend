@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import ScheduleDateRoleCreate, ScheduleDateRoleUpdate, ScheduleDateRoleOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_schedule_date_role, update_schedule_date_role
 from app.db.database import get_db_pool
@@ -26,7 +26,11 @@ async def post_schedule_date_role(schedule_date_role: ScheduleDateRoleCreate, po
 
 # Update schedule date role
 @router.patch("/{schedule_date_role_id}", response_model=ScheduleDateRoleOut)
-async def patch_schedule_date_role(schedule_date_role_id: UUID, schedule_date_role_update: ScheduleDateRoleUpdate, pool=Depends(get_db_pool)):
+async def patch_schedule_date_role(
+    schedule_date_role_id: UUID,
+    schedule_date_role_update: ScheduleDateRoleUpdate | None = Body(default=None),
+    pool=Depends(get_db_pool),
+):
     async with pool.acquire() as conn:
         return await update_schedule_date_role(conn, schedule_date_role_id=schedule_date_role_id, payload=schedule_date_role_update)
  

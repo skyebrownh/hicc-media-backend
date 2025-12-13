@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import MediaRoleCreate, MediaRoleUpdate, MediaRoleOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_media_role, update_media_role
 from app.db.database import get_db_pool
@@ -22,7 +22,11 @@ async def post_media_role(media_role: MediaRoleCreate, pool=Depends(get_db_pool)
         return await insert_media_role(conn, media_role=media_role)
 
 @router.patch("/{media_role_id}", response_model=MediaRoleOut)
-async def patch_media_role(media_role_id: UUID, media_role_update: MediaRoleUpdate, pool=Depends(get_db_pool)):
+async def patch_media_role(
+    media_role_id: UUID,
+    media_role_update: MediaRoleUpdate | None = Body(default=None),
+    pool=Depends(get_db_pool),
+):
     async with pool.acquire() as conn:
         return await update_media_role(conn, media_role_id=media_role_id, payload=media_role_update)
 

@@ -89,6 +89,7 @@ async def truncate_tables(test_db_pool):
                 user_roles,
                 users,
                 teams,
+                schedule_date_types,
                 media_roles,
                 proficiency_levels
             RESTART IDENTITY CASCADE;

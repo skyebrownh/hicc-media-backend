@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import TeamUserCreate, TeamUserUpdate, TeamUserOut 
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_team_user, update_team_user
 from app.db.database import get_db_pool
@@ -33,7 +33,12 @@ async def post_team_user(team_user: TeamUserCreate, pool=Depends(get_db_pool)):
 
 # Update is_active for a team user
 @router.patch("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
-async def patch_team_user(team_id: UUID, user_id: UUID, team_user: TeamUserUpdate, pool=Depends(get_db_pool)):
+async def patch_team_user(
+    team_id: UUID,
+    user_id: UUID,
+    team_user: TeamUserUpdate | None = Body(default=None),
+    pool=Depends(get_db_pool),
+):
     async with pool.acquire() as conn:
         # TODO: Refactor to update based on join IDs in the path
         return await update_team_user(conn, team_user_id=id, payload=team_user)

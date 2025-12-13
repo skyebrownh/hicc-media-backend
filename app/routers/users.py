@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Body, status
 from app.models import UserCreate, UserUpdate, UserOut
 from app.db.queries import fetch_all, fetch_one, delete_one, insert_user, update_user
 from app.db.database import get_db_pool
@@ -22,7 +22,11 @@ async def post_user(user: UserCreate, pool=Depends(get_db_pool)):
         return await insert_user(conn, user=user)
 
 @router.patch("/{user_id}", response_model=UserOut)
-async def patch_user(user_id: UUID, user_update: UserUpdate, pool=Depends(get_db_pool)):
+async def patch_user(
+    user_id: UUID,
+    user_update: UserUpdate | None = Body(default=None),
+    pool=Depends(get_db_pool),
+):
     async with pool.acquire() as conn:
         return await update_user(conn, user_id=user_id, payload=user_update)
 
