@@ -55,13 +55,13 @@ async def delete_all(
     conn: Connection,
     table: str,
     filters: dict[str, str | date] = None
-) -> dict | None:
+) -> list[dict]:
     if filters is None:
         filters = {}
     where_clause, converted_filters = build_where_clause(table, filters)
     query = f"DELETE FROM {table}{where_clause} RETURNING *;"
-    row = await fetch_many(conn, query, converted_filters)
-    return dict(row)
+    rows = await fetch_many(conn, query, converted_filters)
+    return [dict(row) for row in rows]
 
 async def delete_one(
     conn: Connection,
