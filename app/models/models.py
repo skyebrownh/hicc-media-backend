@@ -152,7 +152,7 @@ class TeamUserCreate(TeamUserBase):
 
 class TeamUserUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    is_active: bool
+    is_active: bool = True
 
 class TeamUserOut(TeamUserBase):
     team_user_id: UUID

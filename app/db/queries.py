@@ -1,4 +1,5 @@
 from datetime import date
+from uuid import UUID
 from asyncpg import Connection
 from app.utils.helpers import (
     get_date_details, 
@@ -159,83 +160,83 @@ async def insert_user_availability(conn: Connection, user_availability: UserAvai
 async def update_media_role(conn: Connection, media_role_id: str, payload: MediaRoleUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("media_roles", "media_role_id", media_role_id, data)
+    query, values = build_update_query("media_roles", {"media_role_id": media_role_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_proficiency_level(conn: Connection, proficiency_level_id: str, payload: ProficiencyLevelUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("proficiency_levels", "proficiency_level_id", proficiency_level_id, data)
+    query, values = build_update_query("proficiency_levels", {"proficiency_level_id": proficiency_level_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_schedule_date_type(conn: Connection, schedule_date_type_id: str, payload: ScheduleDateTypeUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("schedule_date_types", "schedule_date_type_id", schedule_date_type_id, data)
+    query, values = build_update_query("schedule_date_types", {"schedule_date_type_id": schedule_date_type_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_team(conn: Connection, team_id: str, payload: TeamUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("teams", "team_id", team_id, data)
+    query, values = build_update_query("teams", {"team_id": team_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_user(conn: Connection, user_id: str, payload: UserUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("users", "user_id", user_id, data)
+    query, values = build_update_query("users", {"user_id": user_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
-async def update_team_user(conn: Connection, team_user_id: str, payload: TeamUserUpdate) -> dict | None:
+async def update_team_user(conn: Connection, team_id: UUID, user_id: UUID, payload: TeamUserUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("team_users", "team_user_id", team_user_id, data)
+    query, values = build_update_query("team_users", {"team_id": team_id, "user_id": user_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_user_role(conn: Connection, user_role_id: str, payload: UserRoleUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("user_roles", "user_role_id", user_role_id, data)
+    query, values = build_update_query("user_roles", {"user_role_id": user_role_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_date(conn: Connection, date: str, payload: DateUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("dates", "date", date, data)
+    query, values = build_update_query("dates", {"date": date}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_schedule(conn: Connection, schedule_id: str, payload: ScheduleUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("schedules", "schedule_id", schedule_id, data)
+    query, values = build_update_query("schedules", {"schedule_id": schedule_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_schedule_date(conn: Connection, schedule_date_id: str, payload: ScheduleDateUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("schedule_dates", "schedule_date_id", schedule_date_id, data)
+    query, values = build_update_query("schedule_dates", {"schedule_date_id": schedule_date_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_schedule_date_role(conn: Connection, schedule_date_role_id: str, payload: ScheduleDateRoleUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("schedule_date_roles", "schedule_date_role_id", schedule_date_role_id, data)
+    query, values = build_update_query("schedule_date_roles", {"schedule_date_role_id": schedule_date_role_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def update_user_availability(conn: Connection, user_availability_id: str, payload: UserAvailabilityUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("user_availability", "user_availability_id", user_availability_id, data)
+    query, values = build_update_query("user_availability", {"user_availability_id": user_availability_id}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)
