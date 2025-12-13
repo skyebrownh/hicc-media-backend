@@ -95,7 +95,7 @@ async def test_insert_media_role(async_client, test_db_pool):
         "media_role_code": "new_role"  # Duplicate media_role_code
     }
     bad_payload_5 = {
-        "media_role_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # Duplicate media_role_id
+        "media_role_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # media_role_id not allowed in payload
         "media_role_name": "Duplicate ID Role",
         "sort_order": 7,
         "media_role_code": "duplicate_id_role"
@@ -126,7 +126,7 @@ async def test_insert_media_role(async_client, test_db_pool):
     response5 = await async_client.post("/media_roles", json=bad_payload_4)
     assert response5.status_code == status.HTTP_409_CONFLICT
 
-    # 6. Test duplicate media_role_id
+    # 6. Test media_role_id not allowed in payload
     # media_role_id is not allowed in payload, so this raises 422 Validation Error instead of 409 Conflict
     response6 = await async_client.post("/media_roles", json=bad_payload_5)
     assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

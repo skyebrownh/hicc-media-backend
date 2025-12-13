@@ -96,7 +96,7 @@ async def test_insert_proficiency_level(async_client, test_db_pool):
         "proficiency_level_code": "new_level"  # Duplicate proficiency_level_code
     }
     bad_payload_5 = {
-        "proficiency_level_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # Duplicate proficiency_level_id
+        "proficiency_level_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # proficiency_level_id not allowed in payload
         "proficiency_level_name": "Duplicate ID Level",
         "proficiency_level_number": 7,
         "proficiency_level_code": "duplicate_id_level"
@@ -129,7 +129,7 @@ async def test_insert_proficiency_level(async_client, test_db_pool):
     response5 = await async_client.post("/proficiency_levels", json=bad_payload_4)
     assert response5.status_code == status.HTTP_409_CONFLICT
 
-    # 6. Test duplicate proficiency_level_id
+    # 6. Test proficiency_level_id not allowed in payload
     # proficiency_level_id is not allowed in payload, so this raises 422 Validation Error instead of 409 Conflict
     response6 = await async_client.post("/proficiency_levels", json=bad_payload_5)
     assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

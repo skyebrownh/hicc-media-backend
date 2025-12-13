@@ -91,7 +91,7 @@ async def test_insert_team(async_client, test_db_pool):
         "team_code": "new_team"  # Duplicate team_code
     }
     bad_payload_5 = {
-        "team_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # Duplicate team_id
+        "team_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # team_id not allowed in payload
         "team_name": "Duplicate ID Team",
         "team_code": "duplicate_id_team"
     }
@@ -121,7 +121,7 @@ async def test_insert_team(async_client, test_db_pool):
     response5 = await async_client.post("/teams", json=bad_payload_4)
     assert response5.status_code == status.HTTP_409_CONFLICT
 
-    # 6. Test duplicate team_id
+    # 6. Test team_id not allowed in payload
     # team_id is not allowed in payload, so this raises 422 Validation Error instead of 409 Conflict
     response6 = await async_client.post("/teams", json=bad_payload_5)
     assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

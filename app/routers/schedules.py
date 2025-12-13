@@ -16,6 +16,8 @@ async def get_schedules(pool=Depends(get_db_pool)):
 @router.get("/{schedule_id}/schedule_dates", response_model=list[ScheduleDateOut])
 async def get_schedule_dates_for_schedule(schedule_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
+        # Verify schedule exists first (will raise 404 if not found)
+        await fetch_one(conn, table="schedules", filters={"schedule_id": schedule_id})
         return await fetch_all(conn, table="schedule_dates", filters={"schedule_id": schedule_id})
 
 # Get single schedule
@@ -52,4 +54,6 @@ async def delete_schedule(schedule_id: UUID, pool=Depends(get_db_pool)):
 @router.delete("/{schedule_id}/schedule_dates", response_model=list[ScheduleDateOut])
 async def delete_schedule_dates_for_schedule(schedule_id: UUID, pool=Depends(get_db_pool)):
     async with pool.acquire() as conn:
+        # Verify schedule exists first (will raise 404 if not found)
+        await fetch_one(conn, table="schedules", filters={"schedule_id": schedule_id})
         return await delete_all(conn, table="schedule_dates", filters={"schedule_id": schedule_id})

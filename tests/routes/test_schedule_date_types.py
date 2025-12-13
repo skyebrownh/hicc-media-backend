@@ -91,7 +91,7 @@ async def test_insert_schedule_date_type(async_client, test_db_pool):
         "schedule_date_type_code": "new_type"  # Duplicate schedule_date_type_code
     }
     bad_payload_5 = {
-        "schedule_date_type_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # Duplicate schedule_date_type_id
+        "schedule_date_type_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # schedule_date_type_id not allowed in payload
         "schedule_date_type_name": "Duplicate ID Type",
         "schedule_date_type_code": "duplicate_id_type"
     }
@@ -121,7 +121,7 @@ async def test_insert_schedule_date_type(async_client, test_db_pool):
     response5 = await async_client.post("/schedule_date_types", json=bad_payload_4)
     assert response5.status_code == status.HTTP_409_CONFLICT
 
-    # 6. Test duplicate schedule_date_type_id
+    # 6. Test schedule_date_type_id not allowed in payload
     # schedule_date_type_id is not allowed in payload, so this raises 422 Validation Error instead of 409 Conflict
     response6 = await async_client.post("/schedule_date_types", json=bad_payload_5)
     assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
