@@ -74,20 +74,30 @@ def build_update_query(
 
     return query, values
 
-# Helper function to build dynamic insert queries
-def build_insert_query(table: str, payload: dict) -> tuple[str, list]:
-    raise_bad_request_empty_payload(payload)
+# Helper function to build dynamic insert queries for multiple payloads
+def build_insert_query(table: str, payloads: list[dict]) -> tuple[str, list]:
+    if not isinstance(payloads, list) or not payloads or not all(isinstance(p, dict) and p for p in payloads):
+        raise_bad_request_empty_payload(payloads)
 
-    columns = list(payload.keys())
-    values = list(payload.values())
-    placeholders = [f"${i+1}" for i in range(len(columns))]
+    columns = list(payloads[0].keys())
+    # All payloads must have the same columns
+    if any(list(p.keys()) != columns for p in payloads):
+        raise ValueError("All payloads must have the same set of columns for bulk insert")
+
+    values = []
+    rows_placeholders = []
+    idx = 1
+    for payload in payloads:
+        placeholders = [f"${i}" for i in range(idx, idx + len(columns))]
+        rows_placeholders.append(f"({', '.join(placeholders)})")
+        values.extend(payload.values())
+        idx += len(columns)
 
     query = f"""
     INSERT INTO {table} ({', '.join(columns)})
-    VALUES ({', '.join(placeholders)})
+    VALUES {', '.join(rows_placeholders)}
     RETURNING *;
     """
-
     return query, values
 
 # Helper function to build WHERE clause from filters

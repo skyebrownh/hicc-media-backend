@@ -1,4 +1,4 @@
-from datetime import date
+import datetime
 from uuid import UUID
 from asyncpg import Connection
 from app.utils.helpers import (
@@ -31,7 +31,7 @@ from app.models import (
 async def fetch_all(
     conn: Connection,
     table: str,
-    filters: dict[str, str | date] = None
+    filters: dict[str, str | datetime.date] = None
 ) -> list[dict]:
     if filters is None:
         filters = {}
@@ -43,7 +43,7 @@ async def fetch_all(
 async def fetch_one(
     conn: Connection,
     table: str,
-    filters: dict[str, str | date] = None
+    filters: dict[str, str | datetime.date] = None
 ) -> dict | None:
     if filters is None:
         filters = {}
@@ -55,7 +55,7 @@ async def fetch_one(
 async def delete_all(
     conn: Connection,
     table: str,
-    filters: dict[str, str | date] = None
+    filters: dict[str, str | datetime.date] = None
 ) -> list[dict]:
     if filters is None:
         filters = {}
@@ -67,7 +67,7 @@ async def delete_all(
 async def delete_one(
     conn: Connection,
     table: str,
-    filters: dict[str, str | date] = None
+    filters: dict[str, str | datetime.date] = None
 ) -> dict | None:
     if filters is None:
         filters = {}
@@ -81,43 +81,43 @@ async def delete_one(
 # =============================
 async def insert_media_role(conn: Connection, media_role: MediaRoleCreate) -> dict:
     data = media_role.model_dump(exclude_none=True)
-    query, values = build_insert_query("media_roles", data)
+    query, values = build_insert_query("media_roles", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_proficiency_level(conn: Connection, proficiency_level: ProficiencyLevelCreate) -> dict:
     data = proficiency_level.model_dump(exclude_none=True)
-    query, values = build_insert_query("proficiency_levels", data)
+    query, values = build_insert_query("proficiency_levels", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_schedule_date_type(conn: Connection, schedule_date_type: ScheduleDateTypeCreate) -> dict:
     data = schedule_date_type.model_dump(exclude_none=True)
-    query, values = build_insert_query("schedule_date_types", data)
+    query, values = build_insert_query("schedule_date_types", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_team(conn: Connection, team: TeamCreate) -> dict:
     data = team.model_dump(exclude_none=True)
-    query, values = build_insert_query("teams", data)
+    query, values = build_insert_query("teams", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_user(conn: Connection, user: UserCreate) -> dict:
     data = user.model_dump(exclude_none=True)
-    query, values = build_insert_query("users", data)
+    query, values = build_insert_query("users", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_team_user(conn: Connection, team_user: TeamUserCreate) -> dict:
     data = team_user.model_dump(exclude_none=True)
-    query, values = build_insert_query("team_users", data)
+    query, values = build_insert_query("team_users", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_user_role(conn: Connection, user_role: UserRoleCreate) -> dict:
     data = user_role.model_dump(exclude_none=True)
-    query, values = build_insert_query("user_roles", data)
+    query, values = build_insert_query("user_roles", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
@@ -126,33 +126,42 @@ async def insert_date(conn: Connection, date_obj: DateCreate) -> dict:
     data = {"date": date_obj.date}
     # Automatically calculate and add other date details
     data.update(get_date_details(date_obj.date))
-    query, values = build_insert_query("dates", data)
+    query, values = build_insert_query("dates", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_schedule(conn: Connection, schedule: ScheduleCreate) -> dict:
     data = schedule.model_dump(exclude_none=True)
-    query, values = build_insert_query("schedules", data)
+    query, values = build_insert_query("schedules", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_schedule_date(conn: Connection, schedule_date: ScheduleDateCreate) -> dict:
     data = schedule_date.model_dump(exclude_none=True)
-    query, values = build_insert_query("schedule_dates", data)
+    query, values = build_insert_query("schedule_dates", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_schedule_date_role(conn: Connection, schedule_date_role: ScheduleDateRoleCreate) -> dict:
     data = schedule_date_role.model_dump(exclude_none=True)
-    query, values = build_insert_query("schedule_date_roles", data)
+    query, values = build_insert_query("schedule_date_roles", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
 async def insert_user_availability(conn: Connection, user_availability: UserAvailabilityCreate) -> dict:
     data = user_availability.model_dump(exclude_none=True)
-    query, values = build_insert_query("user_availability", data)
+    query, values = build_insert_query("user_availability", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
+
+async def insert_user_availabilities(
+    conn: Connection, user_availabilities: list[UserAvailabilityCreate]
+) -> list[dict]:
+    # Convert all models to dicts for insertion
+    data_list = [ua.model_dump(exclude_none=True) for ua in user_availabilities]
+    query, values = build_insert_query("user_availability", data_list)
+    rows = await conn.fetch(query, *values)
+    return [dict(row) for row in rows]
 
 # =============================
 # UPDATES
@@ -234,9 +243,9 @@ async def update_schedule_date_role(conn: Connection, schedule_date_role_id: str
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
-async def update_user_availability(conn: Connection, user_availability_id: str, payload: UserAvailabilityUpdate) -> dict | None:
+async def update_user_availability(conn: Connection, user_id: UUID, date: datetime.date, payload: UserAvailabilityUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("user_availability", {"user_availability_id": user_availability_id}, data)
+    query, values = build_update_query("user_availability", {"user_id": user_id, "date": date}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)

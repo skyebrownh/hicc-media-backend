@@ -174,7 +174,7 @@ class UserRoleCreate(UserRoleBase):
 
 class UserRoleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    proficiency_level_id: UUID
+    proficiency_level_id: UUID | None = None
 
 class UserRoleOut(UserRoleBase):
     user_role_id: UUID
@@ -303,7 +303,7 @@ class UserAvailabilityCreate(UserAvailabilityBase):
 
 class UserAvailabilityUpdate(UserAvailabilityBase):
     model_config = ConfigDict(extra="forbid")
-    date: datetime.date
+    date: datetime.date | None = None
 
 class UserAvailabilityOut(UserAvailabilityBase):
     user_availability_id: UUID
