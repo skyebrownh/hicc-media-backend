@@ -177,11 +177,11 @@ async def test_insert_user_date(async_client, test_db_pool):
 
     # 9. Test foreign key violation (user doesn't exist)
     response9 = await async_client.post("/user_dates", json=bad_payload_8)
-    assert response9.status_code == status.HTTP_400_BAD_REQUEST
+    assert response9.status_code == status.HTTP_404_NOT_FOUND
 
     # 10. Test foreign key violation (date doesn't exist)
     response10 = await async_client.post("/user_dates", json=bad_payload_9)
-    assert response10.status_code == status.HTTP_400_BAD_REQUEST
+    assert response10.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
 async def test_insert_user_dates_bulk(async_client, test_db_pool):
@@ -294,7 +294,7 @@ async def test_update_user_date(async_client, test_db_pool):
 
     # 7. Test foreign key violation (date doesn't exist)
     response7 = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_2}", json=bad_payload_3)
-    assert response7.status_code == status.HTTP_400_BAD_REQUEST
+    assert response7.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
 async def test_delete_user_date(async_client, test_db_pool):
