@@ -188,3 +188,21 @@ def test_build_insert_query():
         "Jane", "jane@example.com", "555-5678",
         "Alice", "alice@example.com", "555-8888"
     ]
+
+    # Test ValueError when payloads have different columns (missing column)
+    payload_missing_col = [
+        {"name": "Jane", "email": "jane@example.com", "phone": "555-5678"},
+        {"name": "Alice", "email": "alice@example.com"}  # Missing "phone"
+    ]
+    with pytest.raises(ValueError) as exc_info:
+        build_insert_query(table, payload_missing_col)
+    assert "All payloads must have the same set of columns for bulk insert" in str(exc_info.value)
+
+    # Test ValueError when payloads have different columns (completely different set)
+    payload_different_cols = [
+        {"name": "Jane", "email": "jane@example.com"},
+        {"phone": "555-8888", "address": "123 Main St"}  # Completely different columns
+    ]
+    with pytest.raises(ValueError) as exc_info:
+        build_insert_query(table, payload_different_cols)
+    assert "All payloads must have the same set of columns for bulk insert" in str(exc_info.value)

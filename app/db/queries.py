@@ -167,10 +167,11 @@ async def insert_all_roles_for_user(conn: Connection, user_id: UUID) -> list[dic
     media_roles = await fetch_all(conn, table="media_roles")
     
     # Fetch the default 'untrained' proficiency level
-    proficiency_level = await fetch_one(conn, table="proficiency_levels", filters={"proficiency_level_code": "untrained"})
-    if not proficiency_level:
+    # Use fetch_all instead of fetch_one to avoid 404 HTTPException, so we can raise ValueError instead
+    proficiency_levels = await fetch_all(conn, table="proficiency_levels", filters={"proficiency_level_code": "untrained"})
+    if not proficiency_levels:
         raise ValueError("Default proficiency level 'untrained' not found")
-    untrained_proficiency_id = proficiency_level["proficiency_level_id"]
+    untrained_proficiency_id = proficiency_levels[0]["proficiency_level_id"]
     
     # Create data dictionaries for each media role
     user_roles_data = []
@@ -200,10 +201,11 @@ async def insert_all_users_for_role(conn: Connection, role_id: UUID) -> list[dic
     users = await fetch_all(conn, table="users")
     
     # Fetch the default 'untrained' proficiency level
-    proficiency_level = await fetch_one(conn, table="proficiency_levels", filters={"proficiency_level_code": "untrained"})
-    if not proficiency_level:
+    # Use fetch_all instead of fetch_one to avoid 404 HTTPException, so we can raise ValueError instead
+    proficiency_levels = await fetch_all(conn, table="proficiency_levels", filters={"proficiency_level_code": "untrained"})
+    if not proficiency_levels:
         raise ValueError("Default proficiency level 'untrained' not found")
-    untrained_proficiency_id = proficiency_level["proficiency_level_id"]
+    untrained_proficiency_id = proficiency_levels[0]["proficiency_level_id"]
     
     # Create data dictionaries for each user
     user_roles_data = []

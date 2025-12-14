@@ -1,5 +1,7 @@
 import pytest
+from uuid import UUID
 from fastapi import status
+from app.db.queries import insert_all_roles_for_user, insert_all_users_for_role
 
 # Test data constants
 USER_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
@@ -295,6 +297,31 @@ async def test_insert_user_role(async_client, test_db_pool):
     assert response10.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
+async def test_insert_all_roles_for_user_missing_untrained(async_client, test_db_pool):
+    """Test inserting all roles for a user when 'untrained' proficiency level doesn't exist"""
+    # Seed users and media roles, but NOT the 'untrained' proficiency level
+    async with test_db_pool.acquire() as conn:
+        await conn.execute(
+            f"""
+            INSERT INTO users (user_id, first_name, last_name, phone)
+            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101');
+            """
+        )
+        await conn.execute(
+            f"""
+            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code, is_active)
+            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter', true),
+                   ('{ROLE_ID_2}', 'Sound', 20, 'sound', true);
+            """
+        )
+        # Intentionally NOT creating the 'untrained' proficiency level
+
+        # Test that inserting all roles for a user raises ValueError when 'untrained' is missing
+        with pytest.raises(ValueError) as exc_info:
+            await insert_all_roles_for_user(conn, user_id=UUID(USER_ID_1))
+        assert "Default proficiency level 'untrained' not found" in str(exc_info.value)
+
+@pytest.mark.asyncio
 async def test_insert_all_roles_for_user(async_client, test_db_pool):
     # Seed users, media roles, and proficiency levels data directly into test DB
     async with test_db_pool.acquire() as conn:
@@ -413,6 +440,31 @@ async def test_insert_all_users_for_role(async_client, test_db_pool):
     # 4. Test role doesn't exist (foreign key violation)
     response4 = await async_client.post(f"/roles/00000000-0000-0000-0000-000000000000/users")
     assert response4.status_code == status.HTTP_404_NOT_FOUND
+
+@pytest.mark.asyncio
+async def test_insert_all_users_for_role_missing_untrained(async_client, test_db_pool):
+    """Test inserting all users for a role when 'untrained' proficiency level doesn't exist"""
+    # Seed users and media roles, but NOT the 'untrained' proficiency level
+    async with test_db_pool.acquire() as conn:
+        await conn.execute(
+            f"""
+            INSERT INTO users (user_id, first_name, last_name, phone, is_active)
+            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101', true),
+                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102', true);
+            """
+        )
+        await conn.execute(
+            f"""
+            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
+            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter');
+            """
+        )
+        # Intentionally NOT creating the 'untrained' proficiency level
+
+        # Test that inserting all users for a role raises ValueError when 'untrained' is missing
+        with pytest.raises(ValueError) as exc_info:
+            await insert_all_users_for_role(conn, role_id=UUID(ROLE_ID_1))
+        assert "Default proficiency level 'untrained' not found" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_update_user_role(async_client, test_db_pool):
