@@ -8,8 +8,9 @@ import pytest_asyncio
 import asyncpg
 from pathlib import Path
 from httpx import AsyncClient, ASGITransport
+from fastapi import Request
 from app.main import app
-from app.db.database import get_db_pool
+from app.db.database import get_db_connection
 from app.settings import settings
 
 # =============================
@@ -65,12 +66,30 @@ async def test_db_pool(ensure_schema):
 # Fixture to provide an async HTTP client for testing
 @pytest_asyncio.fixture(scope="function")
 async def async_client(test_db_pool):
+    """
+    Create an async HTTP client for testing with database connection override.
+    
+    Sets up the app state with the test database pool and overrides the
+    get_db_connection dependency to use the test pool.
+    """
     headers = {"x-api-key": settings.fast_api_key}
-    app.dependency_overrides[get_db_pool] = lambda: test_db_pool
+    
+    # Set app state with test pool (needed for health endpoint and get_db_connection)
+    app.state.db_pool = test_db_pool
+    
+    # Override the get_db_connection dependency to use test pool
+    async def get_test_db_connection(request: Request):
+        async with test_db_pool.acquire() as conn:
+            yield conn
+    
+    app.dependency_overrides[get_db_connection] = get_test_db_connection
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as client:
         yield client
+    
+    # Clean up dependency override after test
+    app.dependency_overrides.clear()
 
 
 # Truncate tables before each test to keep state isolated without recreating schema/pool

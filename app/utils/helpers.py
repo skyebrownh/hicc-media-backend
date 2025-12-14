@@ -2,15 +2,62 @@ import datetime
 from asyncpg import Connection, Record, exceptions
 from fastapi import HTTPException
 
-# Return the primary key column name for a given table
+# Whitelist of valid table names to prevent SQL injection
+VALID_TABLES = {
+    "dates",
+    "media_roles",
+    "proficiency_levels",
+    "schedule_date_roles",
+    "schedule_date_types",
+    "schedule_dates",
+    "schedules",
+    "team_users",
+    "teams",
+    "user_dates",
+    "user_roles",
+    "users",
+}
+
+def validate_table_name(table: str) -> None:
+    """
+    Validate that a table name is in the whitelist to prevent SQL injection.
+    
+    Args:
+        table: The table name to validate
+        
+    Raises:
+        ValueError: If the table name is not in the whitelist
+    """
+    if table not in VALID_TABLES:
+        raise ValueError(f"Invalid table name: {table}. Must be one of {sorted(VALID_TABLES)}")
+
 def table_id(table: str) -> str:
+    """
+    Return the primary key column name for a given table.
+    
+    Args:
+        table: Table name
+        
+    Returns:
+        Primary key column name (e.g., "user_id" for "users", "date" for "dates")
+    """
     if table == "dates":
         return "date"
 
     return f"{table[0:len(table) - 1] if table.endswith("s") else table}_id"
 
-# Return a dict of detailed date information
+
 def get_date_details(date: datetime.date) -> dict:
+    """
+    Calculate and return detailed date information.
+    
+    Args:
+        date: Date object to analyze
+        
+    Returns:
+        Dictionary containing calendar year, month, day, weekday, quarter,
+        week number, and various boolean flags (is_weekend, is_weekday, etc.)
+    """
     return {
         "calendar_year": date.year,
         "calendar_month": date.month,
@@ -39,13 +86,17 @@ def build_update_query(
     Build a parameterized SQL update query for arbitrary number of ID columns in the WHERE clause.
 
     Args:
-        table: table name
+        table: table name (must be in VALID_TABLES whitelist)
         id_columns: dict mapping id column name(s) to their value(s)
         payload: data to update
 
     Returns:
         (query, values)
+        
+    Raises:
+        ValueError: If table name is not in the whitelist
     """
+    validate_table_name(table)
     raise_bad_request_empty_payload(payload)
 
     updates = []
@@ -76,6 +127,20 @@ def build_update_query(
 
 # Helper function to build dynamic insert queries for multiple payloads
 def build_insert_query(table: str, payloads: list[dict]) -> tuple[str, list]:
+    """
+    Build a parameterized SQL insert query for multiple rows.
+    
+    Args:
+        table: table name (must be in VALID_TABLES whitelist)
+        payloads: list of dictionaries containing data to insert
+        
+    Returns:
+        (query, values)
+        
+    Raises:
+        ValueError: If table name is not in the whitelist or payloads are invalid
+    """
+    validate_table_name(table)
     if not isinstance(payloads, list) or not payloads or not all(isinstance(p, dict) and p for p in payloads):
         raise_bad_request_empty_payload(payloads)
 
@@ -102,18 +167,61 @@ def build_insert_query(table: str, payloads: list[dict]) -> tuple[str, list]:
 
 # Helper function to build WHERE clause from filters
 def build_where_clause(table: str, filters: dict[str, str | datetime.date]) -> tuple[str, list]:
-        if not filters:
-            return "", []
-        where_clauses = [f"{k} = ${i+1}" for i, k in enumerate(filters.keys())]
-        clause = f" WHERE {' AND '.join(where_clauses)}"
-        return clause, list(filters.values())
+    """
+    Build a WHERE clause from filter dictionary.
+    
+    Args:
+        table: table name (must be in VALID_TABLES whitelist)
+        filters: dictionary of column names to filter values
+        
+    Returns:
+        (where_clause_string, list_of_values)
+        
+    Raises:
+        ValueError: If table name is not in the whitelist
+    """
+    validate_table_name(table)
+    if not filters:
+        return "", []
+    where_clauses = [f"{k} = ${i+1}" for i, k in enumerate(filters.keys())]
+    clause = f" WHERE {' AND '.join(where_clauses)}"
+    return clause, list(filters.values())
 
-# Helper functions to fetch record or raise 404
 async def fetch_many(conn: Connection, query: str, params: list) -> Record:
+    """
+    Execute a query and return all matching rows.
+    
+    Args:
+        conn: Database connection
+        query: SQL query string
+        params: Query parameters
+        
+    Returns:
+        List of Record objects (empty list if no rows found)
+        
+    Note:
+        Does not raise 404 if no rows found; returns empty list instead
+    """
     return await conn.fetch(query, *params)
-    # Do not raise 404 if no rows found; return 200 OK with empty list instead
+
 
 async def fetch_single_row(conn: Connection, query: str, params: list) -> Record:
+    """
+    Execute a query and return a single row, or raise HTTPException if not found.
+    
+    Args:
+        conn: Database connection
+        query: SQL query string
+        params: Query parameters
+        
+    Returns:
+        Single Record object
+        
+    Raises:
+        HTTPException(409): If unique constraint violation occurs
+        HTTPException(404): If foreign key constraint violation occurs
+        HTTPException(404): If no row is found
+    """
     try:
         row = await conn.fetchrow(query, *params)
     except exceptions.UniqueViolationError:
@@ -131,7 +239,15 @@ async def fetch_single_row(conn: Connection, query: str, params: list) -> Record
         raise HTTPException(status_code=404, detail="Record not found")
     return row
 
-# Helper to check payload and raise Bad Request if empty
 def raise_bad_request_empty_payload(payload):
+    """
+    Validate that a payload is not empty, raising HTTPException if it is.
+    
+    Args:
+        payload: The payload to validate (dict, list, or other truthy value)
+        
+    Raises:
+        HTTPException(400): If payload is empty or falsy
+    """
     if not payload:
         raise HTTPException(status_code=400, detail="Payload cannot be empty")
