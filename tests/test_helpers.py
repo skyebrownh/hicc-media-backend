@@ -147,30 +147,44 @@ def test_build_insert_query():
 
     # Test empty payload triggers HTTPException (bad request)
     with pytest.raises(HTTPException) as exc_info:
-        build_insert_query(table, {})
+        build_insert_query(table, [])
     assert exc_info.value.status_code == 400
     assert "Payload cannot be empty" in str(exc_info.value.detail)
 
-    # Test single-field payload
-    payload1 = {"name": "Jane"}
+    # Test single-field payload (single row)
+    payload1 = [{"name": "Jane"}]
     query1, values1 = build_insert_query(table, payload1)
     assert "INSERT INTO users" in query1
     assert "(name)" in query1
     assert "VALUES ($1)" in query1
     assert values1 == ["Jane"]
 
-    # Test two-field payload
-    payload2 = {"name": "Jane", "email": "jane@example.com"}
+    # Test two-field payload (single row)
+    payload2 = [{"name": "Jane", "email": "jane@example.com"}]
     query2, values2 = build_insert_query(table, payload2)
     assert "INSERT INTO users" in query2
     assert "(name, email)" in query2
     assert "VALUES ($1, $2)" in query2
     assert values2 == ["Jane", "jane@example.com"]
 
-    # Test three-field payload
-    payload3 = {"name": "Jane", "email": "jane@example.com", "phone": "555-5678"}
+    # Test three-field payload (single row)
+    payload3 = [{"name": "Jane", "email": "jane@example.com", "phone": "555-5678"}]
     query3, values3 = build_insert_query(table, payload3)
     assert "INSERT INTO users" in query3
     assert "(name, email, phone)" in query3
     assert "VALUES ($1, $2, $3)" in query3
     assert values3 == ["Jane", "jane@example.com", "555-5678"]
+
+    # Test multiple rows insert (bulk insert)
+    payload_bulk = [
+        {"name": "Jane", "email": "jane@example.com", "phone": "555-5678"},
+        {"name": "Alice", "email": "alice@example.com", "phone": "555-8888"}
+    ]
+    query_bulk, values_bulk = build_insert_query(table, payload_bulk)
+    assert "INSERT INTO users" in query_bulk
+    assert "(name, email, phone)" in query_bulk
+    assert "VALUES ($1, $2, $3), ($4, $5, $6)" in query_bulk
+    assert values_bulk == [
+        "Jane", "jane@example.com", "555-5678",
+        "Alice", "alice@example.com", "555-8888"
+    ]
