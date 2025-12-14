@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.seed import insert_dates
+from tests.utils.helpers import assert_empty_list_200
 
 # Test data constants
 SCHEDULE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
@@ -21,10 +22,7 @@ SCHEDULE_DATE_ROLE_ID_2 = "a9a8a7a6-a5a4-4901-c234-d5e6f7a8b901"
 async def test_get_all_schedule_date_roles(async_client, test_db_pool):
     # 1. Test when no schedule date roles exist
     response1 = await async_client.get("/schedule_date_roles")
-    assert response1.status_code == status.HTTP_200_OK
-    assert isinstance(response1.json(), list)
-    assert len(response1.json()) == 0
-    assert response1.json() == []
+    assert_empty_list_200(response1)
 
     # Seed data directly into test DB
     async with test_db_pool.acquire() as conn:

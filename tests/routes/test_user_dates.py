@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.seed import insert_dates
+from tests.utils.helpers import assert_empty_list_200
 
 # Test data constants
 USER_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
@@ -14,10 +15,7 @@ DATE_3 = "2025-02-01"
 async def test_get_all_user_dates(async_client, test_db_pool):
     # 1. Test when no user dates exist
     response1 = await async_client.get("/user_dates")
-    assert response1.status_code == status.HTTP_200_OK
-    assert isinstance(response1.json(), list)
-    assert len(response1.json()) == 0
-    assert response1.json() == []
+    assert_empty_list_200(response1)
 
     # Seed users and dates data directly into test DB
     async with test_db_pool.acquire() as conn:

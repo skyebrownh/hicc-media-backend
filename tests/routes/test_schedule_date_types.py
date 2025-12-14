@@ -1,19 +1,22 @@
 import pytest
 from fastapi import status
+from tests.utils.helpers import assert_empty_list_200
+
+SCHEDULE_DATE_TYPE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
+SCHEDULE_DATE_TYPE_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
+SCHEDULE_DATE_TYPE_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
+SCHEDULE_DATE_TYPE_ID_4 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
 
 @pytest.mark.asyncio
 async def test_get_all_schedule_date_types(async_client, test_db_pool):
     # 1. Test when no schedule date types exist
     response1 = await async_client.get("/schedule_date_types")
-    assert response1.status_code == status.HTTP_200_OK
-    assert isinstance(response1.json(), list)
-    assert len(response1.json()) == 0
-    assert response1.json() == []
+    assert_empty_list_200(response1)
 
     # Seed schedule date types data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_date_types (schedule_date_type_name, schedule_date_type_code)
             VALUES ('Type 1', 'type_1'),
                    ('Type 2', 'type_2'),
@@ -35,22 +38,22 @@ async def test_get_all_schedule_date_types(async_client, test_db_pool):
 @pytest.mark.asyncio
 async def test_get_single_schedule_date_type(async_client, test_db_pool):
     # 1. Test when no schedule date types exist
-    response1 = await async_client.get("/schedule_date_types/58a6929c-f40d-4363-984c-4c221f41d4f0")
+    response1 = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_1}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 
     # Seed schedule date types data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', 'Type 1', 'type_1'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', 'Type 2', 'type_2'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', 'Type 3', 'type_3');
+            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Type 1', 'type_1'),
+                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Type 2', 'type_2'),
+                   ('{SCHEDULE_DATE_TYPE_ID_3}', 'Type 3', 'type_3');
             """
         )
 
     # 2. Test when schedule date types exist
-    response2 = await async_client.get("/schedule_date_types/fb4d832f-6a45-473e-b9e2-c0495938d005")
+    response2 = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
     assert response2.status_code == status.HTTP_200_OK
     response2_json = response2.json()
     assert isinstance(response2_json, dict)
@@ -80,9 +83,9 @@ async def test_insert_schedule_date_type(async_client, test_db_pool):
     # Seed another schedule date type directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('f8d3e340-9563-4de1-9146-675a8436242e', 'Another Type', 'another_type');
+            VALUES ('{SCHEDULE_DATE_TYPE_ID_4}', 'Another Type', 'another_type');
             """
         )
 
@@ -91,7 +94,7 @@ async def test_insert_schedule_date_type(async_client, test_db_pool):
         "schedule_date_type_code": "new_type"  # Duplicate schedule_date_type_code
     }
     bad_payload_5 = {
-        "schedule_date_type_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # schedule_date_type_id not allowed in payload
+        "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4,  # schedule_date_type_id not allowed in payload
         "schedule_date_type_name": "Duplicate ID Type",
         "schedule_date_type_code": "duplicate_id_type"
     }
@@ -131,11 +134,11 @@ async def test_update_schedule_date_type(async_client, test_db_pool):
     # Seed schedule date type data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', 'Type 1', 'type_1'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', 'Type 2', 'type_2'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', 'Type 3', 'type_3');
+            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Type 1', 'type_1'),
+                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Type 2', 'type_2'),
+                   ('{SCHEDULE_DATE_TYPE_ID_3}', 'Type 3', 'type_3');
             """
         )
 
@@ -163,19 +166,19 @@ async def test_update_schedule_date_type(async_client, test_db_pool):
     assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 3. Test empty payload
-    response3 = await async_client.patch("/schedule_date_types/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_1)
+    response3 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", json=bad_payload_1)
     assert response3.status_code == status.HTTP_400_BAD_REQUEST
 
     # 4. Test invalid data types
-    response4 = await async_client.patch("/schedule_date_types/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_2)
+    response4 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", json=bad_payload_2)
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 5. Test non-updatable field
-    response5 = await async_client.patch("/schedule_date_types/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_3)
+    response5 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", json=bad_payload_3)
     assert response5.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 6. Test valid payload to update full record
-    response6 = await async_client.patch("/schedule_date_types/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=good_payload_full)
+    response6 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", json=good_payload_full)
     assert response6.status_code == status.HTTP_200_OK
     response6_json = response6.json()
     assert response6_json["schedule_date_type_name"] == "Updated Type Name"
@@ -183,7 +186,7 @@ async def test_update_schedule_date_type(async_client, test_db_pool):
     assert response6_json["is_active"] is False
 
     # 7. Test valid payload to update partial record (is_active only)
-    response7 = await async_client.patch("/schedule_date_types/fb4d832f-6a45-473e-b9e2-c0495938d005", json=good_payload_partial_1)
+    response7 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}", json=good_payload_partial_1)
     assert response7.status_code == status.HTTP_200_OK
     response7_json = response7.json()
     assert response7_json["schedule_date_type_name"] == "Type 2"
@@ -191,7 +194,7 @@ async def test_update_schedule_date_type(async_client, test_db_pool):
     assert response7_json["is_active"] is False 
 
     # 8. Test valid payload to update partial record (schedule_date_type_name only)
-    response8 = await async_client.patch("/schedule_date_types/58a6929c-f40d-4363-984c-4c221f41d4f0", json=good_payload_partial_2)
+    response8 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_1}", json=good_payload_partial_2)
     assert response8.status_code == status.HTTP_200_OK
     response8_json = response8.json()
     assert response8_json["schedule_date_type_name"] == "Partially Updated Type"
@@ -203,11 +206,11 @@ async def test_delete_schedule_date_type(async_client, test_db_pool):
     # Seed schedule date types data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', 'Type 1', 'type_1'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', 'Type 2', 'type_2'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', 'Type 3', 'type_3');
+            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Type 1', 'type_1'),
+                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Type 2', 'type_2'),
+                   ('{SCHEDULE_DATE_TYPE_ID_3}', 'Type 3', 'type_3');
             """
         )
 
@@ -220,7 +223,7 @@ async def test_delete_schedule_date_type(async_client, test_db_pool):
     assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 3. Test when schedule date types exist
-    response3 = await async_client.delete("/schedule_date_types/fb4d832f-6a45-473e-b9e2-c0495938d005")
+    response3 = await async_client.delete(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
     assert response3.status_code == status.HTTP_200_OK
     response3_json = response3.json()
     assert isinstance(response3_json, dict)

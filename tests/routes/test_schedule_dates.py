@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.seed import insert_dates
+from tests.utils.helpers import assert_empty_list_200
 
 # Test data constants
 SCHEDULE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
@@ -9,7 +10,7 @@ DATE_1 = "2025-01-15"
 DATE_2 = "2025-01-20"
 DATE_3 = "2025-02-01"
 SCHEDULE_DATE_TYPE_ID_1 = "d0ececff-df86-404a-b2b6-8468b3b0aa33"
-SCHEDULE_DATE_TYPE_ID_2 = "e1fdfd00-e097-515b-c3c7-9579c4c1bb44"
+SCHEDULE_DATE_TYPE_ID_2 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
 TEAM_ID_1 = "11a2b3c4-d5e6-4789-a012-b3c4d5e6f789"
 SCHEDULE_DATE_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
 SCHEDULE_DATE_ID_2 = "b2c3d4e5-f6a7-4890-b123-c4d5e6f7a890"
@@ -23,10 +24,7 @@ MEDIA_ROLE_ID_2 = "22b3c4d5-e6f7-4890-b123-c4d5e6f7a890"
 async def test_get_all_schedule_dates(async_client, test_db_pool):
     # 1. Test when no schedule dates exist
     response1 = await async_client.get("/schedule_dates")
-    assert response1.status_code == status.HTTP_200_OK
-    assert isinstance(response1.json(), list)
-    assert len(response1.json()) == 0
-    assert response1.json() == []
+    assert_empty_list_200(response1)
 
     # Seed schedules, dates, schedule_date_types, and schedule_dates data directly into test DB
     async with test_db_pool.acquire() as conn:
@@ -162,9 +160,7 @@ async def test_get_all_schedule_date_roles_by_schedule_date(async_client, test_d
 
     # 2. Test when schedule date has no roles
     response2 = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_2}/roles")
-    assert response2.status_code == status.HTTP_200_OK
-    assert isinstance(response2.json(), list)
-    assert len(response2.json()) == 0
+    assert_empty_list_200(response2)
 
     # 3. Test invalid UUID format
     response3 = await async_client.get("/schedule_dates/invalid-uuid-format/roles")
@@ -201,7 +197,8 @@ async def test_get_all_user_dates_by_schedule_date(async_client, test_db_pool):
         await conn.execute(
             f"""
             INSERT INTO schedule_dates (schedule_date_id, schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_DATE_ID_3}', '{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}');
+            VALUES ('{SCHEDULE_DATE_ID_1}', '{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}'),
+                   ('{SCHEDULE_DATE_ID_2}', '{SCHEDULE_ID_1}', '{DATE_2}', '{SCHEDULE_DATE_TYPE_ID_1}');
             """
         )
         await conn.execute(
@@ -213,12 +210,17 @@ async def test_get_all_user_dates_by_schedule_date(async_client, test_db_pool):
         )
 
     # 1. Test when schedule date has user dates
-    response1 = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_3}/user_dates")
+    response1 = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_1}/user_dates")
     assert response1.status_code == status.HTTP_200_OK
     response1_json = response1.json()
     assert isinstance(response1_json, list)
     assert len(response1_json) == 2
-    assert all(ud["date"] == DATE_1 for ud in response1_json)
+    assert response1_json[0]["date"] == DATE_1
+    assert response1_json[1]["date"] == DATE_1
+
+    # 2. Test when schedule date has no user dates
+    response2 = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_2}/user_dates")
+    assert_empty_list_200(response2)
 
     # 2. Test invalid UUID format
     response2 = await async_client.get("/schedule_dates/invalid-uuid-format/user_dates")
