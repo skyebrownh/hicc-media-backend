@@ -22,7 +22,7 @@ from app.models import (
     ScheduleCreate, ScheduleUpdate,
     ScheduleDateCreate, ScheduleDateUpdate,
     ScheduleDateRoleCreate, ScheduleDateRoleUpdate,
-    UserAvailabilityCreate,UserAvailabilityUpdate
+    UserDateCreate, UserDateUpdate
 )
 
 # =============================
@@ -148,18 +148,18 @@ async def insert_schedule_date_role(conn: Connection, schedule_date_role: Schedu
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
-async def insert_user_availability(conn: Connection, user_availability: UserAvailabilityCreate) -> dict:
-    data = user_availability.model_dump(exclude_none=True)
-    query, values = build_insert_query("user_availability", [data])
+async def insert_user_date(conn: Connection, user_date: UserDateCreate) -> dict:
+    data = user_date.model_dump(exclude_none=True)
+    query, values = build_insert_query("user_dates", [data])
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
-async def insert_user_availabilities(
-    conn: Connection, user_availabilities: list[UserAvailabilityCreate]
+async def insert_user_dates(
+    conn: Connection, user_dates: list[UserDateCreate]
 ) -> list[dict]:
     # Convert all models to dicts for insertion
-    data_list = [ua.model_dump(exclude_none=True) for ua in user_availabilities]
-    query, values = build_insert_query("user_availability", data_list)
+    data_list = [ud.model_dump(exclude_none=True) for ud in user_dates]
+    query, values = build_insert_query("user_dates", data_list)
     rows = await conn.fetch(query, *values)
     return [dict(row) for row in rows]
 
@@ -243,9 +243,9 @@ async def update_schedule_date_role(conn: Connection, schedule_date_role_id: str
     row = await fetch_single_row(conn, query, values)
     return dict(row)
 
-async def update_user_availability(conn: Connection, user_id: UUID, date: datetime.date, payload: UserAvailabilityUpdate) -> dict | None:
+async def update_user_date(conn: Connection, user_id: UUID, date: datetime.date, payload: UserDateUpdate) -> dict | None:
     data = payload.model_dump(exclude_none=True, exclude_unset=True)
     raise_bad_request_empty_payload(data)
-    query, values = build_update_query("user_availability", {"user_id": user_id, "date": date}, data)
+    query, values = build_update_query("user_dates", {"user_id": user_id, "date": date}, data)
     row = await fetch_single_row(conn, query, values)
     return dict(row)

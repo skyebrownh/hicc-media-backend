@@ -161,12 +161,12 @@ CREATE TABLE test_schema.schedule_date_roles (
 );
 
 --
--- Name: user_availability; Type: TABLE; Schema: test_schema; Owner: -
+-- Name: user_dates; Type: TABLE; Schema: test_schema; Owner: -
 --
 
-CREATE TABLE test_schema.user_availability (
-    user_availability_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE test_schema.user_dates (
+    user_date_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL REFERENCES test_schema.users(user_id),
     date date NOT NULL REFERENCES test_schema.dates(date),
-    CONSTRAINT user_availability_ukey UNIQUE (date, user_id)
+    CONSTRAINT user_dates_ukey UNIQUE (date, user_id)
 );
