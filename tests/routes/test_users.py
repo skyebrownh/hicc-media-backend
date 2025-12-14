@@ -231,7 +231,8 @@ async def test_delete_user(async_client, test_db_pool):
     assert response3.status_code == status.HTTP_200_OK
     response3_json = response3.json()
     assert isinstance(response3_json, dict)
-    assert response3_json["first_name"] == "Bob"
-    assert response3_json["last_name"] == "Jones"
-    assert response3_json["email"] == "bob@example.com"
-    assert response3_json["is_active"] is True
+    assert response3_json["user_id"] == USER_ID_2
+
+    # 4. Verify deletion by trying to get it again
+    response4 = await async_client.get(f"/users/{USER_ID_2}")
+    assert response4.status_code == status.HTTP_404_NOT_FOUND

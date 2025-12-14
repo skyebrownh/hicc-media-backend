@@ -227,6 +227,8 @@ async def test_delete_schedule_date_type(async_client, test_db_pool):
     assert response3.status_code == status.HTTP_200_OK
     response3_json = response3.json()
     assert isinstance(response3_json, dict)
-    assert response3_json["schedule_date_type_name"] == "Type 2"
-    assert response3_json["schedule_date_type_code"] == "type_2"
-    assert response3_json["is_active"] is True
+    assert response3_json["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_2
+
+    # 4. Verify deletion by trying to get it again
+    response4 = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
+    assert response4.status_code == status.HTTP_404_NOT_FOUND
