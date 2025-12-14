@@ -2,6 +2,7 @@ import pytest
 from uuid import UUID
 from fastapi import status
 from app.db.queries import insert_all_roles_for_user, insert_all_users_for_role
+from tests.utils.helpers import assert_empty_list_200
 
 # Test data constants
 USER_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
@@ -63,9 +64,7 @@ async def test_get_roles_for_user(async_client, test_db_pool):
 
     # 2. Test when user has no roles
     response2 = await async_client.get(f"/users/{USER_ID_3}/roles")
-    assert response2.status_code == status.HTTP_200_OK
-    assert isinstance(response2.json(), list)
-    assert len(response2.json()) == 0
+    assert_empty_list_200(response2)
 
     # 3. Test invalid UUID format
     response3 = await async_client.get("/users/invalid-uuid-format/roles")
@@ -120,9 +119,7 @@ async def test_get_users_for_role(async_client, test_db_pool):
 
     # 2. Test when role has no users
     response2 = await async_client.get(f"/roles/{ROLE_ID_3}/users")
-    assert response2.status_code == status.HTTP_200_OK
-    assert isinstance(response2.json(), list)
-    assert len(response2.json()) == 0
+    assert_empty_list_200(response2)
 
     # 3. Test invalid UUID format
     response3 = await async_client.get("/roles/invalid-uuid-format/users")

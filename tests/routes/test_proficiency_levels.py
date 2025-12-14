@@ -1,19 +1,22 @@
 import pytest
 from fastapi import status
+from tests.utils.helpers import assert_empty_list_200
+
+PROFICIENCY_LEVEL_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
+PROFICIENCY_LEVEL_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
+PROFICIENCY_LEVEL_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
+PROFICIENCY_LEVEL_ID_4 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
 
 @pytest.mark.asyncio
 async def test_get_all_proficiency_levels(async_client, test_db_pool):
     # 1. Test when no proficiency levels exist
     response1 = await async_client.get("/proficiency_levels")
-    assert response1.status_code == status.HTTP_200_OK
-    assert isinstance(response1.json(), list)
-    assert len(response1.json()) == 0
-    assert response1.json() == []
+    assert_empty_list_200(response1)
 
     # Seed proficiency levels data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO proficiency_levels (proficiency_level_name, proficiency_level_number, proficiency_level_code)
             VALUES ('Level 1', 1, 'level_1'),
                    ('Level 2', 2, 'level_2'),
@@ -37,22 +40,22 @@ async def test_get_all_proficiency_levels(async_client, test_db_pool):
 @pytest.mark.asyncio
 async def test_get_single_proficiency_level(async_client, test_db_pool):
     # 1. Test when no proficiency levels exist
-    response1 = await async_client.get("/proficiency_levels/58a6929c-f40d-4363-984c-4c221f41d4f0")
+    response1 = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_1}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 
     # Seed proficiency levels data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', 'Level 1', 1, 'level_1'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', 'Level 2', 2, 'level_2'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', 'Level 3', 3, 'level_3');
+            VALUES ('{PROFICIENCY_LEVEL_ID_1}', 'Level 1', 1, 'level_1'),
+                   ('{PROFICIENCY_LEVEL_ID_2}', 'Level 2', 2, 'level_2'),
+                   ('{PROFICIENCY_LEVEL_ID_3}', 'Level 3', 3, 'level_3');
             """
         )
 
     # 2. Test when proficiency levels exist
-    response2 = await async_client.get("/proficiency_levels/fb4d832f-6a45-473e-b9e2-c0495938d005")
+    response2 = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_2}")
     assert response2.status_code == status.HTTP_200_OK
     response2_json = response2.json()
     assert isinstance(response2_json, dict)
@@ -84,9 +87,9 @@ async def test_insert_proficiency_level(async_client, test_db_pool):
     # Seed another proficiency level directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('f8d3e340-9563-4de1-9146-675a8436242e', 'Another Level', 5, 'another_level');
+            VALUES ('{PROFICIENCY_LEVEL_ID_4}', 'Another Level', 5, 'another_level');
             """
         )
 
@@ -96,7 +99,7 @@ async def test_insert_proficiency_level(async_client, test_db_pool):
         "proficiency_level_code": "new_level"  # Duplicate proficiency_level_code
     }
     bad_payload_5 = {
-        "proficiency_level_id": "f8d3e340-9563-4de1-9146-675a8436242e",  # proficiency_level_id not allowed in payload
+        "proficiency_level_id": PROFICIENCY_LEVEL_ID_4,  # proficiency_level_id not allowed in payload
         "proficiency_level_name": "Duplicate ID Level",
         "proficiency_level_number": 7,
         "proficiency_level_code": "duplicate_id_level"
@@ -139,11 +142,11 @@ async def test_update_proficiency_level(async_client, test_db_pool):
     # Seed proficiency level data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', 'Level 1', 1, 'level_1'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', 'Level 2', 2, 'level_2'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', 'Level 3', 3, 'level_3');
+            VALUES ('{PROFICIENCY_LEVEL_ID_1}', 'Level 1', 1, 'level_1'),
+                   ('{PROFICIENCY_LEVEL_ID_2}', 'Level 2', 2, 'level_2'),
+                   ('{PROFICIENCY_LEVEL_ID_3}', 'Level 3', 3, 'level_3');
             """
         )
 
@@ -173,19 +176,19 @@ async def test_update_proficiency_level(async_client, test_db_pool):
     assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 3. Test empty payload
-    response3 = await async_client.patch("/proficiency_levels/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_1)
+    response3 = await async_client.patch(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_3}", json=bad_payload_1)
     assert response3.status_code == status.HTTP_400_BAD_REQUEST
 
     # 4. Test invalid data types
-    response4 = await async_client.patch("/proficiency_levels/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_2)
+    response4 = await async_client.patch(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_3}", json=bad_payload_2)
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 5. Test non-updatable field
-    response5 = await async_client.patch("/proficiency_levels/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_3)
+    response5 = await async_client.patch(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_3}", json=bad_payload_3)
     assert response5.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 6. Test valid payload to update full record
-    response6 = await async_client.patch("/proficiency_levels/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=good_payload_full)
+    response6 = await async_client.patch(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_3}", json=good_payload_full)
     assert response6.status_code == status.HTTP_200_OK
     response6_json = response6.json()
     assert response6_json["proficiency_level_name"] == "Updated Level Name"
@@ -195,7 +198,7 @@ async def test_update_proficiency_level(async_client, test_db_pool):
     assert response6_json["is_assignable"] is True
 
     # 7. Test valid payload to update partial record (is_active only)
-    response7 = await async_client.patch("/proficiency_levels/fb4d832f-6a45-473e-b9e2-c0495938d005", json=good_payload_partial_1)
+    response7 = await async_client.patch(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_2}", json=good_payload_partial_1)
     assert response7.status_code == status.HTTP_200_OK
     response7_json = response7.json()
     assert response7_json["proficiency_level_name"] == "Level 2"
@@ -203,7 +206,7 @@ async def test_update_proficiency_level(async_client, test_db_pool):
     assert response7_json["is_active"] is False 
 
     # 8. Test valid payload to update partial record (proficiency_level_name only)
-    response8 = await async_client.patch("/proficiency_levels/58a6929c-f40d-4363-984c-4c221f41d4f0", json=good_payload_partial_2)
+    response8 = await async_client.patch(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_1}", json=good_payload_partial_2)
     assert response8.status_code == status.HTTP_200_OK
     response8_json = response8.json()
     assert response8_json["proficiency_level_name"] == "Partially Updated Level"
@@ -215,11 +218,11 @@ async def test_delete_proficiency_level(async_client, test_db_pool):
     # Seed proficiency levels data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', 'Level 1', 1, 'level_1'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', 'Level 2', 2, 'level_2'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', 'Level 3', 3, 'level_3');
+            VALUES ('{PROFICIENCY_LEVEL_ID_1}', 'Level 1', 1, 'level_1'),
+                   ('{PROFICIENCY_LEVEL_ID_2}', 'Level 2', 2, 'level_2'),
+                   ('{PROFICIENCY_LEVEL_ID_3}', 'Level 3', 3, 'level_3');
             """
         )
 
@@ -232,7 +235,7 @@ async def test_delete_proficiency_level(async_client, test_db_pool):
     assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 3. Test when proficiency levels exist
-    response3 = await async_client.delete("/proficiency_levels/fb4d832f-6a45-473e-b9e2-c0495938d005")
+    response3 = await async_client.delete(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_2}")
     assert response3.status_code == status.HTTP_200_OK
     response3_json = response3.json()
     assert isinstance(response3_json, dict)

@@ -1,15 +1,19 @@
 import pytest
 from fastapi import status
 from tests.seed import insert_dates
+from tests.utils.helpers import assert_empty_list_200
+
+SCHEDULE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
+SCHEDULE_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
+SCHEDULE_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
+SCHEDULE_DATE_TYPE_ID_1 = "d0ececff-df86-404a-b2b6-8468b3b0aa33"
+SCHEDULE_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
 
 @pytest.mark.asyncio
 async def test_get_all_schedules(async_client, test_db_pool):
     # 1. Test when no schedules exist
     response1 = await async_client.get("/schedules")
-    assert response1.status_code == status.HTTP_200_OK
-    assert isinstance(response1.json(), list)
-    assert len(response1.json()) == 0
-    assert response1.json() == []
+    assert_empty_list_200(response1)
 
     # Seed schedules data directly into test DB
     async with test_db_pool.acquire() as conn:
@@ -17,7 +21,7 @@ async def test_get_all_schedules(async_client, test_db_pool):
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
         # Insert schedules
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedules (month_start_date, notes)
             VALUES ('2025-01-01', 'First schedule'),
                    ('2025-02-01', 'Second schedule'),
@@ -44,40 +48,37 @@ async def test_get_all_schedule_dates_for_schedule(async_client, test_db_pool):
         await conn.execute(insert_dates(["2025-05-01", "2025-05-02", "2025-05-03"]))
         # Insert schedules
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-05-01', 'First schedule');
+            VALUES ('{SCHEDULE_ID_1}', '2025-05-01', 'First schedule');
             """
         )
         # Insert schedule_date_type
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('d0ececff-df86-404a-b2b6-8468b3b0aa33', 'Service', 'service');
+            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
             """
         )
 
     # 1. Test when no schedule_dates exist
-    response1 = await async_client.get("/schedules/58a6929c-f40d-4363-984c-4c221f41d4f0/schedule_dates")
-    assert response1.status_code == status.HTTP_200_OK
-    assert isinstance(response1.json(), list)
-    assert len(response1.json()) == 0
-    assert response1.json() == []
+    response1 = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
+    assert_empty_list_200(response1)
 
     # Insert schedule_dates
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_dates (schedule_id, date, schedule_date_type_id)
             VALUES 
-                ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-05-01', 'd0ececff-df86-404a-b2b6-8468b3b0aa33'),
-                ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-05-02', 'd0ececff-df86-404a-b2b6-8468b3b0aa33'),
-                ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-05-03', 'd0ececff-df86-404a-b2b6-8468b3b0aa33');
+                ('{SCHEDULE_ID_1}', '2025-05-01', '{SCHEDULE_DATE_TYPE_ID_1}'),
+                ('{SCHEDULE_ID_1}', '2025-05-02', '{SCHEDULE_DATE_TYPE_ID_1}'),
+                ('{SCHEDULE_ID_1}', '2025-05-03', '{SCHEDULE_DATE_TYPE_ID_1}');
             """
         )
     
     # 2. Test when schedule_dates exist
-    response2 = await async_client.get("/schedules/58a6929c-f40d-4363-984c-4c221f41d4f0/schedule_dates")
+    response2 = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
     assert response2.status_code == status.HTTP_200_OK
     response2_json = response2.json()
     assert isinstance(response2_json, list)
@@ -85,14 +86,14 @@ async def test_get_all_schedule_dates_for_schedule(async_client, test_db_pool):
     assert response2_json[0]["date"] == "2025-05-01"
     assert response2_json[1]["date"] == "2025-05-02"
     assert response2_json[2]["date"] == "2025-05-03"
-    assert response2_json[1]["schedule_date_type_id"] == "d0ececff-df86-404a-b2b6-8468b3b0aa33"
+    assert response2_json[1]["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
     assert response2_json[1]["notes"] is None
     assert response2_json[2]["is_active"] is True
 
 @pytest.mark.asyncio
 async def test_get_single_schedule(async_client, test_db_pool):
     # 1. Test when no schedules exist
-    response1 = await async_client.get("/schedules/58a6929c-f40d-4363-984c-4c221f41d4f0")
+    response1 = await async_client.get(f"/schedules/{SCHEDULE_ID_1}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 
     # Seed schedules data directly into test DB
@@ -101,16 +102,16 @@ async def test_get_single_schedule(async_client, test_db_pool):
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
         # Insert schedules
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-01-01', 'First schedule'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', '2025-02-01', 'Second schedule'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', '2025-03-01', NULL);
+            VALUES ('{SCHEDULE_ID_1}', '2025-01-01', 'First schedule'),
+                   ('{SCHEDULE_ID_2}', '2025-02-01', 'Second schedule'),
+                   ('{SCHEDULE_ID_3}', '2025-03-01', NULL);
             """
         )
 
     # 2. Test when schedules exist
-    response2 = await async_client.get("/schedules/fb4d832f-6a45-473e-b9e2-c0495938d005")
+    response2 = await async_client.get(f"/schedules/{SCHEDULE_ID_2}")
     assert response2.status_code == status.HTTP_200_OK
     response2_json = response2.json()
     assert isinstance(response2_json, dict)
@@ -183,18 +184,18 @@ async def test_update_schedule(async_client, test_db_pool):
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
         # Insert schedules
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-01-01', 'First schedule'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', '2025-02-01', 'Second schedule'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', '2025-03-01', NULL);
+            VALUES ('{SCHEDULE_ID_1}', '2025-01-01', 'First schedule'),
+                   ('{SCHEDULE_ID_2}', '2025-02-01', 'Second schedule'),
+                   ('{SCHEDULE_ID_3}', '2025-03-01', NULL);
             """
         )
 
     # Set up payloads
     bad_payload_1 = {}
     bad_payload_2 = {"month_start_date": 12345}  # month_start_date should be str/date
-    bad_payload_3 = {"schedule_id": "not-allowed"}  # schedule_id is not updatable
+    bad_payload_3 = {"schedule_id": SCHEDULE_ID_1}  # schedule_id is not updatable
     good_payload_full = {
         "notes": "Updated schedule",
         "is_active": False
@@ -215,19 +216,19 @@ async def test_update_schedule(async_client, test_db_pool):
     assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 3. Test empty payload
-    response3 = await async_client.patch("/schedules/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_1)
+    response3 = await async_client.patch(f"/schedules/{SCHEDULE_ID_3}", json=bad_payload_1)
     assert response3.status_code == status.HTTP_400_BAD_REQUEST
 
     # 4. Test invalid data types
-    response4 = await async_client.patch("/schedules/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_2)
+    response4 = await async_client.patch(f"/schedules/{SCHEDULE_ID_3}", json=bad_payload_2)
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 5. Test non-updatable field
-    response5 = await async_client.patch("/schedules/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=bad_payload_3)
+    response5 = await async_client.patch(f"/schedules/{SCHEDULE_ID_3}", json=bad_payload_3)
     assert response5.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 6. Test valid payload to update full record
-    response6 = await async_client.patch("/schedules/c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1", json=good_payload_full)
+    response6 = await async_client.patch(f"/schedules/{SCHEDULE_ID_3}", json=good_payload_full)
     assert response6.status_code == status.HTTP_200_OK
     response6_json = response6.json()
     assert response6_json["month_start_date"] == "2025-03-01"
@@ -235,14 +236,14 @@ async def test_update_schedule(async_client, test_db_pool):
     assert response6_json["is_active"] is False
 
     # 7. Test valid payload to update partial record (is_active only)
-    response7 = await async_client.patch("/schedules/fb4d832f-6a45-473e-b9e2-c0495938d005", json=good_payload_partial_1)
+    response7 = await async_client.patch(f"/schedules/{SCHEDULE_ID_2}", json=good_payload_partial_1)
     assert response7.status_code == status.HTTP_200_OK
     response7_json = response7.json()
     assert response7_json["month_start_date"] == "2025-02-01"
     assert response7_json["is_active"] is False
 
     # 8. Test valid payload to update partial record (notes only)
-    response8 = await async_client.patch("/schedules/58a6929c-f40d-4363-984c-4c221f41d4f0", json=good_payload_partial_2)
+    response8 = await async_client.patch(f"/schedules/{SCHEDULE_ID_1}", json=good_payload_partial_2)
     assert response8.status_code == status.HTTP_200_OK
     response8_json = response8.json()
     assert response8_json["notes"] == "Partially Updated"
@@ -256,11 +257,11 @@ async def test_delete_schedule(async_client, test_db_pool):
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
         # Insert schedules
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-01-01', 'First schedule'),
-                   ('fb4d832f-6a45-473e-b9e2-c0495938d005', '2025-02-01', 'Second schedule'),
-                   ('c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1', '2025-03-01', NULL);
+            VALUES ('{SCHEDULE_ID_1}', '2025-01-01', 'First schedule'),
+                   ('{SCHEDULE_ID_2}', '2025-02-01', 'Second schedule'),
+                   ('{SCHEDULE_ID_3}', '2025-03-01', NULL);
             """
         )
 
@@ -273,7 +274,7 @@ async def test_delete_schedule(async_client, test_db_pool):
     assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 3. Test when schedules exist
-    response3 = await async_client.delete("/schedules/fb4d832f-6a45-473e-b9e2-c0495938d005")
+    response3 = await async_client.delete(f"/schedules/{SCHEDULE_ID_2}")
     assert response3.status_code == status.HTTP_200_OK
     response3_json = response3.json()
     assert isinstance(response3_json, dict)
@@ -289,16 +290,16 @@ async def test_delete_schedule_dates_for_schedule(async_client, test_db_pool):
         await conn.execute(insert_dates(["2025-05-01"]))
         # Insert schedules
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-05-01', 'First schedule');
+            VALUES ('{SCHEDULE_ID_1}', '2025-05-01', 'First schedule');
             """
         )
         # Insert schedule_date_type
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('d0ececff-df86-404a-b2b6-8468b3b0aa33', 'Service', 'service');
+            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
             """
         )
 
@@ -311,7 +312,7 @@ async def test_delete_schedule_dates_for_schedule(async_client, test_db_pool):
     assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # 3. Test when no schedule_dates exist
-    response3 = await async_client.delete("/schedules/58a6929c-f40d-4363-984c-4c221f41d4f0/schedule_dates")
+    response3 = await async_client.delete(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
     assert response3.status_code == status.HTTP_200_OK
     response3_json = response3.json()
     assert isinstance(response3_json, list)
@@ -321,20 +322,20 @@ async def test_delete_schedule_dates_for_schedule(async_client, test_db_pool):
     # Insert schedule_dates
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            """
+            f"""
             INSERT INTO schedule_dates (schedule_id, date, schedule_date_type_id)
             VALUES 
-                ('58a6929c-f40d-4363-984c-4c221f41d4f0', '2025-05-01', 'd0ececff-df86-404a-b2b6-8468b3b0aa33');
+                ('{SCHEDULE_ID_1}', '2025-05-01', '{SCHEDULE_DATE_TYPE_ID_1}');
             """
         )
 
     # 3. Test when schedule_dates exist
-    response4 = await async_client.delete("/schedules/58a6929c-f40d-4363-984c-4c221f41d4f0/schedule_dates")
+    response4 = await async_client.delete(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
     assert response4.status_code == status.HTTP_200_OK
     response4_json = response4.json()
     assert isinstance(response4_json, list)
     assert len(response4_json) == 1
     assert response4_json[0]["date"] == "2025-05-01"
-    assert response4_json[0]["schedule_date_type_id"] == "d0ececff-df86-404a-b2b6-8468b3b0aa33"
+    assert response4_json[0]["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
     assert response4_json[0]["notes"] is None
     assert response4_json[0]["is_active"] is True

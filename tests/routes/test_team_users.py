@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from uuid import UUID
+from tests.utils.helpers import assert_empty_list_200
 
 # Test data constants
 TEAM_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
@@ -13,10 +13,7 @@ USER_ID_3 = "c3d4e5f6-a7b8-4901-c234-d5e6f7a8b901"
 async def test_get_all_team_users(async_client, test_db_pool):
     # 1. Test when no team users exist
     response1 = await async_client.get("/team_users")
-    assert response1.status_code == status.HTTP_200_OK
-    assert isinstance(response1.json(), list)
-    assert len(response1.json()) == 0
-    assert response1.json() == []
+    assert_empty_list_200(response1)
 
     # Seed teams and users data directly into test DB
     async with test_db_pool.acquire() as conn:
@@ -94,10 +91,7 @@ async def test_get_team_users_for_team(async_client, test_db_pool):
 
     # 2. Test when team has no users
     response2 = await async_client.get(f"/teams/{TEAM_ID_2}/users")
-    assert response2.status_code == status.HTTP_200_OK
-    response2_json = response2.json()
-    assert isinstance(response2_json, list)
-    assert len(response2_json) == 0
+    assert_empty_list_200(response2)
 
     # 3. Test invalid UUID format
     response3 = await async_client.get("/teams/invalid-uuid-format/users")
