@@ -3,6 +3,33 @@ import pytest
 from fastapi import HTTPException
 from app.utils.helpers import *
 
+def test_validate_table_name():
+    """Test table name validation against whitelist"""
+    # Test valid table names
+    valid_tables = [
+        "dates", "media_roles", "proficiency_levels", "schedule_date_roles",
+        "schedule_date_types", "schedule_dates", "schedules", "team_users",
+        "teams", "user_dates", "user_roles", "users"
+    ]
+    for table in valid_tables:
+        # Should not raise any exception
+        validate_table_name(table)
+    
+    # Test invalid table names
+    invalid_tables = [
+        "invalid_table",
+        "user",  # singular form not in whitelist
+        "DROP TABLE users;--",  # SQL injection attempt
+        "users; DELETE FROM users;--",  # SQL injection attempt
+        "user_roles_old",  # similar but not exact match
+        "",  # empty string
+    ]
+    for table in invalid_tables:
+        with pytest.raises(ValueError) as exc_info:
+            validate_table_name(table)
+        assert "Invalid table name" in str(exc_info.value)
+        assert table in str(exc_info.value)
+
 def test_table_id():
     assert table_id("users") == "user_id"
     assert table_id("schedule_date_types") == "schedule_date_type_id"
@@ -112,6 +139,11 @@ def test_build_update_query():
     table = "users"
     id_columns = {"user_id": "4843a172-52d9-4378-a766-0d342b4ce095"}
 
+    # Test invalid table name raises ValueError
+    with pytest.raises(ValueError) as exc_info:
+        build_update_query("invalid_table", id_columns, {"name": "John"})
+    assert "Invalid table name" in str(exc_info.value)
+
     # Test empty payload triggers HTTPException (bad request)
     with pytest.raises(HTTPException) as exc_info:
         build_update_query(table, id_columns, {})
@@ -144,6 +176,11 @@ def test_build_update_query():
 
 def test_build_insert_query():
     table = "users"
+
+    # Test invalid table name raises ValueError
+    with pytest.raises(ValueError) as exc_info:
+        build_insert_query("invalid_table", [{"name": "Jane"}])
+    assert "Invalid table name" in str(exc_info.value)
 
     # Test empty payload triggers HTTPException (bad request)
     with pytest.raises(HTTPException) as exc_info:
@@ -206,3 +243,32 @@ def test_build_insert_query():
     with pytest.raises(ValueError) as exc_info:
         build_insert_query(table, payload_different_cols)
     assert "All payloads must have the same set of columns for bulk insert" in str(exc_info.value)
+
+def test_build_where_clause():
+    """Test build_where_clause with table validation"""
+    # Test invalid table name raises ValueError
+    with pytest.raises(ValueError) as exc_info:
+        build_where_clause("invalid_table", {"user_id": "123"})
+    assert "Invalid table name" in str(exc_info.value)
+    
+    # Test valid table name with empty filters
+    table = "users"
+    clause1, values1 = build_where_clause(table, {})
+    assert clause1 == ""
+    assert values1 == []
+    
+    # Test valid table name with single filter
+    clause2, values2 = build_where_clause(table, {"user_id": "123"})
+    assert "WHERE user_id = $1" in clause2
+    assert values2 == ["123"]
+    
+    # Test valid table name with multiple filters
+    clause3, values3 = build_where_clause(table, {"user_id": "123", "is_active": True})
+    assert "WHERE user_id = $1 AND is_active = $2" in clause3
+    assert values3 == ["123", True]
+    
+    # Test with date filter
+    test_date = datetime.date(2024, 1, 1)
+    clause4, values4 = build_where_clause("dates", {"date": test_date})
+    assert "WHERE date = $1" in clause4
+    assert values4 == [test_date]
