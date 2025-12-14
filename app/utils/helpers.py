@@ -123,8 +123,8 @@ async def fetch_single_row(conn: Connection, query: str, params: list) -> Record
         )
     except exceptions.ForeignKeyViolationError:
         raise HTTPException(
-            status_code=400, 
-            detail="Bad Request: Foreign key constraint violation"
+            status_code=404, 
+            detail="Not Found: Foreign key constraint violation"
         )
 
     if not row:

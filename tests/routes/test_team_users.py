@@ -235,7 +235,7 @@ async def test_insert_team_user(async_client, test_db_pool):
 
     # 8. Test foreign key violation (team doesn't exist)
     response8 = await async_client.post("/team_users", json=bad_payload_7)
-    assert response8.status_code == status.HTTP_400_BAD_REQUEST
+    assert response8.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
 async def test_update_team_user(async_client, test_db_pool):

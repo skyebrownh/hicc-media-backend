@@ -164,7 +164,7 @@ async def test_insert_schedule(async_client, test_db_pool):
     
     # 5. Test foreign key constraint violation
     response5 = await async_client.post("/schedules", json=bad_payload_5)
-    assert response5.status_code == status.HTTP_400_BAD_REQUEST
+    assert response5.status_code == status.HTTP_404_NOT_FOUND
 
     # 6. Test valid payload
     response6 = await async_client.post("/schedules", json=good_payload)
