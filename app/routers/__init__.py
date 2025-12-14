@@ -5,7 +5,7 @@ from .proficiency_levels import router as proficiency_level_router
 from .schedule_date_types import router as schedule_date_type_router
 from .dates import router as date_router
 from .schedules import router as schedule_router
-from .user_availability import router as user_availability_router
+from .user_dates import router as user_dates_router
 from .team_users import router as team_user_router
 from .user_roles import router as user_role_router
 from .schedule_dates import router as schedule_date_router
@@ -19,7 +19,7 @@ __all__ = [
     "schedule_date_type_router",
     "date_router",
     "schedule_router",
-    "user_availability_router",
+    "user_dates_router",
     "team_user_router",
     "user_role_router",
     "schedule_date_router",

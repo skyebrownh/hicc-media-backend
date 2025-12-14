@@ -80,7 +80,7 @@ async def truncate_tables(test_db_pool):
         await conn.execute(
             """
             TRUNCATE TABLE
-                user_availability,
+                user_dates,
                 schedule_date_roles,
                 schedule_dates,
                 schedules,

@@ -9,7 +9,7 @@ from .models import DateCreate, DateUpdate, DateOut
 from .models import ScheduleCreate, ScheduleUpdate, ScheduleOut
 from .models import ScheduleDateCreate, ScheduleDateUpdate, ScheduleDateOut
 from .models import ScheduleDateRoleCreate, ScheduleDateRoleUpdate, ScheduleDateRoleOut
-from .models import UserAvailabilityCreate, UserAvailabilityUpdate, UserAvailabilityOut
+from .models import UserDateCreate, UserDateUpdate, UserDateOut
 
 __all__ = [
     "MediaRoleCreate", "MediaRoleUpdate", "MediaRoleOut",
@@ -23,5 +23,5 @@ __all__ = [
     "ScheduleCreate", "ScheduleUpdate", "ScheduleOut",
     "ScheduleDateCreate", "ScheduleDateUpdate", "ScheduleDateOut",
     "ScheduleDateRoleCreate", "ScheduleDateRoleUpdate", "ScheduleDateRoleOut",
-    "UserAvailabilityCreate", "UserAvailabilityUpdate", "UserAvailabilityOut",
+    "UserDateCreate", "UserDateUpdate", "UserDateOut",
 ]
