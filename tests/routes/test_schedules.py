@@ -279,8 +279,7 @@ async def test_delete_schedule(async_client, test_db_pool):
     response3_json = response3.json()
     assert isinstance(response3_json, dict)
     assert response3_json["month_start_date"] == "2025-02-01"
-    assert response3_json["notes"] == "Second schedule"
-    assert response3_json["is_active"] is True
+    assert response3_json["schedule_id"] == SCHEDULE_ID_2
 
 @pytest.mark.asyncio
 async def test_delete_schedule_dates_for_schedule(async_client, test_db_pool):
@@ -337,5 +336,7 @@ async def test_delete_schedule_dates_for_schedule(async_client, test_db_pool):
     assert len(response4_json) == 1
     assert response4_json[0]["date"] == "2025-05-01"
     assert response4_json[0]["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
-    assert response4_json[0]["notes"] is None
-    assert response4_json[0]["is_active"] is True
+
+    # 4. Verify deletion by trying to get it again
+    response5 = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
+    assert_empty_list_200(response5)

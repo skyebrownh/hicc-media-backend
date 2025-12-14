@@ -135,140 +135,185 @@ def test_get_date_details():
         for key, value in expected.items():
             assert details[key] == value, f"{date_str}: {key} expected {value}, got {details[key]}"
 
-def test_build_update_query():
-    table = "users"
+def test_build_update_query_invalid_table():
+    """Test that invalid table name raises ValueError"""
     id_columns = {"user_id": "4843a172-52d9-4378-a766-0d342b4ce095"}
-
-    # Test invalid table name raises ValueError
     with pytest.raises(ValueError) as exc_info:
         build_update_query("invalid_table", id_columns, {"name": "John"})
     assert "Invalid table name" in str(exc_info.value)
 
-    # Test empty payload triggers HTTPException (bad request)
+
+def test_build_update_query_empty_payload():
+    """Test that empty payload triggers HTTPException"""
+    table = "users"
+    id_columns = {"user_id": "4843a172-52d9-4378-a766-0d342b4ce095"}
     with pytest.raises(HTTPException) as exc_info:
         build_update_query(table, id_columns, {})
     assert exc_info.value.status_code == 400
     assert "Payload cannot be empty" in str(exc_info.value.detail)
 
-    # Test single-field payload
-    payload1 = {"name": "John"}
-    query1, values1 = build_update_query(table, id_columns, payload1)
-    assert "UPDATE users" in query1
-    assert "SET name = $1" in query1
-    assert "WHERE user_id = $2" in query1
-    assert values1 == ["John", "4843a172-52d9-4378-a766-0d342b4ce095"]
 
-    # Test two-field payload
-    payload2 = {"name": "John", "email": "john@example.com"}
-    query2, values2 = build_update_query(table, id_columns, payload2)
-    assert "UPDATE users" in query2
-    assert "SET name = $1, email = $2" in query2
-    assert "WHERE user_id = $3" in query2
-    assert values2 == ["John", "john@example.com", "4843a172-52d9-4378-a766-0d342b4ce095"]
-
-    # Test three-field payload
-    payload3 = {"name": "John", "email": "john@example.com", "phone": "555-1234"}
-    query3, values3 = build_update_query(table, id_columns, payload3)
-    assert "UPDATE users" in query3
-    assert "SET name = $1, email = $2, phone = $3" in query3
-    assert "WHERE user_id = $4" in query3
-    assert values3 == ["John", "john@example.com", "555-1234", "4843a172-52d9-4378-a766-0d342b4ce095"]
-
-def test_build_insert_query():
+@pytest.mark.parametrize("payload,expected_set,expected_values", [
+    ({"name": "John"}, "SET name = $1", ["John"]),
+    ({"name": "John", "email": "john@example.com"}, "SET name = $1, email = $2", ["John", "john@example.com"]),
+    ({"name": "John", "email": "john@example.com", "phone": "555-1234"}, 
+     "SET name = $1, email = $2, phone = $3", ["John", "john@example.com", "555-1234"]),
+])
+def test_build_update_query_payloads(payload, expected_set, expected_values):
+    """Test build_update_query with various payload sizes"""
     table = "users"
+    id_columns = {"user_id": "4843a172-52d9-4378-a766-0d342b4ce095"}
+    user_id = "4843a172-52d9-4378-a766-0d342b4ce095"
+    
+    query, values = build_update_query(table, id_columns, payload)
+    
+    assert "UPDATE users" in query
+    assert expected_set in query
+    assert f"WHERE user_id = ${len(payload) + 1}" in query
+    assert values == expected_values + [user_id]
 
-    # Test invalid table name raises ValueError
+def test_build_insert_query_invalid_table():
+    """Test that invalid table name raises ValueError"""
     with pytest.raises(ValueError) as exc_info:
         build_insert_query("invalid_table", [{"name": "Jane"}])
     assert "Invalid table name" in str(exc_info.value)
 
-    # Test empty payload triggers HTTPException (bad request)
+
+def test_build_insert_query_empty_payload():
+    """Test that empty payload triggers HTTPException"""
+    table = "users"
     with pytest.raises(HTTPException) as exc_info:
         build_insert_query(table, [])
     assert exc_info.value.status_code == 400
     assert "Payload cannot be empty" in str(exc_info.value.detail)
 
-    # Test single-field payload (single row)
-    payload1 = [{"name": "Jane"}]
-    query1, values1 = build_insert_query(table, payload1)
-    assert "INSERT INTO users" in query1
-    assert "(name)" in query1
-    assert "VALUES ($1)" in query1
-    assert values1 == ["Jane"]
 
-    # Test two-field payload (single row)
-    payload2 = [{"name": "Jane", "email": "jane@example.com"}]
-    query2, values2 = build_insert_query(table, payload2)
-    assert "INSERT INTO users" in query2
-    assert "(name, email)" in query2
-    assert "VALUES ($1, $2)" in query2
-    assert values2 == ["Jane", "jane@example.com"]
+@pytest.mark.parametrize("payload,expected_columns,expected_values", [
+    ([{"name": "Jane"}], "(name)", ["Jane"]),
+    ([{"name": "Jane", "email": "jane@example.com"}], "(name, email)", ["Jane", "jane@example.com"]),
+    ([{"name": "Jane", "email": "jane@example.com", "phone": "555-5678"}], 
+     "(name, email, phone)", ["Jane", "jane@example.com", "555-5678"]),
+])
+def test_build_insert_query_single_row(payload, expected_columns, expected_values):
+    """Test build_insert_query with single row payloads of various sizes"""
+    table = "users"
+    query, values = build_insert_query(table, payload)
+    
+    assert "INSERT INTO users" in query
+    assert expected_columns in query
+    assert f"VALUES ({', '.join(f'${i+1}' for i in range(len(expected_values)))})" in query
+    assert values == expected_values
 
-    # Test three-field payload (single row)
-    payload3 = [{"name": "Jane", "email": "jane@example.com", "phone": "555-5678"}]
-    query3, values3 = build_insert_query(table, payload3)
-    assert "INSERT INTO users" in query3
-    assert "(name, email, phone)" in query3
-    assert "VALUES ($1, $2, $3)" in query3
-    assert values3 == ["Jane", "jane@example.com", "555-5678"]
 
-    # Test multiple rows insert (bulk insert)
-    payload_bulk = [
+def test_build_insert_query_bulk():
+    """Test bulk insert with multiple rows"""
+    table = "users"
+    payload = [
         {"name": "Jane", "email": "jane@example.com", "phone": "555-5678"},
         {"name": "Alice", "email": "alice@example.com", "phone": "555-8888"}
     ]
-    query_bulk, values_bulk = build_insert_query(table, payload_bulk)
-    assert "INSERT INTO users" in query_bulk
-    assert "(name, email, phone)" in query_bulk
-    assert "VALUES ($1, $2, $3), ($4, $5, $6)" in query_bulk
-    assert values_bulk == [
+    query, values = build_insert_query(table, payload)
+    
+    assert "INSERT INTO users" in query
+    assert "(name, email, phone)" in query
+    assert "VALUES ($1, $2, $3), ($4, $5, $6)" in query
+    assert values == [
         "Jane", "jane@example.com", "555-5678",
         "Alice", "alice@example.com", "555-8888"
     ]
 
-    # Test ValueError when payloads have different columns (missing column)
-    payload_missing_col = [
+
+@pytest.mark.parametrize("payload,description", [
+    ([
         {"name": "Jane", "email": "jane@example.com", "phone": "555-5678"},
         {"name": "Alice", "email": "alice@example.com"}  # Missing "phone"
-    ]
-    with pytest.raises(ValueError) as exc_info:
-        build_insert_query(table, payload_missing_col)
-    assert "All payloads must have the same set of columns for bulk insert" in str(exc_info.value)
-
-    # Test ValueError when payloads have different columns (completely different set)
-    payload_different_cols = [
+    ], "missing column"),
+    ([
         {"name": "Jane", "email": "jane@example.com"},
         {"phone": "555-8888", "address": "123 Main St"}  # Completely different columns
-    ]
+    ], "different columns"),
+])
+def test_build_insert_query_invalid_bulk_payloads(payload, description):
+    """Test that bulk insert with mismatched columns raises ValueError"""
+    table = "users"
     with pytest.raises(ValueError) as exc_info:
-        build_insert_query(table, payload_different_cols)
+        build_insert_query(table, payload)
     assert "All payloads must have the same set of columns for bulk insert" in str(exc_info.value)
 
-def test_build_where_clause():
-    """Test build_where_clause with table validation"""
-    # Test invalid table name raises ValueError
+def test_build_where_clause_invalid_table():
+    """Test that invalid table name raises ValueError"""
     with pytest.raises(ValueError) as exc_info:
         build_where_clause("invalid_table", {"user_id": "123"})
     assert "Invalid table name" in str(exc_info.value)
-    
-    # Test valid table name with empty filters
+
+
+def test_build_where_clause_empty_filters():
+    """Test build_where_clause with empty filters"""
     table = "users"
-    clause1, values1 = build_where_clause(table, {})
-    assert clause1 == ""
-    assert values1 == []
-    
-    # Test valid table name with single filter
-    clause2, values2 = build_where_clause(table, {"user_id": "123"})
-    assert "WHERE user_id = $1" in clause2
-    assert values2 == ["123"]
-    
-    # Test valid table name with multiple filters
-    clause3, values3 = build_where_clause(table, {"user_id": "123", "is_active": True})
-    assert "WHERE user_id = $1 AND is_active = $2" in clause3
-    assert values3 == ["123", True]
-    
-    # Test with date filter
+    clause, values = build_where_clause(table, {})
+    assert clause == ""
+    assert values == []
+
+
+@pytest.mark.parametrize("filters,expected_clause_pattern,expected_values", [
+    ({"user_id": "123"}, "WHERE user_id = $1", ["123"]),
+    ({"user_id": "123", "is_active": True}, "WHERE user_id = $1 AND is_active = $2", ["123", True]),
+    ({"user_id": "123", "is_active": True, "email": "test@example.com"}, 
+     "WHERE user_id = $1 AND is_active = $2 AND email = $3", ["123", True, "test@example.com"]),
+])
+def test_build_where_clause_filters(filters, expected_clause_pattern, expected_values):
+    """Test build_where_clause with various filter combinations"""
+    table = "users"
+    clause, values = build_where_clause(table, filters)
+    assert expected_clause_pattern in clause
+    assert values == expected_values
+
+
+def test_build_where_clause_with_date():
+    """Test build_where_clause with date filter"""
     test_date = datetime.date(2024, 1, 1)
-    clause4, values4 = build_where_clause("dates", {"date": test_date})
-    assert "WHERE date = $1" in clause4
-    assert values4 == [test_date]
+    clause, values = build_where_clause("dates", {"date": test_date})
+    assert "WHERE date = $1" in clause
+    assert values == [test_date]
+
+
+def test_build_where_clause_with_none_value():
+    """Test build_where_clause with None value (should use = operator, not IS NULL)"""
+    table = "users"
+    clause, values = build_where_clause(table, {"email": None})
+    # Current implementation uses = operator even for None
+    assert "WHERE email = $1" in clause
+    assert values == [None]
+
+
+def test_build_where_clause_with_multiple_none_values():
+    """Test build_where_clause with multiple None values"""
+    table = "users"
+    clause, values = build_where_clause(table, {"email": None, "phone": None})
+    assert "WHERE email = $1 AND phone = $2" in clause
+    assert values == [None, None]
+
+
+def test_build_where_clause_with_list_value():
+    """Test build_where_clause with list value (should use = operator, not IN)"""
+    table = "users"
+    clause, values = build_where_clause(table, {"user_id": ["123", "456", "789"]})
+    # Current implementation uses = operator even for lists
+    assert "WHERE user_id = $1" in clause
+    assert values == [["123", "456", "789"]]
+
+
+def test_build_where_clause_with_mixed_types():
+    """Test build_where_clause with mixed value types including None and list"""
+    table = "users"
+    test_date = datetime.date(2024, 1, 1)
+    filters = {
+        "user_id": "123",
+        "email": None,
+        "is_active": True,
+        "created_date": test_date,
+        "tags": ["tag1", "tag2"]
+    }
+    clause, values = build_where_clause(table, filters)
+    assert "WHERE user_id = $1 AND email = $2 AND is_active = $3 AND created_date = $4 AND tags = $5" in clause
+    assert values == ["123", None, True, test_date, ["tag1", "tag2"]]

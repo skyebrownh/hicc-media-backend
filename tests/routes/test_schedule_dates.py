@@ -222,13 +222,13 @@ async def test_get_all_user_dates_by_schedule_date(async_client, test_db_pool):
     response2 = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_2}/user_dates")
     assert_empty_list_200(response2)
 
-    # 2. Test invalid UUID format
-    response2 = await async_client.get("/schedule_dates/invalid-uuid-format/user_dates")
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    # 3. Test invalid UUID format
+    response3 = await async_client.get("/schedule_dates/invalid-uuid-format/user_dates")
+    assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-    # 3. Test schedule date not found
-    response3 = await async_client.get("/schedule_dates/00000000-0000-0000-0000-000000000000/user_dates")
-    assert response3.status_code == status.HTTP_404_NOT_FOUND
+    # 4. Test schedule date not found
+    response4 = await async_client.get("/schedule_dates/00000000-0000-0000-0000-000000000000/user_dates")
+    assert response4.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
 async def test_insert_schedule_date(async_client, test_db_pool):
