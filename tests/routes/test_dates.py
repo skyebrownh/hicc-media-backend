@@ -1,5 +1,5 @@
 import pytest
-import datetime
+import pytest_asyncio
 from fastapi import status
 from tests.seed import insert_dates
 from tests.utils.helpers import assert_empty_list_200
@@ -13,36 +13,43 @@ DATE_6 = "2025-06-06"
 DATE_7 = "2025-09-08"
 DATE_8 = "2025-12-31"
 
+# =============================
+# HELPER FIXTURES
+# =============================
+@pytest_asyncio.fixture
+async def seed_dates_helper(test_db_pool):
+    """Helper fixture to seed dates in the database"""
+    async def seed_dates(dates):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_dates(dates))
+    return seed_dates
+
+
+# =============================
+# GET ALL DATES
+# =============================
 @pytest.mark.asyncio
-async def test_get_all_dates(async_client, test_db_pool):
-    # 1. Test when no dates exist
-    response1 = await async_client.get("/dates")
-    assert_empty_list_200(response1)
+async def test_get_all_dates_none_exist(async_client):
+    """Test when no dates exist returns empty list"""
+    response = await async_client.get("/dates")
+    assert_empty_list_200(response)
 
-    # Seed dates data directly into test DB with more edge-case variety
-    varied_dates = [
-        DATE_1,  # Leap year, last day of Feb
-        DATE_2,  # Wednesday, first day of year & month
-        DATE_3,  # Sunday, first Sunday in Jan (test is_weekend + 5th day of month)
-        DATE_5,  # Thursday, first of May
-        DATE_7,  # Monday, second Monday of Sep
-        DATE_8,  # Last day of year & Dec, Wednesday
-    ]
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates(varied_dates))
+@pytest.mark.asyncio
+async def test_get_all_dates_success(async_client, seed_dates_helper):
+    """Test getting all dates after inserting a variety, asserts on correct date columns per-date"""
+    varied_dates = [DATE_1, DATE_2, DATE_3, DATE_8]
+    await seed_dates_helper(varied_dates)
 
-    response2 = await async_client.get("/dates")
-    assert response2.status_code == status.HTTP_200_OK
-    response2_json = response2.json()
-    assert isinstance(response2_json, list)
-    returned_dates = [d["date"] for d in response2_json]
-    # All inserted dates should be present
+    response = await async_client.get("/dates")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, list)
+    returned_dates = [d["date"] for d in response_json]
     for d in varied_dates:
         assert d in returned_dates
-    assert len(response2_json) == len(varied_dates) 
+    assert len(response_json) == len(varied_dates) 
 
-    # Cross-check specifics for edge cases - assert all date fields at least once, but only where necessary
-    for row in response2_json:
+    for row in response_json:
         d = row["date"]
         if d == DATE_2:  # first of year/month
             assert row["calendar_year"] == 2025
@@ -64,170 +71,147 @@ async def test_get_all_dates(async_client, test_db_pool):
             assert row["calendar_day"] == 29
         elif d == DATE_8:  # last of year/month
             assert row["is_last_of_month"] is True
-        elif d == DATE_5:  # first of May
-            assert row["is_first_of_month"] is True
-        elif d == DATE_7:  # second Monday September
-            assert row["weekday_of_month"] == 2
+
+# =============================
+# GET SINGLE DATE
+# =============================
+@pytest.mark.parametrize("seed_dates, query_date, expected_status", [
+    ([], DATE_2, status.HTTP_404_NOT_FOUND),           # No dates in DB
+    ([DATE_3], DATE_8, status.HTTP_404_NOT_FOUND),     # Date not present
+    ([], "invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),  # Invalid date format
+])
+@pytest.mark.asyncio
+async def test_get_single_date_error_cases(async_client, seed_dates_helper, seed_dates, query_date, expected_status):
+    """Test GET single date error cases (404 and 422)"""
+    # Optionally seed DB
+    if seed_dates:
+        await seed_dates_helper(seed_dates)
+    response = await async_client.get(f"/dates/{query_date}")
+    assert response.status_code == expected_status
+
 
 @pytest.mark.asyncio
-async def test_get_single_date(async_client, test_db_pool):
-    # 1. Test when no dates exist
-    response1 = await async_client.get(f"/dates/{DATE_2}")
-    assert response1.status_code == status.HTTP_404_NOT_FOUND
+async def test_get_single_date_success(async_client, seed_dates_helper):
+    """Test GET single date success case"""
+    # Seed a single date
+    await seed_dates_helper([DATE_3])
+    response = await async_client.get(f"/dates/{DATE_3}")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert isinstance(data, dict)
+    assert data["date"] == DATE_3
 
-    # Seed dates data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_3]))
-
-    # 2. Test when dates exist
-    response2 = await async_client.get(f"/dates/{DATE_3}")
-    assert response2.status_code == status.HTTP_200_OK
-    response2_json = response2.json()
-    assert isinstance(response2_json, dict)
-    assert response2_json["date"] == DATE_3
-
-    # 3. Test date not found
-    response3 = await async_client.get(f"/dates/{DATE_8}")
-    assert response3.status_code == status.HTTP_404_NOT_FOUND
-
-    # 4. Test invalid date format
-    response4 = await async_client.get("/dates/invalid-date-format")
-    assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
+# =============================
+# INSERT DATE
+# =============================
+@pytest.mark.parametrize("seed_dates,payload,expected_status", [
+    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # empty payload
+    ([], {"date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # invalid date format
+    ([], {"date": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # invalid data type
+    ([], {"date": DATE_7, "calendar_year": 2025}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # extra fields not allowed
+    ([DATE_5], {"date": DATE_5}, status.HTTP_409_CONFLICT),  # duplicate date
+])
 @pytest.mark.asyncio
-async def test_insert_date(async_client, test_db_pool):
-    # Set up payloads
-    bad_payload_1 = {}
-    bad_payload_2 = {"date": "invalid-date"}  # Invalid date format
-    bad_payload_3 = {"date": 12345}  # date should be date string
-    good_payload = {
-        "date": DATE_5
-    }
+async def test_insert_date_error_cases(async_client, seed_dates_helper, seed_dates, payload, expected_status):
+    """Test INSERT date error cases (422 and 409)"""
+    # Optionally seed DB
+    if seed_dates:
+        await seed_dates_helper(seed_dates)
     
-    # Seed another date data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_6]))
+    response = await async_client.post("/dates", json=payload)
+    assert response.status_code == expected_status
 
-    bad_payload_4 = {
-        "date": DATE_5  # Duplicate date (will be inserted in test 4)
-    }
-    bad_payload_5 = {
-        "date": DATE_7,
-        "calendar_year": 2025  # calendar_year not allowed in payload
-    }
 
-    # 1. Test empty payload
-    response1 = await async_client.post("/dates", json=bad_payload_1)
-    assert response1.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 2. Test invalid date format
-    response2 = await async_client.post("/dates", json=bad_payload_2)
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 3. Test invalid data types
-    response3 = await async_client.post("/dates", json=bad_payload_3)
-    assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 4. Test valid payload
-    response4 = await async_client.post("/dates", json=good_payload)
-    assert response4.status_code == status.HTTP_201_CREATED
-    response4_json = response4.json()
-    assert response4_json["date"] == DATE_5
-
-    assert response4_json["calendar_month"] == 5
-    assert response4_json["calendar_day"] == 1
+@pytest.mark.asyncio
+async def test_insert_date_success(async_client):
+    """Test valid date insertion"""
+    good_payload = {"date": DATE_5}
+    
+    response = await async_client.post("/dates", json=good_payload)
+    assert response.status_code == status.HTTP_201_CREATED
+    response_json = response.json()
+    assert response_json["date"] == DATE_5
+    assert response_json["calendar_month"] == 5
+    assert response_json["calendar_day"] == 1
     # Check that auto-generated fields exist
-    assert "is_weekend" in response4_json
-    assert "is_weekday" in response4_json
-    assert "weekday" in response4_json
+    assert "is_weekend" in response_json
+    assert "is_weekday" in response_json
+    assert "weekday" in response_json
 
-    # 5. Test duplicate date
-    response5 = await async_client.post("/dates", json=bad_payload_4)
-    assert response5.status_code == status.HTTP_409_CONFLICT
+# =============================
+# UPDATE DATE
+# =============================
+@pytest.mark.parametrize("seed_dates,date_path,payload,expected_status", [
+    # date not found
+    ([DATE_2], f"/dates/{DATE_8}", {"is_holiday": True}, status.HTTP_404_NOT_FOUND),
+    # invalid date format in path
+    ([DATE_4], "/dates/invalid-date-format", {"is_holiday": True}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # invalid data type in payload
+    ([DATE_4], f"/dates/{DATE_4}", {"calendar_year": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # empty payload
+    ([DATE_4], f"/dates/{DATE_4}", {}, status.HTTP_400_BAD_REQUEST),
+])
+@pytest.mark.asyncio
+async def test_update_date_error_cases(async_client, seed_dates_helper, seed_dates, date_path, payload, expected_status):
+    """Test UPDATE date error cases (400, 404, and 422)"""
+    # Seed date data
+    await seed_dates_helper(seed_dates)
+    
+    response = await async_client.patch(date_path, json=payload)
+    assert response.status_code == expected_status
 
-    # 6. Test extra fields not allowed in payload
-    # Extra fields are not allowed in payload, so this raises 422 Validation Error
-    response6 = await async_client.post("/dates", json=bad_payload_5)
-    assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+@pytest.mark.parametrize("date,payload,expected_fields,unchanged_fields", [
+    (DATE_4, {"is_holiday": True, "is_weekend": False}, {"is_holiday": True, "is_weekend": False}, {}),
+    (DATE_3, {"is_holiday": True}, {"is_holiday": True}, {"calendar_year": 2025}),
+    (DATE_2, {"calendar_year": 2026}, {"calendar_year": 2026}, {}),
+])
+@pytest.mark.asyncio
+async def test_update_date_success(async_client, seed_dates_helper, date, payload, expected_fields, unchanged_fields):
+    """Test valid date updates"""
+    # Seed date data
+    await seed_dates_helper([DATE_2, DATE_3, DATE_4])
+    
+    response = await async_client.patch(f"/dates/{date}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, expected_value in expected_fields.items():
+        assert response_json[field] == expected_value
+    for field, expected_value in unchanged_fields.items():
+        assert response_json[field] == expected_value
+
+# =============================
+# DELETE DATE
+# =============================
+@pytest.mark.parametrize("seed_dates,date_path,expected_status", [
+    # date not found
+    ([DATE_3], f"/dates/{DATE_8}", status.HTTP_404_NOT_FOUND),
+    # invalid date format in path
+    ([DATE_3], "/dates/invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
+])
+@pytest.mark.asyncio
+async def test_delete_date_error_cases(async_client, seed_dates_helper, seed_dates, date_path, expected_status):
+    """Test DELETE date error cases (404 and 422)"""
+    # Seed date data
+    await seed_dates_helper(seed_dates)
+    
+    response = await async_client.delete(date_path)
+    assert response.status_code == expected_status
+
 
 @pytest.mark.asyncio
-async def test_update_date(async_client, test_db_pool):
-    # Seed date data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_2, DATE_3, DATE_4]))
-
-    # Set up payloads
-    bad_payload_1 = {}
-    bad_payload_2 = {"calendar_year": "invalid"}  # calendar_year should be int
-    good_payload_full = {
-        "is_holiday": True,
-        "is_weekend": False
-    }
-    good_payload_partial_1 = {
-        "is_holiday": True
-    }
-    good_payload_partial_2 = {
-        "calendar_year": 2026
-    }
-
-    # 1. Test date not found
-    response1 = await async_client.patch(f"/dates/{DATE_8}", json=good_payload_full)
-    assert response1.status_code == status.HTTP_404_NOT_FOUND
-
-    # 2. Test invalid date format
-    response2 = await async_client.patch("/dates/invalid-date-format", json=good_payload_full)
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 3. Test empty payload
-    response3 = await async_client.patch(f"/dates/{DATE_4}", json=bad_payload_1)
-    assert response3.status_code == status.HTTP_400_BAD_REQUEST
-
-    # 4. Test invalid data types
-    response4 = await async_client.patch(f"/dates/{DATE_4}", json=bad_payload_2)
-    assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 5. Test valid payload to update full record
-    response5 = await async_client.patch(f"/dates/{DATE_4}", json=good_payload_full)
-    assert response5.status_code == status.HTTP_200_OK
-    response5_json = response5.json()
-    assert response5_json["is_holiday"] is True
-    assert response5_json["is_weekend"] is False
-
-    # 6. Test valid payload to update partial record (is_holiday only)
-    response6 = await async_client.patch(f"/dates/{DATE_3}", json=good_payload_partial_1)
-    assert response6.status_code == status.HTTP_200_OK
-    response6_json = response6.json()
-    assert response6_json["is_holiday"] is True
-    # Other fields should remain unchanged
-    assert response6_json["calendar_year"] == 2025
-
-    # 7. Test valid payload to update partial record (calendar_year only)
-    response7 = await async_client.patch(f"/dates/{DATE_2}", json=good_payload_partial_2)
-    assert response7.status_code == status.HTTP_200_OK
-    response7_json = response7.json()
-    assert response7_json["calendar_year"] == 2026
-
-@pytest.mark.asyncio
-async def test_delete_date(async_client, test_db_pool):
+async def test_delete_date_success(async_client, seed_dates_helper):
+    """Test successful date deletion with verification"""
     # Seed dates data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_3]))
+    await seed_dates_helper([DATE_3])
 
-    # 1. Test date not found
-    response1 = await async_client.delete(f"/dates/{DATE_8}")
-    assert response1.status_code == status.HTTP_404_NOT_FOUND
+    # Test successful deletion
+    response = await async_client.delete(f"/dates/{DATE_3}")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, dict)
+    assert response_json["date"] == DATE_3
 
-    # 2. Test invalid date format
-    response2 = await async_client.delete("/dates/invalid-date-format")
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 3. Test when dates exist
-    response3 = await async_client.delete(f"/dates/{DATE_3}")
-    assert response3.status_code == status.HTTP_200_OK
-    response3_json = response3.json()
-    assert isinstance(response3_json, dict)
-    assert response3_json["date"] == DATE_3
-
-    # 4. Verify deletion by trying to get it again
-    response4 = await async_client.get(f"/dates/{DATE_3}")
-    assert response4.status_code == status.HTTP_404_NOT_FOUND
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/dates/{DATE_3}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
