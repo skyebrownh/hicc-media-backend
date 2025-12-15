@@ -114,7 +114,6 @@ async def test_get_single_schedule(async_client, test_db_pool, seed_schedules_he
     schedules = [
         {"schedule_id": SCHEDULE_ID_1, "month_start_date": "2025-01-01", "notes": "First schedule"},
         {"schedule_id": SCHEDULE_ID_2, "month_start_date": "2025-02-01", "notes": "Second schedule"},
-        {"schedule_id": SCHEDULE_ID_3, "month_start_date": "2025-03-01", "notes": None},
     ]
     await seed_schedules_helper(schedules)
 
@@ -262,11 +261,7 @@ async def test_delete_schedule(async_client, test_db_pool, seed_schedules_helper
         # Insert required dates for foreign key constraint
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
     
-    schedules = [
-        {"schedule_id": SCHEDULE_ID_1, "month_start_date": "2025-01-01", "notes": "First schedule"},
-        {"schedule_id": SCHEDULE_ID_2, "month_start_date": "2025-02-01", "notes": "Second schedule"},
-        {"schedule_id": SCHEDULE_ID_3, "month_start_date": "2025-03-01", "notes": None},
-    ]
+    schedules = [{"schedule_id": SCHEDULE_ID_2, "month_start_date": "2025-02-01", "notes": "Second schedule"}]
     await seed_schedules_helper(schedules)
 
     # 1. Test schedule not found

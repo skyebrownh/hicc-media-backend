@@ -468,10 +468,7 @@ async def test_delete_schedule_date(async_client, test_db_pool, seed_schedules_h
     schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"}]
     await seed_schedule_date_types_helper(schedule_date_types)
     
-    schedule_dates = [
-        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
-        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
-    ]
+    schedule_dates = [{"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}]
     await seed_schedule_dates_helper(schedule_dates)
 
     # 1. Test schedule date not found

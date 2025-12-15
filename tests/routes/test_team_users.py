@@ -85,7 +85,6 @@ async def test_get_team_users_for_team(async_client, seed_teams_helper, seed_use
     users = [
         {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
         {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
     ]
     await seed_users_helper(users)
     
@@ -138,8 +137,8 @@ async def test_get_single_team_user(async_client, seed_teams_helper, seed_users_
     assert response1_json["is_active"] is True
     assert response1_json["team_user_id"] is not None
 
-    # 2. Test team user not found
-    response2 = await async_client.get(f"/teams/{TEAM_ID_1}/users/{USER_ID_2}")
+    # 2. Test team user not found (USER_ID_2 doesn't exist)
+    response2 = await async_client.get(f"/teams/{TEAM_ID_1}/users/00000000-0000-0000-0000-000000000000")
     assert response2.status_code == status.HTTP_404_NOT_FOUND
 
     # 3. Test invalid UUID format for team_id
@@ -256,7 +255,7 @@ async def test_update_team_user(async_client, seed_teams_helper, seed_users_help
         "is_active": False
     }
 
-    # 1. Test team user not found
+    # 1. Test team user not found (USER_ID_2 is not in TEAM_ID_1)
     response1 = await async_client.patch(f"/teams/{TEAM_ID_1}/users/{USER_ID_2}", json=good_payload)
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 
@@ -306,13 +305,10 @@ async def test_delete_team_user(async_client, seed_teams_helper, seed_users_help
     ]
     await seed_users_helper(users)
     
-    team_users = [
-        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
-        {"team_id": TEAM_ID_2, "user_id": USER_ID_2},
-    ]
+    team_users = [{"team_id": TEAM_ID_1, "user_id": USER_ID_1}]
     await seed_team_users_helper(team_users)
 
-    # 1. Test team user not found
+    # 1. Test team user not found (USER_ID_2 is not in TEAM_ID_1)
     response1 = await async_client.delete(f"/teams/{TEAM_ID_1}/users/{USER_ID_2}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 

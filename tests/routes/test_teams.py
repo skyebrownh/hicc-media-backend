@@ -51,7 +51,6 @@ async def test_get_single_team(async_client, seed_teams_helper):
     teams = [
         {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
         {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
-        {"team_id": TEAM_ID_3, "team_name": "Team 3", "team_code": "team_3"},
     ]
     await seed_teams_helper(teams)
 
@@ -199,11 +198,7 @@ async def test_update_team(async_client, seed_teams_helper):
 @pytest.mark.asyncio
 async def test_delete_team(async_client, seed_teams_helper):
     # Seed teams data directly into test DB
-    teams = [
-        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
-        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
-        {"team_id": TEAM_ID_3, "team_name": "Team 3", "team_code": "team_3"},
-    ]
+    teams = [{"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"}]
     await seed_teams_helper(teams)
 
     # 1. Test team not found

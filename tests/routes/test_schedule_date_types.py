@@ -51,7 +51,6 @@ async def test_get_single_schedule_date_type(async_client, seed_schedule_date_ty
     schedule_date_types = [
         {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
         {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_3, "schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
     ]
     await seed_schedule_date_types_helper(schedule_date_types)
 
@@ -199,11 +198,7 @@ async def test_update_schedule_date_type(async_client, seed_schedule_date_types_
 @pytest.mark.asyncio
 async def test_delete_schedule_date_type(async_client, seed_schedule_date_types_helper):
     # Seed schedule date types data directly into test DB
-    schedule_date_types = [
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_3, "schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
-    ]
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"}]
     await seed_schedule_date_types_helper(schedule_date_types)
 
     # 1. Test schedule date type not found
