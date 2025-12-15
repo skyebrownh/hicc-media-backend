@@ -1,0 +1,12 @@
+# Test data constants
+BAD_ID_0000 = "00000000-0000-0000-0000-000000000000"
+
+# User IDs
+USER_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
+USER_ID_2 = "b2c3d4e5-f6a7-4890-b123-c4d5e6f7a890"
+USER_ID_3 = "c3d4e5f6-a7b8-4901-c234-d5e6f7a8b901"
+
+# Dates
+DATE_1 = "2025-01-15"
+DATE_2 = "2025-01-20"
+DATE_3 = "2025-02-01"

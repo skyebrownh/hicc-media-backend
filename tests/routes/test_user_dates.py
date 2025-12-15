@@ -1,334 +1,256 @@
 import pytest
-import pytest_asyncio
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, insert_dates, insert_users, insert_user_dates
+from tests.utils.helpers import assert_empty_list_200
+from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, DATE_1, DATE_2, DATE_3
 
-# Test data constants
-USER_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
-USER_ID_2 = "b2c3d4e5-f6a7-4890-b123-c4d5e6f7a890"
-USER_ID_3 = "c3d4e5f6-a7b8-4901-c234-d5e6f7a8b901"
-DATE_1 = "2025-01-15"
-DATE_2 = "2025-01-20"
-DATE_3 = "2025-02-01"
-
-@pytest_asyncio.fixture
-async def seed_users_helper(test_db_pool):
-    """Helper fixture to seed users in the database"""
-    async def seed_users(users: list[dict]):
-        async with test_db_pool.acquire() as conn:
-            await conn.execute(insert_users(users))
-    return seed_users
-
-@pytest_asyncio.fixture
-async def seed_user_dates_helper(test_db_pool):
-    """Helper fixture to seed user_dates in the database"""
-    async def seed_user_dates(user_dates: list[dict]):
-        async with test_db_pool.acquire() as conn:
-            await conn.execute(insert_user_dates(user_dates))
-    return seed_user_dates
-
-@pytest.mark.asyncio
-async def test_get_all_user_dates(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
-    # 1. Test when no user dates exist
-    response1 = await async_client.get("/user_dates")
-    assert_empty_list_200(response1)
-
-    # Seed users and dates data directly into test DB
-    users = [
+# =============================
+# DATA FIXTURES
+# =============================
+@pytest.fixture
+def test_users_data():
+    """Fixture providing array of test user data"""
+    return [
         {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
         {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
     ]
-    await seed_users_helper(users)
-    
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_1, DATE_2, DATE_3]))
-    
-    user_dates = [
+
+@pytest.fixture
+def test_dates_data():
+    """Fixture providing array of test date strings"""
+    return [DATE_1, DATE_2, DATE_3]
+
+@pytest.fixture
+def test_user_dates_data():
+    """Fixture providing array of test user_date data"""
+    return [
         {"user_id": USER_ID_1, "date": DATE_1},
         {"user_id": USER_ID_1, "date": DATE_2},
+        {"user_id": USER_ID_1, "date": DATE_3},
+        {"user_id": USER_ID_2, "date": DATE_1},
+        {"user_id": USER_ID_2, "date": DATE_2},
         {"user_id": USER_ID_2, "date": DATE_3},
     ]
-    await seed_user_dates_helper(user_dates)
 
-    # 2. Test when user dates exist
-    response2 = await async_client.get("/user_dates")
-    assert response2.status_code == status.HTTP_200_OK
-    response2_json = response2.json()
-    assert isinstance(response2_json, list)
-    assert len(response2_json) == 3
-    assert response2_json[0]["user_date_id"] is not None
-    assert response2_json[0]["user_id"] == USER_ID_1
-    assert response2_json[0]["date"] == DATE_1
-    assert response2_json[1]["user_id"] == USER_ID_1
-    assert response2_json[1]["date"] == DATE_2
-    assert response2_json[2]["user_id"] == USER_ID_2
-    assert response2_json[2]["date"] == DATE_3
+# =============================
+# GET ALL USER DATES
+# =============================
+@pytest.mark.asyncio
+async def test_get_all_user_dates_none_exist(async_client):
+    """Test when no user dates exist returns empty list"""
+    response = await async_client.get("/user_dates")
+    assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_single_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
-    # Seed users and dates data directly into test DB
-    users = [{"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"}]
-    await seed_users_helper(users)
-    
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_1, DATE_2]))
-    
-    user_dates = [{"user_id": USER_ID_1, "date": DATE_1}]
-    await seed_user_dates_helper(user_dates)
+async def test_get_all_user_dates_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
+    """Test getting all user dates after inserting a variety"""
+    await seed_users(test_users_data[:2])
+    await seed_dates(test_dates_data)
+    await seed_user_dates(
+        [test_user_dates_data[0], 
+        test_user_dates_data[1], 
+        test_user_dates_data[4]]
+    )
 
-    # 1. Test when user date exists
-    response1 = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_1}")
-    assert response1.status_code == status.HTTP_200_OK
-    response1_json = response1.json()
-    assert isinstance(response1_json, dict)
-    assert response1_json["user_id"] == USER_ID_1
-    assert response1_json["date"] == DATE_1
+    response = await async_client.get("/user_dates")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, list)
+    assert len(response_json) == 3
+    assert response_json[0]["user_date_id"] is not None
+    assert response_json[0]["user_id"] == USER_ID_1
+    assert response_json[0]["date"] == DATE_1
+    assert response_json[1]["user_id"] == USER_ID_1
+    assert response_json[1]["date"] == DATE_2
+    assert response_json[2]["user_id"] == USER_ID_2
+    assert response_json[2]["date"] == DATE_2
 
-    # 2. Test user date not found
-    response2 = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_2}")
-    assert response2.status_code == status.HTTP_404_NOT_FOUND
-
-    # 3. Test invalid UUID format for user_id
-    response3 = await async_client.get(f"/users/invalid-uuid-format/dates/{DATE_1}")
-    assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 4. Test invalid date format
-    response4 = await async_client.get(f"/users/{USER_ID_1}/dates/invalid-date-format")
-    assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+# =============================
+# GET SINGLE USER DATE
+# =============================
+@pytest.mark.parametrize("user_id, date, expected_status", [
+    # User date not found
+    (USER_ID_1, DATE_2, status.HTTP_404_NOT_FOUND),
+    # Invalid UUID format for user_id
+    ("invalid-uuid-format", DATE_1, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # Invalid date format
+    (USER_ID_1, "invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
+])
+@pytest.mark.asyncio
+async def test_get_single_user_date_error_cases(async_client, user_id, date, expected_status):
+    """Test GET single user date error cases (404 and 422)"""
+    response = await async_client.get(f"/users/{user_id}/dates/{date}")
+    assert response.status_code == expected_status
 
 @pytest.mark.asyncio
-async def test_insert_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
-    # Seed users and dates data directly into test DB
-    users = [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-    ]
-    await seed_users_helper(users)
+async def test_get_single_user_date_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
+    """Test GET single user date success case"""
+    await seed_users([test_users_data[0]])
+    await seed_dates(test_dates_data[:2])
+    await seed_user_dates([test_user_dates_data[0]])
+
+    response = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_1}")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, dict)
+    assert response_json["user_id"] == USER_ID_1
+    assert response_json["date"] == DATE_1
+
+# =============================
+# INSERT USER DATE
+# =============================
+@pytest.mark.parametrize("user_indices, date_indices, user_date_indices, payload, expected_status", [
+    # empty payload
+    ([], [], [], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # missing required fields (date)
+    ([], [], [], {"user_id": USER_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # missing required fields (user_id)
+    ([], [], [], {"date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # invalid UUID format
+    ([], [], [], {"user_id": "invalid-uuid", "date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # invalid date format
+    ([], [], [], {"user_id": USER_ID_1, "date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # duplicate user_date
+    ([0], [0, 1], [0], {"user_id": USER_ID_1, "date": DATE_1}, status.HTTP_409_CONFLICT),
+    # extra fields not allowed
+    ([], [], [], {"user_id": USER_ID_1, "date": DATE_2, "user_date_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # foreign key violation (user doesn't exist)
+    ([], [1], [], {"user_id": BAD_ID_0000, "date": DATE_2}, status.HTTP_404_NOT_FOUND),
+    # foreign key violation (date doesn't exist)
+    ([0], [], [], {"user_id": USER_ID_1, "date": "2025-12-31"}, status.HTTP_404_NOT_FOUND),
+])
+@pytest.mark.asyncio
+async def test_insert_user_date_error_cases(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data, user_indices, date_indices, user_date_indices, payload, expected_status):
+    """Test INSERT user date error cases (422, 409, and 404)"""
+    users = [test_users_data[i] for i in user_indices] if user_indices else []
+    dates = [test_dates_data[i] for i in date_indices] if date_indices else []
+    user_dates = [test_user_dates_data[i] for i in user_date_indices] if user_date_indices else []
     
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_1, DATE_2]))
+    await seed_users(users)
+    await seed_dates(dates)
+    if user_dates:
+        await seed_user_dates(user_dates)
     
-    user_dates = [{"user_id": USER_ID_1, "date": DATE_1}]
-    await seed_user_dates_helper(user_dates)
-
-    # Set up payloads
-    bad_payload_1 = {}
-    bad_payload_2 = {"user_id": USER_ID_1}  # Missing date
-    bad_payload_3 = {"date": DATE_2}  # Missing user_id
-    bad_payload_4 = {"user_id": "invalid-uuid", "date": DATE_2}  # Invalid UUID
-    bad_payload_5 = {"user_id": USER_ID_1, "date": "invalid-date"}  # Invalid date format
-    good_payload = {
-        "user_id": USER_ID_2,
-        "date": DATE_1
-    }
-    bad_payload_6 = {
-        "user_id": USER_ID_1,
-        "date": DATE_1  # Duplicate (already exists)
-    }
-    bad_payload_7 = {
-        "user_id": USER_ID_1,
-        "date": DATE_2,
-        "user_date_id": "00000000-0000-0000-0000-000000000000"  # user_date_id not allowed
-    }
-    bad_payload_8 = {
-        "user_id": "00000000-0000-0000-0000-000000000000",
-        "date": DATE_2  # Foreign key violation (user doesn't exist)
-    }
-    bad_payload_9 = {
-        "user_id": USER_ID_1,
-        "date": "2025-12-31"  # Foreign key violation (date doesn't exist)
-    }
-
-    # 1. Test empty payload
-    response1 = await async_client.post("/user_dates", json=bad_payload_1)
-    assert response1.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 2. Test missing required fields (date)
-    response2 = await async_client.post("/user_dates", json=bad_payload_2)
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 3. Test missing required fields (user_id)
-    response3 = await async_client.post("/user_dates", json=bad_payload_3)
-    assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 4. Test invalid UUID format
-    response4 = await async_client.post("/user_dates", json=bad_payload_4)
-    assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 5. Test invalid date format
-    response5 = await async_client.post("/user_dates", json=bad_payload_5)
-    assert response5.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 6. Test valid payload
-    response6 = await async_client.post("/user_dates", json=good_payload)
-    assert response6.status_code == status.HTTP_201_CREATED
-    response6_json = response6.json()
-    assert response6_json["user_date_id"] is not None
-    assert response6_json["user_id"] == USER_ID_2
-    assert response6_json["date"] == DATE_1
-
-    # 7. Test duplicate user_date (same user_id + date combination)
-    response7 = await async_client.post("/user_dates", json=bad_payload_6)
-    assert response7.status_code == status.HTTP_409_CONFLICT
-
-    # 8. Test extra fields not allowed in payload
-    response8 = await async_client.post("/user_dates", json=bad_payload_7)
-    assert response8.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 9. Test foreign key violation (user doesn't exist)
-    response9 = await async_client.post("/user_dates", json=bad_payload_8)
-    assert response9.status_code == status.HTTP_404_NOT_FOUND
-
-    # 10. Test foreign key violation (date doesn't exist)
-    response10 = await async_client.post("/user_dates", json=bad_payload_9)
-    assert response10.status_code == status.HTTP_404_NOT_FOUND
+    response = await async_client.post("/user_dates", json=payload)
+    assert response.status_code == expected_status
 
 @pytest.mark.asyncio
-async def test_insert_user_dates_bulk(async_client, test_db_pool, seed_users_helper):
-    # Seed users and dates data directly into test DB
-    users = [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-    ]
-    await seed_users_helper(users)
+async def test_insert_user_date_success(async_client, seed_dates, seed_users, test_users_data, test_dates_data):
+    """Test valid user date insertion"""
+    await seed_users([test_users_data[1]])    
+    await seed_dates([test_dates_data[0]])
     
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_1, DATE_2, DATE_3]))
+    response = await async_client.post("/user_dates", json={"user_id": USER_ID_2, "date": DATE_1})
+    assert response.status_code == status.HTTP_201_CREATED
+    response_json = response.json()
+    assert response_json["user_date_id"] is not None
+    assert response_json["user_id"] == USER_ID_2
+    assert response_json["date"] == DATE_1
 
-    # Set up payloads
-    bad_payload_1 = []
-    bad_payload_2 = [{"user_id": USER_ID_1}]  # Missing date
-    bad_payload_3 = [{"date": DATE_1}]  # Missing user_id
-    bad_payload_4 = [
-        {"user_id": USER_ID_1, "date": DATE_1},
-        {"user_id": USER_ID_1, "date": DATE_2, "is_active": "False"} # is_active not allowed in payload
-    ]
-    good_payload = [
-        {"user_id": USER_ID_1, "date": DATE_1},
-        {"user_id": USER_ID_1, "date": DATE_2},
-        {"user_id": USER_ID_2, "date": DATE_3}
-    ]
-
-    # 1. Test empty list
-    response1 = await async_client.post("/user_dates/bulk", json=bad_payload_1)
-    assert response1.status_code == status.HTTP_400_BAD_REQUEST
-
-    # 2. Test missing required fields
-    response2 = await async_client.post("/user_dates/bulk", json=bad_payload_2)
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 3. Test missing required fields
-    response3 = await async_client.post("/user_dates/bulk", json=bad_payload_3)
-    assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 4. Test extra fields not allowed in payload
-    response4 = await async_client.post("/user_dates/bulk", json=bad_payload_4)
-    assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 5. Test valid bulk payload
-    response4 = await async_client.post("/user_dates/bulk", json=good_payload)
-    assert response4.status_code == status.HTTP_201_CREATED
-    response4_json = response4.json()
-    assert isinstance(response4_json, list)
-    assert len(response4_json) == 3
-    assert all(ud["user_date_id"] is not None for ud in response4_json)
-    assert {ud["user_id"] for ud in response4_json} == {USER_ID_1, USER_ID_2}
-    assert {ud["date"] for ud in response4_json} == {DATE_1, DATE_2, DATE_3}
+# =============================
+# INSERT USER DATES BULK
+# =============================
+@pytest.mark.parametrize("payload, expected_status", [
+    # empty list
+    ([], status.HTTP_400_BAD_REQUEST),
+    # missing required fields (date)
+    ([{"user_id": USER_ID_1}], status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # missing required fields (user_id)
+    ([{"date": DATE_1}], status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # extra fields not allowed
+    ([{"user_id": USER_ID_1, "date": DATE_2, "is_active": "False"}], status.HTTP_422_UNPROCESSABLE_CONTENT),
+])
+@pytest.mark.asyncio
+async def test_insert_user_dates_bulk_error_cases(async_client, payload, expected_status):
+    """Test INSERT user dates bulk error cases (400 and 422)"""
+    response = await async_client.post("/user_dates/bulk", json=payload)
+    assert response.status_code == expected_status
 
 @pytest.mark.asyncio
-async def test_update_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
-    # Seed users and dates data directly into test DB
-    users = [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-    ]
-    await seed_users_helper(users)
-    
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_1, DATE_2]))
-    
-    user_dates = [{"user_id": USER_ID_1, "date": DATE_1}]
-    await seed_user_dates_helper(user_dates)
+async def test_insert_user_dates_bulk_success(async_client, seed_dates, seed_users, test_users_data, test_dates_data, test_user_dates_data):
+    """Test valid user dates bulk insertion"""
+    await seed_users(test_users_data[:2])
+    await seed_dates(test_dates_data)
 
-    # Set up payloads
-    bad_payload_1 = {}
-    bad_payload_2 = {"date": "invalid-date"}  # Invalid date format
-    good_payload = {
-        "date": DATE_2
-    }
-    bad_payload_3 = {
-        "date": "2025-12-31"  # Foreign key violation (date doesn't exist)
-    }
+    good_payload = [test_user_dates_data[0], test_user_dates_data[1], test_user_dates_data[4]]
 
-    # 1. Test user date not found
-    response1 = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_2}", json=good_payload)
-    assert response1.status_code == status.HTTP_404_NOT_FOUND
+    response = await async_client.post("/user_dates/bulk", json=good_payload)
+    assert response.status_code == status.HTTP_201_CREATED
+    response_json = response.json()
+    assert isinstance(response_json, list)
+    assert len(response_json) == 3
+    assert all(ud["user_date_id"] is not None for ud in response_json)
+    assert {ud["user_id"] for ud in response_json} == {USER_ID_1, USER_ID_2}
+    assert {ud["date"] for ud in response_json} == {DATE_1, DATE_2}
 
-    # 2. Test invalid UUID format for user_id
-    response2 = await async_client.patch(f"/users/invalid-uuid-format/dates/{DATE_1}", json=good_payload)
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 3. Test invalid date format in path
-    response3 = await async_client.patch(f"/users/{USER_ID_1}/dates/invalid-date-format", json=good_payload)
-    assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 4. Test empty payload
-    response4 = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_1}", json=bad_payload_1)
-    assert response4.status_code == status.HTTP_400_BAD_REQUEST
-
-    # 5. Test invalid date format in payload
-    response5 = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_1}", json=bad_payload_2)
-    assert response5.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 6. Test valid payload
-    response6 = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_1}", json=good_payload)
-    assert response6.status_code == status.HTTP_200_OK
-    response6_json = response6.json()
-    assert response6_json["user_id"] == USER_ID_1
-    assert response6_json["date"] == DATE_2
-
-    # 7. Test foreign key violation (date doesn't exist)
-    response7 = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_2}", json=bad_payload_3)
-    assert response7.status_code == status.HTTP_404_NOT_FOUND
+# =============================
+# UPDATE USER DATE
+# =============================
+@pytest.mark.parametrize("user_id, date_path, payload, expected_status", [
+    # user date not found
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2}", {"date": DATE_2}, status.HTTP_404_NOT_FOUND),
+    # invalid UUID format for user_id
+    ("invalid-uuid-format", f"/users/invalid-uuid-format/dates/{DATE_1}", {"date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # invalid date format in path
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/invalid-date-format", {"date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # empty payload
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_1}", {}, status.HTTP_400_BAD_REQUEST),
+    # invalid date format in payload
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_1}", {"date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # foreign key violation (date doesn't exist)
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2}", {"date": "2025-12-31"}, status.HTTP_404_NOT_FOUND),
+])
+@pytest.mark.asyncio
+async def test_update_user_date_error_cases(async_client, user_id, date_path, payload, expected_status):
+    """Test UPDATE user date error cases (400, 404, and 422)"""
+    response = await async_client.patch(date_path, json=payload)
+    assert response.status_code == expected_status
 
 @pytest.mark.asyncio
-async def test_delete_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
-    # Seed users and dates data directly into test DB
-    users = [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-    ]
-    await seed_users_helper(users)
-    
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_1, DATE_2]))
-    
-    user_dates = [
-        {"user_id": USER_ID_1, "date": DATE_1},
-        {"user_id": USER_ID_2, "date": DATE_2},
-    ]
-    await seed_user_dates_helper(user_dates)
+async def test_update_user_date_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
+    """Test valid user date update"""
+    await seed_users([test_users_data[0]])    
+    await seed_dates(test_dates_data[:2])
+    await seed_user_dates([test_user_dates_data[0]])
 
-    # 1. Test user date not found
-    response1 = await async_client.delete(f"/users/{USER_ID_1}/dates/{DATE_2}")
-    assert response1.status_code == status.HTTP_404_NOT_FOUND
+    response = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_1}", json={"date": DATE_2})
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert response_json["user_id"] == USER_ID_1
+    assert response_json["date"] == DATE_2
 
-    # 2. Test invalid UUID format for user_id
-    response2 = await async_client.delete(f"/users/invalid-uuid-format/dates/{DATE_1}")
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+# =============================
+# DELETE USER DATE
+# =============================
+@pytest.mark.parametrize("user_id, date, expected_status", [
+    # user date not found
+    (USER_ID_1, DATE_2, status.HTTP_404_NOT_FOUND),
+    # invalid UUID format for user_id
+    ("invalid-uuid-format", DATE_1, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # invalid date format
+    (USER_ID_1, "invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
+])
+@pytest.mark.asyncio
+async def test_delete_user_date_error_cases(async_client, user_id, date, expected_status):
+    """Test DELETE user date error cases (404 and 422)"""
+    response = await async_client.delete(f"/users/{user_id}/dates/{date}")
+    assert response.status_code == expected_status
 
-    # 3. Test invalid date format
-    response3 = await async_client.delete(f"/users/{USER_ID_1}/dates/invalid-date-format")
-    assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+@pytest.mark.asyncio
+async def test_delete_user_date_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
+    """Test successful user date deletion with verification"""
+    await seed_users([test_users_data[0]])
+    await seed_dates([test_dates_data[0]])
+    await seed_user_dates([test_user_dates_data[0]])
 
-    # 4. Test when user date exists
-    response4 = await async_client.delete(f"/users/{USER_ID_1}/dates/{DATE_1}")
-    assert response4.status_code == status.HTTP_200_OK
-    response4_json = response4.json()
-    assert isinstance(response4_json, dict)
-    assert response4_json["user_id"] == USER_ID_1
-    assert response4_json["date"] == DATE_1
+    # Test successful deletion
+    response = await async_client.delete(f"/users/{USER_ID_1}/dates/{DATE_1}")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, dict)
+    assert response_json["user_id"] == USER_ID_1
+    assert response_json["date"] == DATE_1
 
-    # 5. Verify deletion by trying to get it again
-    response5 = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_1}")
-    assert response5.status_code == status.HTTP_404_NOT_FOUND
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
