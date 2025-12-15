@@ -1,8 +1,7 @@
 import pytest
 import pytest_asyncio
 from fastapi import status
-from tests.seed import insert_dates
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_dates
 
 DATE_1 = "2024-02-29"
 DATE_2 = "2025-01-01"
