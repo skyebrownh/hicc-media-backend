@@ -53,7 +53,6 @@ async def test_get_single_user(async_client, seed_users_helper):
     users = [
         {"user_id": USER_ID_1, "first_name": "Alice", "last_name": "Smith", "phone": "555-1111", "email": "alice@example.com"},
         {"user_id": USER_ID_2, "first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"},
-        {"user_id": USER_ID_3, "first_name": "Carol", "last_name": "Lee", "phone": "555-3333", "email": None},
     ]
     await seed_users_helper(users)
 
@@ -203,11 +202,7 @@ async def test_update_user(async_client, seed_users_helper):
 @pytest.mark.asyncio
 async def test_delete_user(async_client, seed_users_helper):
     # Seed users data directly into test DB
-    users = [
-        {"user_id": USER_ID_1, "first_name": "Alice", "last_name": "Smith", "phone": "555-1111", "email": "alice@example.com"},
-        {"user_id": USER_ID_2, "first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"},
-        {"user_id": USER_ID_3, "first_name": "Carol", "last_name": "Lee", "phone": "555-3333", "email": None},
-    ]
+    users = [{"user_id": USER_ID_2, "first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"}]
     await seed_users_helper(users)
 
     # 1. Test user not found

@@ -37,7 +37,6 @@ async def test_get_all_user_dates(async_client, test_db_pool, seed_users_helper,
     users = [
         {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
         {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
     ]
     await seed_users_helper(users)
     
@@ -68,10 +67,7 @@ async def test_get_all_user_dates(async_client, test_db_pool, seed_users_helper,
 @pytest.mark.asyncio
 async def test_get_single_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
     # Seed users and dates data directly into test DB
-    users = [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-    ]
+    users = [{"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"}]
     await seed_users_helper(users)
     
     async with test_db_pool.acquire() as conn:
@@ -249,7 +245,7 @@ async def test_update_user_date(async_client, test_db_pool, seed_users_helper, s
     await seed_users_helper(users)
     
     async with test_db_pool.acquire() as conn:
-        await conn.execute(insert_dates([DATE_1, DATE_2, DATE_3]))
+        await conn.execute(insert_dates([DATE_1, DATE_2]))
     
     user_dates = [{"user_id": USER_ID_1, "date": DATE_1}]
     await seed_user_dates_helper(user_dates)

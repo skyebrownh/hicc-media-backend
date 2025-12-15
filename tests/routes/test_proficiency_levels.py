@@ -53,7 +53,6 @@ async def test_get_single_proficiency_level(async_client, seed_proficiency_level
     proficiency_levels = [
         {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Level 1", "proficiency_level_number": 1, "proficiency_level_code": "level_1"},
         {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Level 3", "proficiency_level_number": 3, "proficiency_level_code": "level_3"},
     ]
     await seed_proficiency_levels_helper(proficiency_levels)
 
@@ -211,11 +210,7 @@ async def test_update_proficiency_level(async_client, seed_proficiency_levels_he
 @pytest.mark.asyncio
 async def test_delete_proficiency_level(async_client, seed_proficiency_levels_helper):
     # Seed proficiency levels data directly into test DB
-    proficiency_levels = [
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Level 1", "proficiency_level_number": 1, "proficiency_level_code": "level_1"},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Level 3", "proficiency_level_number": 3, "proficiency_level_code": "level_3"},
-    ]
+    proficiency_levels = [{"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"}]
     await seed_proficiency_levels_helper(proficiency_levels)
 
     # 1. Test proficiency level not found

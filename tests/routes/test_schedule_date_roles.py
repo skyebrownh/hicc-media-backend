@@ -375,16 +375,10 @@ async def test_delete_schedule_date_role(async_client, test_db_pool, seed_schedu
     schedule_dates = [{"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}]
     await seed_schedule_dates_helper(schedule_dates)
     
-    media_roles = [
-        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
-        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
-    ]
+    media_roles = [{"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"}]
     await seed_media_roles_helper(media_roles)
     
-    schedule_date_roles = [
-        {"schedule_date_role_id": SCHEDULE_DATE_ROLE_ID_1, "schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_1},
-        {"schedule_date_role_id": SCHEDULE_DATE_ROLE_ID_2, "schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_2},
-    ]
+    schedule_date_roles = [{"schedule_date_role_id": SCHEDULE_DATE_ROLE_ID_1, "schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_1}]
     await seed_schedule_date_roles_helper(schedule_date_roles)
 
     # 1. Test schedule date role not found

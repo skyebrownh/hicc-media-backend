@@ -52,7 +52,6 @@ async def test_get_roles_for_user(async_client, seed_users_helper, seed_media_ro
     # Seed users, media roles, proficiency levels, and user roles data directly into test DB
     users = [
         {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
         {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
     ]
     await seed_users_helper(users)
@@ -60,7 +59,6 @@ async def test_get_roles_for_user(async_client, seed_users_helper, seed_media_ro
     media_roles = [
         {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
         {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
-        {"media_role_id": ROLE_ID_3, "media_role_name": "Lighting", "sort_order": 30, "media_role_code": "lighting"},
     ]
     await seed_media_roles_helper(media_roles)
     
@@ -73,7 +71,6 @@ async def test_get_roles_for_user(async_client, seed_users_helper, seed_media_ro
     user_roles = [
         {"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1},
         {"user_id": USER_ID_1, "media_role_id": ROLE_ID_2, "proficiency_level_id": PROFICIENCY_ID_2},
-        {"user_id": USER_ID_2, "media_role_id": ROLE_ID_3, "proficiency_level_id": PROFICIENCY_ID_1},
     ]
     await seed_user_roles_helper(user_roles)
 
