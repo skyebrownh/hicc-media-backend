@@ -1,7 +1,7 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
-from tests.seed import insert_dates
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_dates, insert_users, insert_user_dates
 
 # Test data constants
 USER_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
@@ -11,31 +11,45 @@ DATE_1 = "2025-01-15"
 DATE_2 = "2025-01-20"
 DATE_3 = "2025-02-01"
 
+@pytest_asyncio.fixture
+async def seed_users_helper(test_db_pool):
+    """Helper fixture to seed users in the database"""
+    async def seed_users(users: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_users(users))
+    return seed_users
+
+@pytest_asyncio.fixture
+async def seed_user_dates_helper(test_db_pool):
+    """Helper fixture to seed user_dates in the database"""
+    async def seed_user_dates(user_dates: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_user_dates(user_dates))
+    return seed_user_dates
+
 @pytest.mark.asyncio
-async def test_get_all_user_dates(async_client, test_db_pool):
+async def test_get_all_user_dates(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
     # 1. Test when no user dates exist
     response1 = await async_client.get("/user_dates")
     assert_empty_list_200(response1)
 
     # Seed users and dates data directly into test DB
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
+    ]
+    await seed_users_helper(users)
+    
     async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102'),
-                   ('{USER_ID_3}', 'Bob', 'Johnson', '555-0103');
-            """
-        )
         await conn.execute(insert_dates([DATE_1, DATE_2, DATE_3]))
-        await conn.execute(
-            f"""
-            INSERT INTO user_dates (user_id, date)
-            VALUES ('{USER_ID_1}', '{DATE_1}'),
-                   ('{USER_ID_1}', '{DATE_2}'),
-                   ('{USER_ID_2}', '{DATE_3}');
-            """
-        )
+    
+    user_dates = [
+        {"user_id": USER_ID_1, "date": DATE_1},
+        {"user_id": USER_ID_1, "date": DATE_2},
+        {"user_id": USER_ID_2, "date": DATE_3},
+    ]
+    await seed_user_dates_helper(user_dates)
 
     # 2. Test when user dates exist
     response2 = await async_client.get("/user_dates")
@@ -52,23 +66,19 @@ async def test_get_all_user_dates(async_client, test_db_pool):
     assert response2_json[2]["date"] == DATE_3
 
 @pytest.mark.asyncio
-async def test_get_single_user_date(async_client, test_db_pool):
+async def test_get_single_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
     # Seed users and dates data directly into test DB
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
     async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO user_dates (user_id, date)
-            VALUES ('{USER_ID_1}', '{DATE_1}');
-            """
-        )
+    
+    user_dates = [{"user_id": USER_ID_1, "date": DATE_1}]
+    await seed_user_dates_helper(user_dates)
 
     # 1. Test when user date exists
     response1 = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_1}")
@@ -91,23 +101,19 @@ async def test_get_single_user_date(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_insert_user_date(async_client, test_db_pool):
+async def test_insert_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
     # Seed users and dates data directly into test DB
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
     async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO user_dates (user_id, date)
-            VALUES ('{USER_ID_1}', '{DATE_1}');
-            """
-        )
+    
+    user_dates = [{"user_id": USER_ID_1, "date": DATE_1}]
+    await seed_user_dates_helper(user_dates)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -182,16 +188,15 @@ async def test_insert_user_date(async_client, test_db_pool):
     assert response10.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_insert_user_dates_bulk(async_client, test_db_pool):
+async def test_insert_user_dates_bulk(async_client, test_db_pool, seed_users_helper):
     # Seed users and dates data directly into test DB
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
     async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
         await conn.execute(insert_dates([DATE_1, DATE_2, DATE_3]))
 
     # Set up payloads
@@ -235,23 +240,19 @@ async def test_insert_user_dates_bulk(async_client, test_db_pool):
     assert {ud["date"] for ud in response4_json} == {DATE_1, DATE_2, DATE_3}
 
 @pytest.mark.asyncio
-async def test_update_user_date(async_client, test_db_pool):
+async def test_update_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
     # Seed users and dates data directly into test DB
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
     async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
         await conn.execute(insert_dates([DATE_1, DATE_2, DATE_3]))
-        await conn.execute(
-            f"""
-            INSERT INTO user_dates (user_id, date)
-            VALUES ('{USER_ID_1}', '{DATE_1}');
-            """
-        )
+    
+    user_dates = [{"user_id": USER_ID_1, "date": DATE_1}]
+    await seed_user_dates_helper(user_dates)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -295,24 +296,22 @@ async def test_update_user_date(async_client, test_db_pool):
     assert response7.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_delete_user_date(async_client, test_db_pool):
+async def test_delete_user_date(async_client, test_db_pool, seed_users_helper, seed_user_dates_helper):
     # Seed users and dates data directly into test DB
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
     async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO user_dates (user_id, date)
-            VALUES ('{USER_ID_1}', '{DATE_1}'),
-                   ('{USER_ID_2}', '{DATE_2}');
-            """
-        )
+    
+    user_dates = [
+        {"user_id": USER_ID_1, "date": DATE_1},
+        {"user_id": USER_ID_2, "date": DATE_2},
+    ]
+    await seed_user_dates_helper(user_dates)
 
     # 1. Test user date not found
     response1 = await async_client.delete(f"/users/{USER_ID_1}/dates/{DATE_2}")

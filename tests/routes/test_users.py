@@ -1,6 +1,7 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_users
 
 # Test data constants
 USER_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
@@ -8,22 +9,27 @@ USER_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
 USER_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
 USER_ID_4 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
 
+@pytest_asyncio.fixture
+async def seed_users_helper(test_db_pool):
+    """Helper fixture to seed users in the database"""
+    async def seed_users(users: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_users(users))
+    return seed_users
+
 @pytest.mark.asyncio
-async def test_get_all_users(async_client, test_db_pool):
+async def test_get_all_users(async_client, seed_users_helper):
     # 1. Test when no users exist
     response1 = await async_client.get("/users")
     assert_empty_list_200(response1)
 
     # Seed users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (first_name, last_name, phone, email)
-            VALUES ('Alice', 'Smith', '555-1111', 'alice@example.com'),
-                   ('Bob', 'Jones', '555-2222', 'bob@example.com'),
-                   ('Carol', 'Lee', '555-3333', NULL);
-            """
-        )
+    users = [
+        {"first_name": "Alice", "last_name": "Smith", "phone": "555-1111", "email": "alice@example.com"},
+        {"first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"},
+        {"first_name": "Carol", "last_name": "Lee", "phone": "555-3333", "email": None},
+    ]
+    await seed_users_helper(users)
 
     # 2. Test when users exist
     response2 = await async_client.get("/users")
@@ -38,21 +44,18 @@ async def test_get_all_users(async_client, test_db_pool):
     assert response2_json[2]["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_get_single_user(async_client, test_db_pool):
+async def test_get_single_user(async_client, seed_users_helper):
     # 1. Test when no users exist
     response1 = await async_client.get(f"/users/{USER_ID_1}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 
     # Seed users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone, email)
-            VALUES ('{USER_ID_1}', 'Alice', 'Smith', '555-1111', 'alice@example.com'),
-                   ('{USER_ID_2}', 'Bob', 'Jones', '555-2222', 'bob@example.com'),
-                   ('{USER_ID_3}', 'Carol', 'Lee', '555-3333', NULL);
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "Alice", "last_name": "Smith", "phone": "555-1111", "email": "alice@example.com"},
+        {"user_id": USER_ID_2, "first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"},
+        {"user_id": USER_ID_3, "first_name": "Carol", "last_name": "Lee", "phone": "555-3333", "email": None},
+    ]
+    await seed_users_helper(users)
 
     # 2. Test when users exist
     response2 = await async_client.get(f"/users/{USER_ID_2}")
@@ -74,7 +77,7 @@ async def test_get_single_user(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_insert_user(async_client, test_db_pool):
+async def test_insert_user(async_client, seed_users_helper):
     # Set up payloads
     bad_payload_1 = {}
     bad_payload_2 = {"first_name": "Incomplete"}
@@ -87,13 +90,8 @@ async def test_insert_user(async_client, test_db_pool):
     }
 
     # Seed another user directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone, email)
-            VALUES ('{USER_ID_4}', 'Another', 'User', '555-5555', 'another@example.com');
-            """
-        )
+    users = [{"user_id": USER_ID_4, "first_name": "Another", "last_name": "User", "phone": "555-5555", "email": "another@example.com"}]
+    await seed_users_helper(users)
 
     bad_payload_4 = {
         "user_id": USER_ID_4,  # Not allowed in payload
@@ -129,17 +127,14 @@ async def test_insert_user(async_client, test_db_pool):
     assert response5.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_update_user(async_client, test_db_pool):
+async def test_update_user(async_client, seed_users_helper):
     # Seed user data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone, email)
-            VALUES ('{USER_ID_1}', 'Alice', 'Smith', '555-1111', 'alice@example.com'),
-                   ('{USER_ID_2}', 'Bob', 'Jones', '555-2222', 'bob@example.com'),
-                   ('{USER_ID_3}', 'Carol', 'Lee', '555-3333', NULL);
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "Alice", "last_name": "Smith", "phone": "555-1111", "email": "alice@example.com"},
+        {"user_id": USER_ID_2, "first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"},
+        {"user_id": USER_ID_3, "first_name": "Carol", "last_name": "Lee", "phone": "555-3333", "email": None},
+    ]
+    await seed_users_helper(users)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -206,17 +201,14 @@ async def test_update_user(async_client, test_db_pool):
     assert response8_json["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_delete_user(async_client, test_db_pool):
+async def test_delete_user(async_client, seed_users_helper):
     # Seed users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone, email)
-            VALUES ('{USER_ID_1}', 'Alice', 'Smith', '555-1111', 'alice@example.com'),
-                   ('{USER_ID_2}', 'Bob', 'Jones', '555-2222', 'bob@example.com'),
-                   ('{USER_ID_3}', 'Carol', 'Lee', '555-3333', NULL);
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "Alice", "last_name": "Smith", "phone": "555-1111", "email": "alice@example.com"},
+        {"user_id": USER_ID_2, "first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"},
+        {"user_id": USER_ID_3, "first_name": "Carol", "last_name": "Lee", "phone": "555-3333", "email": None},
+    ]
+    await seed_users_helper(users)
 
     # 1. Test user not found
     response1 = await async_client.delete("/users/00000000-0000-0000-0000-000000000000")

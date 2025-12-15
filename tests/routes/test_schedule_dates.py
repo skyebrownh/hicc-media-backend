@@ -1,7 +1,7 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
-from tests.seed import insert_dates
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_dates, insert_schedules, insert_schedule_date_types, insert_schedule_dates, insert_teams, insert_media_roles, insert_schedule_date_roles, insert_users, insert_user_dates
 
 # Test data constants
 SCHEDULE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
@@ -20,8 +20,72 @@ USER_ID_2 = "b2c3d4e5-f6a7-4890-b123-c4d5e6f7a890"
 MEDIA_ROLE_ID_1 = "11a2b3c4-d5e6-4789-a012-b3c4d5e6f789"
 MEDIA_ROLE_ID_2 = "22b3c4d5-e6f7-4890-b123-c4d5e6f7a890"
 
+@pytest_asyncio.fixture
+async def seed_schedules_helper(test_db_pool):
+    """Helper fixture to seed schedules in the database"""
+    async def seed_schedules(schedules: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_schedules(schedules))
+    return seed_schedules
+
+@pytest_asyncio.fixture
+async def seed_schedule_date_types_helper(test_db_pool):
+    """Helper fixture to seed schedule_date_types in the database"""
+    async def seed_schedule_date_types(schedule_date_types: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_schedule_date_types(schedule_date_types))
+    return seed_schedule_date_types
+
+@pytest_asyncio.fixture
+async def seed_schedule_dates_helper(test_db_pool):
+    """Helper fixture to seed schedule_dates in the database"""
+    async def seed_schedule_dates(schedule_dates: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_schedule_dates(schedule_dates))
+    return seed_schedule_dates
+
+@pytest_asyncio.fixture
+async def seed_teams_helper(test_db_pool):
+    """Helper fixture to seed teams in the database"""
+    async def seed_teams(teams: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_teams(teams))
+    return seed_teams
+
+@pytest_asyncio.fixture
+async def seed_media_roles_helper(test_db_pool):
+    """Helper fixture to seed media roles in the database"""
+    async def seed_media_roles(media_roles: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_media_roles(media_roles))
+    return seed_media_roles
+
+@pytest_asyncio.fixture
+async def seed_schedule_date_roles_helper(test_db_pool):
+    """Helper fixture to seed schedule_date_roles in the database"""
+    async def seed_schedule_date_roles(schedule_date_roles: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_schedule_date_roles(schedule_date_roles))
+    return seed_schedule_date_roles
+
+@pytest_asyncio.fixture
+async def seed_users_helper(test_db_pool):
+    """Helper fixture to seed users in the database"""
+    async def seed_users(users: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_users(users))
+    return seed_users
+
+@pytest_asyncio.fixture
+async def seed_user_dates_helper(test_db_pool):
+    """Helper fixture to seed user_dates in the database"""
+    async def seed_user_dates(user_dates: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_user_dates(user_dates))
+    return seed_user_dates
+
 @pytest.mark.asyncio
-async def test_get_all_schedule_dates(async_client, test_db_pool):
+async def test_get_all_schedule_dates(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_schedule_dates_helper):
     # 1. Test when no schedule dates exist
     response1 = await async_client.get("/schedule_dates")
     assert_empty_list_200(response1)
@@ -29,28 +93,25 @@ async def test_get_all_schedule_dates(async_client, test_db_pool):
     # Seed schedules, dates, schedule_date_types, and schedule_dates data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(insert_dates([DATE_1, DATE_2, DATE_3]))
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}'),
-                   ('{SCHEDULE_ID_2}', '{DATE_2}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service'),
-                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Rehearsal', 'rehearsal');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}'),
-                   ('{SCHEDULE_ID_1}', '{DATE_2}', '{SCHEDULE_DATE_TYPE_ID_1}'),
-                   ('{SCHEDULE_ID_2}', '{DATE_3}', '{SCHEDULE_DATE_TYPE_ID_2}');
-            """
-        )
+    
+    schedules = [
+        {"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1},
+        {"schedule_id": SCHEDULE_ID_2, "month_start_date": DATE_2},
+    ]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Rehearsal", "schedule_date_type_code": "rehearsal"},
+    ]
+    await seed_schedule_date_types_helper(schedule_date_types)
+    
+    schedule_dates = [
+        {"schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_id": SCHEDULE_ID_2, "date": DATE_3, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2},
+    ]
+    await seed_schedule_dates_helper(schedule_dates)
 
     # 2. Test when schedule dates exist
     response2 = await async_client.get("/schedule_dates")
@@ -67,28 +128,19 @@ async def test_get_all_schedule_dates(async_client, test_db_pool):
     assert response2_json[2]["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_get_single_schedule_date(async_client, test_db_pool):
+async def test_get_single_schedule_date(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_schedule_dates_helper):
     # Seed schedules, dates, schedule_date_types, and schedule_dates data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_date_id, schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_DATE_ID_1}', '{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"}]
+    await seed_schedule_date_types_helper(schedule_date_types)
+    
+    schedule_dates = [{"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}]
+    await seed_schedule_dates_helper(schedule_dates)
 
     # 1. Test when schedule date exists
     response1 = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_1}")
@@ -112,43 +164,34 @@ async def test_get_single_schedule_date(async_client, test_db_pool):
     assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_get_all_schedule_date_roles_by_schedule_date(async_client, test_db_pool):
+async def test_get_all_schedule_date_roles_by_schedule_date(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_schedule_dates_helper, seed_media_roles_helper, seed_schedule_date_roles_helper):
     # Seed data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_date_id, schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_DATE_ID_1}', '{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}'),
-                   ('{SCHEDULE_DATE_ID_2}', '{SCHEDULE_ID_1}', '{DATE_2}', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{MEDIA_ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{MEDIA_ROLE_ID_2}', 'Sound', 20, 'sound');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_roles (schedule_date_id, media_role_id)
-            VALUES ('{SCHEDULE_DATE_ID_1}', '{MEDIA_ROLE_ID_1}'),
-                   ('{SCHEDULE_DATE_ID_1}', '{MEDIA_ROLE_ID_2}');
-            """
-        )
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"}]
+    await seed_schedule_date_types_helper(schedule_date_types)
+    
+    schedule_dates = [
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+    ]
+    await seed_schedule_dates_helper(schedule_dates)
+    
+    media_roles = [
+        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    schedule_date_roles = [
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_2},
+    ]
+    await seed_schedule_date_roles_helper(schedule_date_roles)
 
     # 1. Test when schedule date has roles
     response1 = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_1}/roles")
@@ -171,43 +214,34 @@ async def test_get_all_schedule_date_roles_by_schedule_date(async_client, test_d
     assert response4.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_get_all_user_dates_by_schedule_date(async_client, test_db_pool):
+async def test_get_all_user_dates_by_schedule_date(async_client, test_db_pool, seed_users_helper, seed_schedules_helper, seed_schedule_date_types_helper, seed_schedule_dates_helper, seed_user_dates_helper):
     # Seed data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_date_id, schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_DATE_ID_1}', '{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}'),
-                   ('{SCHEDULE_DATE_ID_2}', '{SCHEDULE_ID_1}', '{DATE_2}', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO user_dates (user_id, date)
-            VALUES ('{USER_ID_1}', '{DATE_1}'),
-                   ('{USER_ID_2}', '{DATE_1}');
-            """
-        )
+    
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"}]
+    await seed_schedule_date_types_helper(schedule_date_types)
+    
+    schedule_dates = [
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+    ]
+    await seed_schedule_dates_helper(schedule_dates)
+    
+    user_dates = [
+        {"user_id": USER_ID_1, "date": DATE_1},
+        {"user_id": USER_ID_2, "date": DATE_1},
+    ]
+    await seed_user_dates_helper(user_dates)
 
     # 1. Test when schedule date has user dates
     response1 = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_1}/user_dates")
@@ -231,35 +265,25 @@ async def test_get_all_user_dates_by_schedule_date(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_insert_schedule_date(async_client, test_db_pool):
+async def test_insert_schedule_date(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_teams_helper, seed_schedule_dates_helper):
     # Seed schedules, dates, and schedule_date_types data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service'),
-                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Rehearsal', 'rehearsal');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Rehearsal", "schedule_date_type_code": "rehearsal"},
+    ]
+    await seed_schedule_date_types_helper(schedule_date_types)
+    
+    teams = [{"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"}]
+    await seed_teams_helper(teams)
+    
+    schedule_dates = [{"schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}]
+    await seed_schedule_dates_helper(schedule_dates)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -359,35 +383,25 @@ async def test_insert_schedule_date(async_client, test_db_pool):
     assert response11_json["notes"] == "Test notes"
 
 @pytest.mark.asyncio
-async def test_update_schedule_date(async_client, test_db_pool):
+async def test_update_schedule_date(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_teams_helper, seed_schedule_dates_helper):
     # Seed schedules, dates, schedule_date_types, and schedule_dates data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(insert_dates([DATE_1, DATE_2, DATE_3]))
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service'),
-                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Rehearsal', 'rehearsal');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_date_id, schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_DATE_ID_1}', '{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Rehearsal", "schedule_date_type_code": "rehearsal"},
+    ]
+    await seed_schedule_date_types_helper(schedule_date_types)
+    
+    teams = [{"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"}]
+    await seed_teams_helper(teams)
+    
+    schedule_dates = [{"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}]
+    await seed_schedule_dates_helper(schedule_dates)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -443,29 +457,22 @@ async def test_update_schedule_date(async_client, test_db_pool):
     assert response7_json["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_2
 
 @pytest.mark.asyncio
-async def test_delete_schedule_date(async_client, test_db_pool):
+async def test_delete_schedule_date(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_schedule_dates_helper):
     # Seed schedules, dates, schedule_date_types, and schedule_dates data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_date_id, schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_DATE_ID_1}', '{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}'),
-                   ('{SCHEDULE_DATE_ID_2}', '{SCHEDULE_ID_1}', '{DATE_2}', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"}]
+    await seed_schedule_date_types_helper(schedule_date_types)
+    
+    schedule_dates = [
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+    ]
+    await seed_schedule_dates_helper(schedule_dates)
 
     # 1. Test schedule date not found
     response1 = await async_client.delete("/schedule_dates/00000000-0000-0000-0000-000000000000")
@@ -487,43 +494,34 @@ async def test_delete_schedule_date(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_delete_schedule_date_roles_for_schedule_date(async_client, test_db_pool):
+async def test_delete_schedule_date_roles_for_schedule_date(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_schedule_dates_helper, seed_media_roles_helper, seed_schedule_date_roles_helper):
     # Seed data directly into test DB
     async with test_db_pool.acquire() as conn:
         await conn.execute(insert_dates([DATE_1, DATE_2]))
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date)
-            VALUES ('{SCHEDULE_ID_1}', '{DATE_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_date_id, schedule_id, date, schedule_date_type_id)
-            VALUES ('{SCHEDULE_DATE_ID_1}', '{SCHEDULE_ID_1}', '{DATE_1}', '{SCHEDULE_DATE_TYPE_ID_1}'),
-                   ('{SCHEDULE_DATE_ID_2}', '{SCHEDULE_ID_1}', '{DATE_2}', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{MEDIA_ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{MEDIA_ROLE_ID_2}', 'Sound', 20, 'sound');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_roles (schedule_date_id, media_role_id)
-            VALUES ('{SCHEDULE_DATE_ID_1}', '{MEDIA_ROLE_ID_1}'),
-                   ('{SCHEDULE_DATE_ID_1}', '{MEDIA_ROLE_ID_2}');
-            """
-        )
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"}]
+    await seed_schedule_date_types_helper(schedule_date_types)
+    
+    schedule_dates = [
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+    ]
+    await seed_schedule_dates_helper(schedule_dates)
+    
+    media_roles = [
+        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    schedule_date_roles = [
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_2},
+    ]
+    await seed_schedule_date_roles_helper(schedule_date_roles)
 
     # 1. Test when schedule date has roles
     response1 = await async_client.delete(f"/schedule_dates/{SCHEDULE_DATE_ID_1}/roles")
