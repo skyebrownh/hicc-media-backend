@@ -1,7 +1,7 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
-from tests.seed import insert_dates
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_dates, insert_schedules, insert_schedule_date_types, insert_schedule_dates
 
 SCHEDULE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
 SCHEDULE_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
@@ -9,8 +9,32 @@ SCHEDULE_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
 SCHEDULE_DATE_TYPE_ID_1 = "d0ececff-df86-404a-b2b6-8468b3b0aa33"
 SCHEDULE_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
 
+@pytest_asyncio.fixture
+async def seed_schedules_helper(test_db_pool):
+    """Helper fixture to seed schedules in the database"""
+    async def seed_schedules(schedules: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_schedules(schedules))
+    return seed_schedules
+
+@pytest_asyncio.fixture
+async def seed_schedule_date_types_helper(test_db_pool):
+    """Helper fixture to seed schedule_date_types in the database"""
+    async def seed_schedule_date_types(schedule_date_types: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_schedule_date_types(schedule_date_types))
+    return seed_schedule_date_types
+
+@pytest_asyncio.fixture
+async def seed_schedule_dates_helper(test_db_pool):
+    """Helper fixture to seed schedule_dates in the database"""
+    async def seed_schedule_dates(schedule_dates: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_schedule_dates(schedule_dates))
+    return seed_schedule_dates
+
 @pytest.mark.asyncio
-async def test_get_all_schedules(async_client, test_db_pool):
+async def test_get_all_schedules(async_client, test_db_pool, seed_schedules_helper):
     # 1. Test when no schedules exist
     response1 = await async_client.get("/schedules")
     assert_empty_list_200(response1)
@@ -19,15 +43,13 @@ async def test_get_all_schedules(async_client, test_db_pool):
     async with test_db_pool.acquire() as conn:
         # Insert required dates for foreign key constraint
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
-        # Insert schedules
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (month_start_date, notes)
-            VALUES ('2025-01-01', 'First schedule'),
-                   ('2025-02-01', 'Second schedule'),
-                   ('2025-03-01', NULL);
-            """
-        )
+    
+    schedules = [
+        {"month_start_date": "2025-01-01", "notes": "First schedule"},
+        {"month_start_date": "2025-02-01", "notes": "Second schedule"},
+        {"month_start_date": "2025-03-01", "notes": None},
+    ]
+    await seed_schedules_helper(schedules)
 
     # 2. Test when schedules exist
     response2 = await async_client.get("/schedules")
@@ -41,41 +63,29 @@ async def test_get_all_schedules(async_client, test_db_pool):
     assert response2_json[2]["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_get_all_schedule_dates_for_schedule(async_client, test_db_pool):
+async def test_get_all_schedule_dates_for_schedule(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_schedule_dates_helper):
     # Seed schedules data directly into test DB
     async with test_db_pool.acquire() as conn:
         # Insert required dates for foreign key constraint
         await conn.execute(insert_dates(["2025-05-01", "2025-05-02", "2025-05-03"]))
-        # Insert schedules
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('{SCHEDULE_ID_1}', '2025-05-01', 'First schedule');
-            """
-        )
-        # Insert schedule_date_type
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
-            """
-        )
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": "2025-05-01", "notes": "First schedule"}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"}]
+    await seed_schedule_date_types_helper(schedule_date_types)
 
     # 1. Test when no schedule_dates exist
     response1 = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
     assert_empty_list_200(response1)
 
     # Insert schedule_dates
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_id, date, schedule_date_type_id)
-            VALUES 
-                ('{SCHEDULE_ID_1}', '2025-05-01', '{SCHEDULE_DATE_TYPE_ID_1}'),
-                ('{SCHEDULE_ID_1}', '2025-05-02', '{SCHEDULE_DATE_TYPE_ID_1}'),
-                ('{SCHEDULE_ID_1}', '2025-05-03', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
+    schedule_dates = [
+        {"schedule_id": SCHEDULE_ID_1, "date": "2025-05-01", "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_id": SCHEDULE_ID_1, "date": "2025-05-02", "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_id": SCHEDULE_ID_1, "date": "2025-05-03", "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+    ]
+    await seed_schedule_dates_helper(schedule_dates)
     
     # 2. Test when schedule_dates exist
     response2 = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
@@ -91,7 +101,7 @@ async def test_get_all_schedule_dates_for_schedule(async_client, test_db_pool):
     assert response2_json[2]["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_get_single_schedule(async_client, test_db_pool):
+async def test_get_single_schedule(async_client, test_db_pool, seed_schedules_helper):
     # 1. Test when no schedules exist
     response1 = await async_client.get(f"/schedules/{SCHEDULE_ID_1}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
@@ -100,15 +110,13 @@ async def test_get_single_schedule(async_client, test_db_pool):
     async with test_db_pool.acquire() as conn:
         # Insert required dates for foreign key constraint
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
-        # Insert schedules
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('{SCHEDULE_ID_1}', '2025-01-01', 'First schedule'),
-                   ('{SCHEDULE_ID_2}', '2025-02-01', 'Second schedule'),
-                   ('{SCHEDULE_ID_3}', '2025-03-01', NULL);
-            """
-        )
+    
+    schedules = [
+        {"schedule_id": SCHEDULE_ID_1, "month_start_date": "2025-01-01", "notes": "First schedule"},
+        {"schedule_id": SCHEDULE_ID_2, "month_start_date": "2025-02-01", "notes": "Second schedule"},
+        {"schedule_id": SCHEDULE_ID_3, "month_start_date": "2025-03-01", "notes": None},
+    ]
+    await seed_schedules_helper(schedules)
 
     # 2. Test when schedules exist
     response2 = await async_client.get(f"/schedules/{SCHEDULE_ID_2}")
@@ -177,20 +185,18 @@ async def test_insert_schedule(async_client, test_db_pool):
     assert response6_json["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_update_schedule(async_client, test_db_pool):
+async def test_update_schedule(async_client, test_db_pool, seed_schedules_helper):
     # Seed schedule data directly into test DB
     async with test_db_pool.acquire() as conn:
         # Insert required dates for foreign key constraint
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
-        # Insert schedules
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('{SCHEDULE_ID_1}', '2025-01-01', 'First schedule'),
-                   ('{SCHEDULE_ID_2}', '2025-02-01', 'Second schedule'),
-                   ('{SCHEDULE_ID_3}', '2025-03-01', NULL);
-            """
-        )
+    
+    schedules = [
+        {"schedule_id": SCHEDULE_ID_1, "month_start_date": "2025-01-01", "notes": "First schedule"},
+        {"schedule_id": SCHEDULE_ID_2, "month_start_date": "2025-02-01", "notes": "Second schedule"},
+        {"schedule_id": SCHEDULE_ID_3, "month_start_date": "2025-03-01", "notes": None},
+    ]
+    await seed_schedules_helper(schedules)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -250,20 +256,18 @@ async def test_update_schedule(async_client, test_db_pool):
     assert response8_json["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_delete_schedule(async_client, test_db_pool):
+async def test_delete_schedule(async_client, test_db_pool, seed_schedules_helper):
     # Seed schedules data directly into test DB
     async with test_db_pool.acquire() as conn:
         # Insert required dates for foreign key constraint
         await conn.execute(insert_dates(["2025-01-01", "2025-02-01", "2025-03-01"]))
-        # Insert schedules
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('{SCHEDULE_ID_1}', '2025-01-01', 'First schedule'),
-                   ('{SCHEDULE_ID_2}', '2025-02-01', 'Second schedule'),
-                   ('{SCHEDULE_ID_3}', '2025-03-01', NULL);
-            """
-        )
+    
+    schedules = [
+        {"schedule_id": SCHEDULE_ID_1, "month_start_date": "2025-01-01", "notes": "First schedule"},
+        {"schedule_id": SCHEDULE_ID_2, "month_start_date": "2025-02-01", "notes": "Second schedule"},
+        {"schedule_id": SCHEDULE_ID_3, "month_start_date": "2025-03-01", "notes": None},
+    ]
+    await seed_schedules_helper(schedules)
 
     # 1. Test schedule not found
     response1 = await async_client.delete("/schedules/00000000-0000-0000-0000-000000000000")
@@ -282,25 +286,17 @@ async def test_delete_schedule(async_client, test_db_pool):
     assert response3_json["schedule_id"] == SCHEDULE_ID_2
 
 @pytest.mark.asyncio
-async def test_delete_schedule_dates_for_schedule(async_client, test_db_pool):
+async def test_delete_schedule_dates_for_schedule(async_client, test_db_pool, seed_schedules_helper, seed_schedule_date_types_helper, seed_schedule_dates_helper):
     # Seed schedules data directly into test DB
     async with test_db_pool.acquire() as conn:
         # Insert required dates for foreign key constraint
         await conn.execute(insert_dates(["2025-05-01"]))
-        # Insert schedules
-        await conn.execute(
-            f"""
-            INSERT INTO schedules (schedule_id, month_start_date, notes)
-            VALUES ('{SCHEDULE_ID_1}', '2025-05-01', 'First schedule');
-            """
-        )
-        # Insert schedule_date_type
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Service', 'service');
-            """
-        )
+    
+    schedules = [{"schedule_id": SCHEDULE_ID_1, "month_start_date": "2025-05-01", "notes": "First schedule"}]
+    await seed_schedules_helper(schedules)
+    
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"}]
+    await seed_schedule_date_types_helper(schedule_date_types)
 
     # 1. Test schedule not found
     response1 = await async_client.delete("/schedules/00000000-0000-0000-0000-000000000000/schedule_dates")
@@ -319,14 +315,8 @@ async def test_delete_schedule_dates_for_schedule(async_client, test_db_pool):
     assert response3_json == []
 
     # Insert schedule_dates
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_dates (schedule_id, date, schedule_date_type_id)
-            VALUES 
-                ('{SCHEDULE_ID_1}', '2025-05-01', '{SCHEDULE_DATE_TYPE_ID_1}');
-            """
-        )
+    schedule_dates = [{"schedule_id": SCHEDULE_ID_1, "date": "2025-05-01", "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}]
+    await seed_schedule_dates_helper(schedule_dates)
 
     # 3. Test when schedule_dates exist
     response4 = await async_client.delete(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")

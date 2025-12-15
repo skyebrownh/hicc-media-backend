@@ -1,8 +1,9 @@
 import pytest
+import pytest_asyncio
 from uuid import UUID
 from fastapi import status
 from app.db.queries import insert_all_roles_for_user, insert_all_users_for_role
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_users, insert_media_roles, insert_proficiency_levels, insert_user_roles
 
 # Test data constants
 USER_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
@@ -14,41 +15,67 @@ ROLE_ID_3 = "33c4d5e6-f7a8-4901-c234-d5e6f7a8b901"
 PROFICIENCY_ID_1 = "44d5e6f7-a8b9-4901-c234-d5e6f7a8b901"
 PROFICIENCY_ID_2 = "55e6f7a8-b9c0-4901-c234-d5e6f7a8b901"
 
+@pytest_asyncio.fixture
+async def seed_users_helper(test_db_pool):
+    """Helper fixture to seed users in the database"""
+    async def seed_users(users: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_users(users))
+    return seed_users
+
+@pytest_asyncio.fixture
+async def seed_media_roles_helper(test_db_pool):
+    """Helper fixture to seed media roles in the database"""
+    async def seed_media_roles(media_roles: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_media_roles(media_roles))
+    return seed_media_roles
+
+@pytest_asyncio.fixture
+async def seed_proficiency_levels_helper(test_db_pool):
+    """Helper fixture to seed proficiency levels in the database"""
+    async def seed_proficiency_levels(proficiency_levels: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_proficiency_levels(proficiency_levels))
+    return seed_proficiency_levels
+
+@pytest_asyncio.fixture
+async def seed_user_roles_helper(test_db_pool):
+    """Helper fixture to seed user_roles in the database"""
+    async def seed_user_roles(user_roles: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_user_roles(user_roles))
+    return seed_user_roles
+
 @pytest.mark.asyncio
-async def test_get_roles_for_user(async_client, test_db_pool):
+async def test_get_roles_for_user(async_client, seed_users_helper, seed_media_roles_helper, seed_proficiency_levels_helper, seed_user_roles_helper):
     # Seed users, media roles, proficiency levels, and user roles data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102'),
-                   ('{USER_ID_3}', 'Bob', 'Johnson', '555-0103');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound'),
-                   ('{ROLE_ID_3}', 'Lighting', 30, 'lighting');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code, is_assignable)
-            VALUES ('{PROFICIENCY_ID_1}', 'Novice', 3, 'novice', true),
-                   ('{PROFICIENCY_ID_2}', 'Proficient', 4, 'proficient', true);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO user_roles (user_id, media_role_id, proficiency_level_id)
-            VALUES ('{USER_ID_1}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}'),
-                   ('{USER_ID_1}', '{ROLE_ID_2}', '{PROFICIENCY_ID_2}'),
-                   ('{USER_ID_2}', '{ROLE_ID_3}', '{PROFICIENCY_ID_1}');
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+        {"media_role_id": ROLE_ID_3, "media_role_name": "Lighting", "sort_order": 30, "media_role_code": "lighting"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    proficiency_levels = [
+        {"proficiency_level_id": PROFICIENCY_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
+        {"proficiency_level_id": PROFICIENCY_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
+    ]
+    await seed_proficiency_levels_helper(proficiency_levels)
+    
+    user_roles = [
+        {"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1},
+        {"user_id": USER_ID_1, "media_role_id": ROLE_ID_2, "proficiency_level_id": PROFICIENCY_ID_2},
+        {"user_id": USER_ID_2, "media_role_id": ROLE_ID_3, "proficiency_level_id": PROFICIENCY_ID_1},
+    ]
+    await seed_user_roles_helper(user_roles)
 
     # 1. Test when user has roles
     response1 = await async_client.get(f"/users/{USER_ID_1}/roles")
@@ -71,39 +98,31 @@ async def test_get_roles_for_user(async_client, test_db_pool):
     assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_get_users_for_role(async_client, test_db_pool):
+async def test_get_users_for_role(async_client, seed_users_helper, seed_media_roles_helper, seed_proficiency_levels_helper, seed_user_roles_helper):
     # Seed users, media roles, proficiency levels, and user roles data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102'),
-                   ('{USER_ID_3}', 'Bob', 'Johnson', '555-0103');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound'),
-                   ('{ROLE_ID_3}', 'Lighting', 30, 'lighting');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code, is_assignable)
-            VALUES ('{PROFICIENCY_ID_1}', 'Novice', 3, 'novice', true);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO user_roles (user_id, media_role_id, proficiency_level_id)
-            VALUES ('{USER_ID_1}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}'),
-                   ('{USER_ID_2}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}'),
-                   ('{USER_ID_3}', '{ROLE_ID_2}', '{PROFICIENCY_ID_1}');
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+        {"media_role_id": ROLE_ID_3, "media_role_name": "Lighting", "sort_order": 30, "media_role_code": "lighting"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    proficiency_levels = [{"proficiency_level_id": PROFICIENCY_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True}]
+    await seed_proficiency_levels_helper(proficiency_levels)
+    
+    user_roles = [
+        {"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1},
+        {"user_id": USER_ID_2, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1},
+        {"user_id": USER_ID_3, "media_role_id": ROLE_ID_2, "proficiency_level_id": PROFICIENCY_ID_1},
+    ]
+    await seed_user_roles_helper(user_roles)
 
     # 1. Test when role has users
     response1 = await async_client.get(f"/roles/{ROLE_ID_1}/users")
@@ -126,35 +145,25 @@ async def test_get_users_for_role(async_client, test_db_pool):
     assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_get_user_role(async_client, test_db_pool):
+async def test_get_user_role(async_client, seed_users_helper, seed_media_roles_helper, seed_proficiency_levels_helper, seed_user_roles_helper):
     # Seed users, media roles, proficiency levels, and user roles data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code, is_assignable)
-            VALUES ('{PROFICIENCY_ID_1}', 'Novice', 3, 'novice', true);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO user_roles (user_id, media_role_id, proficiency_level_id)
-            VALUES ('{USER_ID_1}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}');
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    proficiency_levels = [{"proficiency_level_id": PROFICIENCY_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True}]
+    await seed_proficiency_levels_helper(proficiency_levels)
+    
+    user_roles = [{"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1}]
+    await seed_user_roles_helper(user_roles)
 
     # 1. Test when user role exists
     response1 = await async_client.get(f"/users/{USER_ID_1}/roles/{ROLE_ID_1}")
@@ -180,36 +189,28 @@ async def test_get_user_role(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_insert_user_role(async_client, test_db_pool):
+async def test_insert_user_role(async_client, seed_users_helper, seed_media_roles_helper, seed_proficiency_levels_helper, seed_user_roles_helper):
     # Seed users, media roles, and proficiency levels data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code, is_assignable)
-            VALUES ('{PROFICIENCY_ID_1}', 'Novice', 3, 'novice', true),
-                   ('{PROFICIENCY_ID_2}', 'Proficient', 4, 'proficient', true);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO user_roles (user_id, media_role_id, proficiency_level_id)
-            VALUES ('{USER_ID_1}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}');
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    proficiency_levels = [
+        {"proficiency_level_id": PROFICIENCY_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
+        {"proficiency_level_id": PROFICIENCY_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
+    ]
+    await seed_proficiency_levels_helper(proficiency_levels)
+    
+    user_roles = [{"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1}]
+    await seed_user_roles_helper(user_roles)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -294,62 +295,47 @@ async def test_insert_user_role(async_client, test_db_pool):
     assert response10.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_insert_all_roles_for_user_missing_untrained(async_client, test_db_pool):
+async def test_insert_all_roles_for_user_missing_untrained(seed_users_helper, seed_media_roles_helper, test_db_pool):
     """Test inserting all roles for a user when 'untrained' proficiency level doesn't exist"""
     # Seed users and media roles, but NOT the 'untrained' proficiency level
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code, is_active)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter', true),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound', true);
-            """
-        )
-        # Intentionally NOT creating the 'untrained' proficiency level
+    users = [{"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"}]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter", "is_active": True},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound", "is_active": True},
+    ]
+    await seed_media_roles_helper(media_roles)
+    # Intentionally NOT creating the 'untrained' proficiency level
 
-        # Test that inserting all roles for a user raises ValueError when 'untrained' is missing
+    # Test that inserting all roles for a user raises ValueError when 'untrained' is missing
+    async with test_db_pool.acquire() as conn:
         with pytest.raises(ValueError) as exc_info:
             await insert_all_roles_for_user(conn, user_id=UUID(USER_ID_1))
         assert "Default proficiency level 'untrained' not found" in str(exc_info.value)
 
 @pytest.mark.asyncio
-async def test_insert_all_roles_for_user(async_client, test_db_pool):
+async def test_insert_all_roles_for_user(async_client, seed_users_helper, seed_media_roles_helper, seed_proficiency_levels_helper, seed_user_roles_helper):
     # Seed users, media roles, and proficiency levels data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code, is_active)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter', true),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound', true),
-                   ('{ROLE_ID_3}', 'Lighting', 30, 'lighting', false);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code, is_assignable)
-            VALUES ('{PROFICIENCY_ID_1}', 'Untrained', 0, 'untrained', false);
-            """
-        )
-        # Pre-existing user role for USER_ID_1
-        await conn.execute(
-            f"""
-            INSERT INTO user_roles (user_id, media_role_id, proficiency_level_id)
-            VALUES ('{USER_ID_1}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}');
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter", "is_active": True},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound", "is_active": True},
+        {"media_role_id": ROLE_ID_3, "media_role_name": "Lighting", "sort_order": 30, "media_role_code": "lighting", "is_active": False},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    proficiency_levels = [{"proficiency_level_id": PROFICIENCY_ID_1, "proficiency_level_name": "Untrained", "proficiency_level_number": 0, "proficiency_level_code": "untrained", "is_assignable": False}]
+    await seed_proficiency_levels_helper(proficiency_levels)
+    
+    # Pre-existing user role for USER_ID_1
+    user_roles = [{"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1}]
+    await seed_user_roles_helper(user_roles)
 
     # 1. Test inserting all roles for a user (should skip duplicate)
     response1 = await async_client.post(f"/users/{USER_ID_1}/roles")
@@ -379,37 +365,27 @@ async def test_insert_all_roles_for_user(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_insert_all_users_for_role(async_client, test_db_pool):
+async def test_insert_all_users_for_role(async_client, seed_users_helper, seed_media_roles_helper, seed_proficiency_levels_helper, seed_user_roles_helper):
     # Seed users, media roles, and proficiency levels data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone, is_active)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101', true),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102', true),
-                   ('{USER_ID_3}', 'Bob', 'Johnson', '555-0103', false);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code, is_assignable)
-            VALUES ('{PROFICIENCY_ID_1}', 'Untrained', 0, 'untrained', false);
-            """
-        )
-        # Pre-existing user role
-        await conn.execute(
-            f"""
-            INSERT INTO user_roles (user_id, media_role_id, proficiency_level_id)
-            VALUES ('{USER_ID_1}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}');
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101", "is_active": True},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102", "is_active": True},
+        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103", "is_active": False},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    proficiency_levels = [{"proficiency_level_id": PROFICIENCY_ID_1, "proficiency_level_name": "Untrained", "proficiency_level_number": 0, "proficiency_level_code": "untrained", "is_assignable": False}]
+    await seed_proficiency_levels_helper(proficiency_levels)
+    
+    # Pre-existing user role
+    user_roles = [{"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1}]
+    await seed_user_roles_helper(user_roles)
 
     # 1. Test inserting all users for a role (should skip duplicate)
     response1 = await async_client.post(f"/roles/{ROLE_ID_1}/users")
@@ -439,61 +415,48 @@ async def test_insert_all_users_for_role(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_insert_all_users_for_role_missing_untrained(async_client, test_db_pool):
+async def test_insert_all_users_for_role_missing_untrained(seed_users_helper, seed_media_roles_helper, test_db_pool):
     """Test inserting all users for a role when 'untrained' proficiency level doesn't exist"""
     # Seed users and media roles, but NOT the 'untrained' proficiency level
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone, is_active)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101', true),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102', true);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter');
-            """
-        )
-        # Intentionally NOT creating the 'untrained' proficiency level
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101", "is_active": True},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102", "is_active": True},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [{"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"}]
+    await seed_media_roles_helper(media_roles)
+    # Intentionally NOT creating the 'untrained' proficiency level
 
-        # Test that inserting all users for a role raises ValueError when 'untrained' is missing
+    # Test that inserting all users for a role raises ValueError when 'untrained' is missing
+    async with test_db_pool.acquire() as conn:
         with pytest.raises(ValueError) as exc_info:
             await insert_all_users_for_role(conn, role_id=UUID(ROLE_ID_1))
         assert "Default proficiency level 'untrained' not found" in str(exc_info.value)
 
 @pytest.mark.asyncio
-async def test_update_user_role(async_client, test_db_pool):
+async def test_update_user_role(async_client, seed_users_helper, seed_media_roles_helper, seed_proficiency_levels_helper, seed_user_roles_helper):
     # Seed users, media roles, and proficiency levels data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code, is_assignable)
-            VALUES ('{PROFICIENCY_ID_1}', 'Novice', 3, 'novice', true),
-                   ('{PROFICIENCY_ID_2}', 'Proficient', 4, 'proficient', true);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO user_roles (user_id, media_role_id, proficiency_level_id)
-            VALUES ('{USER_ID_1}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}');
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    proficiency_levels = [
+        {"proficiency_level_id": PROFICIENCY_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
+        {"proficiency_level_id": PROFICIENCY_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
+    ]
+    await seed_proficiency_levels_helper(proficiency_levels)
+    
+    user_roles = [{"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1}]
+    await seed_user_roles_helper(user_roles)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -538,36 +501,28 @@ async def test_update_user_role(async_client, test_db_pool):
     assert response7.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_delete_user_role(async_client, test_db_pool):
+async def test_delete_user_role(async_client, seed_users_helper, seed_media_roles_helper, seed_proficiency_levels_helper, seed_user_roles_helper):
     # Seed users, media roles, and proficiency levels data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO media_roles (media_role_id, media_role_name, sort_order, media_role_code)
-            VALUES ('{ROLE_ID_1}', 'ProPresenter', 10, 'propresenter'),
-                   ('{ROLE_ID_2}', 'Sound', 20, 'sound');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code, is_assignable)
-            VALUES ('{PROFICIENCY_ID_1}', 'Novice', 3, 'novice', true);
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO user_roles (user_id, media_role_id, proficiency_level_id)
-            VALUES ('{USER_ID_1}', '{ROLE_ID_1}', '{PROFICIENCY_ID_1}'),
-                   ('{USER_ID_2}', '{ROLE_ID_2}', '{PROFICIENCY_ID_1}');
-            """
-        )
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    media_roles = [
+        {"media_role_id": ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+    ]
+    await seed_media_roles_helper(media_roles)
+    
+    proficiency_levels = [{"proficiency_level_id": PROFICIENCY_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True}]
+    await seed_proficiency_levels_helper(proficiency_levels)
+    
+    user_roles = [
+        {"user_id": USER_ID_1, "media_role_id": ROLE_ID_1, "proficiency_level_id": PROFICIENCY_ID_1},
+        {"user_id": USER_ID_2, "media_role_id": ROLE_ID_2, "proficiency_level_id": PROFICIENCY_ID_1},
+    ]
+    await seed_user_roles_helper(user_roles)
 
     # 1. Test user role not found
     response1 = await async_client.delete(f"/users/{USER_ID_1}/roles/{ROLE_ID_2}")

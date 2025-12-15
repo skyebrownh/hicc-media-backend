@@ -1,28 +1,34 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_proficiency_levels
 
 PROFICIENCY_LEVEL_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
 PROFICIENCY_LEVEL_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
 PROFICIENCY_LEVEL_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
 PROFICIENCY_LEVEL_ID_4 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
 
+@pytest_asyncio.fixture
+async def seed_proficiency_levels_helper(test_db_pool):
+    """Helper fixture to seed proficiency levels in the database"""
+    async def seed_proficiency_levels(proficiency_levels: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_proficiency_levels(proficiency_levels))
+    return seed_proficiency_levels
+
 @pytest.mark.asyncio
-async def test_get_all_proficiency_levels(async_client, test_db_pool):
+async def test_get_all_proficiency_levels(async_client, seed_proficiency_levels_helper):
     # 1. Test when no proficiency levels exist
     response1 = await async_client.get("/proficiency_levels")
     assert_empty_list_200(response1)
 
     # Seed proficiency levels data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('Level 1', 1, 'level_1'),
-                   ('Level 2', 2, 'level_2'),
-                   ('Level 3', 3, 'level_3');
-            """
-        )
+    proficiency_levels = [
+        {"proficiency_level_name": "Level 1", "proficiency_level_number": 1, "proficiency_level_code": "level_1"},
+        {"proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"},
+        {"proficiency_level_name": "Level 3", "proficiency_level_number": 3, "proficiency_level_code": "level_3"},
+    ]
+    await seed_proficiency_levels_helper(proficiency_levels)
 
     # 2. Test when proficiency levels exist
     response2 = await async_client.get("/proficiency_levels")
@@ -38,21 +44,18 @@ async def test_get_all_proficiency_levels(async_client, test_db_pool):
     assert response2_json[2]["is_assignable"] is False
 
 @pytest.mark.asyncio
-async def test_get_single_proficiency_level(async_client, test_db_pool):
+async def test_get_single_proficiency_level(async_client, seed_proficiency_levels_helper):
     # 1. Test when no proficiency levels exist
     response1 = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_1}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 
     # Seed proficiency levels data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('{PROFICIENCY_LEVEL_ID_1}', 'Level 1', 1, 'level_1'),
-                   ('{PROFICIENCY_LEVEL_ID_2}', 'Level 2', 2, 'level_2'),
-                   ('{PROFICIENCY_LEVEL_ID_3}', 'Level 3', 3, 'level_3');
-            """
-        )
+    proficiency_levels = [
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Level 1", "proficiency_level_number": 1, "proficiency_level_code": "level_1"},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Level 3", "proficiency_level_number": 3, "proficiency_level_code": "level_3"},
+    ]
+    await seed_proficiency_levels_helper(proficiency_levels)
 
     # 2. Test when proficiency levels exist
     response2 = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_2}")
@@ -74,7 +77,7 @@ async def test_get_single_proficiency_level(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_insert_proficiency_level(async_client, test_db_pool):
+async def test_insert_proficiency_level(async_client, seed_proficiency_levels_helper):
     # Set up payloads
     bad_payload_1 = {}
     bad_payload_2 = {"proficiency_level_name": "Incomplete Level"}
@@ -85,13 +88,8 @@ async def test_insert_proficiency_level(async_client, test_db_pool):
     }
     
     # Seed another proficiency level directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('{PROFICIENCY_LEVEL_ID_4}', 'Another Level', 5, 'another_level');
-            """
-        )
+    proficiency_levels = [{"proficiency_level_id": PROFICIENCY_LEVEL_ID_4, "proficiency_level_name": "Another Level", "proficiency_level_number": 5, "proficiency_level_code": "another_level"}]
+    await seed_proficiency_levels_helper(proficiency_levels)
 
     bad_payload_4 = {
         "proficiency_level_name": "Duplicate Code",
@@ -138,17 +136,14 @@ async def test_insert_proficiency_level(async_client, test_db_pool):
     assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_update_proficiency_level(async_client, test_db_pool):
+async def test_update_proficiency_level(async_client, seed_proficiency_levels_helper):
     # Seed proficiency level data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('{PROFICIENCY_LEVEL_ID_1}', 'Level 1', 1, 'level_1'),
-                   ('{PROFICIENCY_LEVEL_ID_2}', 'Level 2', 2, 'level_2'),
-                   ('{PROFICIENCY_LEVEL_ID_3}', 'Level 3', 3, 'level_3');
-            """
-        )
+    proficiency_levels = [
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Level 1", "proficiency_level_number": 1, "proficiency_level_code": "level_1"},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Level 3", "proficiency_level_number": 3, "proficiency_level_code": "level_3"},
+    ]
+    await seed_proficiency_levels_helper(proficiency_levels)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -214,17 +209,14 @@ async def test_update_proficiency_level(async_client, test_db_pool):
     assert response8_json["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_delete_proficiency_level(async_client, test_db_pool):
+async def test_delete_proficiency_level(async_client, seed_proficiency_levels_helper):
     # Seed proficiency levels data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO proficiency_levels (proficiency_level_id, proficiency_level_name, proficiency_level_number, proficiency_level_code)
-            VALUES ('{PROFICIENCY_LEVEL_ID_1}', 'Level 1', 1, 'level_1'),
-                   ('{PROFICIENCY_LEVEL_ID_2}', 'Level 2', 2, 'level_2'),
-                   ('{PROFICIENCY_LEVEL_ID_3}', 'Level 3', 3, 'level_3');
-            """
-        )
+    proficiency_levels = [
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Level 1", "proficiency_level_number": 1, "proficiency_level_code": "level_1"},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Level 3", "proficiency_level_number": 3, "proficiency_level_code": "level_3"},
+    ]
+    await seed_proficiency_levels_helper(proficiency_levels)
 
     # 1. Test proficiency level not found
     response1 = await async_client.delete("/proficiency_levels/00000000-0000-0000-0000-000000000000")

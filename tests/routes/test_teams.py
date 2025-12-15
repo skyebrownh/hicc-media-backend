@@ -1,28 +1,34 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_teams
 
 TEAM_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
 TEAM_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
 TEAM_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
 TEAM_ID_4 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
 
+@pytest_asyncio.fixture
+async def seed_teams_helper(test_db_pool):
+    """Helper fixture to seed teams in the database"""
+    async def seed_teams(teams: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_teams(teams))
+    return seed_teams
+
 @pytest.mark.asyncio
-async def test_get_all_teams(async_client, test_db_pool):
+async def test_get_all_teams(async_client, seed_teams_helper):
     # 1. Test when no teams exist
     response1 = await async_client.get("/teams")
     assert_empty_list_200(response1)
 
     # Seed teams data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_name, team_code)
-            VALUES ('Team 1', 'team_1'),
-                   ('Team 2', 'team_2'),
-                   ('Team 3', 'team_3');
-            """
-        )
+    teams = [
+        {"team_name": "Team 1", "team_code": "team_1"},
+        {"team_name": "Team 2", "team_code": "team_2"},
+        {"team_name": "Team 3", "team_code": "team_3"},
+    ]
+    await seed_teams_helper(teams)
 
     # 2. Test when teams exist
     response2 = await async_client.get("/teams")
@@ -36,21 +42,18 @@ async def test_get_all_teams(async_client, test_db_pool):
     assert response2_json[2]["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_get_single_team(async_client, test_db_pool):
+async def test_get_single_team(async_client, seed_teams_helper):
     # 1. Test when no teams exist
     response1 = await async_client.get(f"/teams/{TEAM_ID_1}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 
     # Seed teams data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1'),
-                   ('{TEAM_ID_2}', 'Team 2', 'team_2'),
-                   ('{TEAM_ID_3}', 'Team 3', 'team_3');
-            """
-        )
+    teams = [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+        {"team_id": TEAM_ID_3, "team_name": "Team 3", "team_code": "team_3"},
+    ]
+    await seed_teams_helper(teams)
 
     # 2. Test when teams exist
     response2 = await async_client.get(f"/teams/{TEAM_ID_2}")
@@ -70,7 +73,7 @@ async def test_get_single_team(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_insert_team(async_client, test_db_pool):
+async def test_insert_team(async_client, seed_teams_helper):
     # Set up payloads
     bad_payload_1 = {}
     bad_payload_2 = {"team_name": "Incomplete Team"}
@@ -81,13 +84,8 @@ async def test_insert_team(async_client, test_db_pool):
     }
     
     # Seed another team data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_4}', 'Another Team', 'another_team');
-            """
-        )
+    teams = [{"team_id": TEAM_ID_4, "team_name": "Another Team", "team_code": "another_team"}]
+    await seed_teams_helper(teams)
 
     bad_payload_4 = {
         "team_name": "Duplicate Team Code",
@@ -130,17 +128,14 @@ async def test_insert_team(async_client, test_db_pool):
     assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_update_team(async_client, test_db_pool):
+async def test_update_team(async_client, seed_teams_helper):
     # Seed team data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1'),
-                   ('{TEAM_ID_2}', 'Team 2', 'team_2'),
-                   ('{TEAM_ID_3}', 'Team 3', 'team_3');
-            """
-        )
+    teams = [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+        {"team_id": TEAM_ID_3, "team_name": "Team 3", "team_code": "team_3"},
+    ]
+    await seed_teams_helper(teams)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -202,17 +197,14 @@ async def test_update_team(async_client, test_db_pool):
     assert response8_json["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_delete_team(async_client, test_db_pool):
+async def test_delete_team(async_client, seed_teams_helper):
     # Seed teams data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1'),
-                   ('{TEAM_ID_2}', 'Team 2', 'team_2'),
-                   ('{TEAM_ID_3}', 'Team 3', 'team_3');
-            """
-        )
+    teams = [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+        {"team_id": TEAM_ID_3, "team_name": "Team 3", "team_code": "team_3"},
+    ]
+    await seed_teams_helper(teams)
 
     # 1. Test team not found
     response1 = await async_client.delete("/teams/00000000-0000-0000-0000-000000000000")

@@ -1,28 +1,34 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_schedule_date_types
 
 SCHEDULE_DATE_TYPE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
 SCHEDULE_DATE_TYPE_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
 SCHEDULE_DATE_TYPE_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
 SCHEDULE_DATE_TYPE_ID_4 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
 
+@pytest_asyncio.fixture
+async def seed_schedule_date_types_helper(test_db_pool):
+    """Helper fixture to seed schedule_date_types in the database"""
+    async def seed_schedule_date_types(schedule_date_types: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_schedule_date_types(schedule_date_types))
+    return seed_schedule_date_types
+
 @pytest.mark.asyncio
-async def test_get_all_schedule_date_types(async_client, test_db_pool):
+async def test_get_all_schedule_date_types(async_client, seed_schedule_date_types_helper):
     # 1. Test when no schedule date types exist
     response1 = await async_client.get("/schedule_date_types")
     assert_empty_list_200(response1)
 
     # Seed schedule date types data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_name, schedule_date_type_code)
-            VALUES ('Type 1', 'type_1'),
-                   ('Type 2', 'type_2'),
-                   ('Type 3', 'type_3');
-            """
-        )
+    schedule_date_types = [
+        {"schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
+        {"schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
+        {"schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
+    ]
+    await seed_schedule_date_types_helper(schedule_date_types)
 
     # 2. Test when schedule date types exist
     response2 = await async_client.get("/schedule_date_types")
@@ -36,21 +42,18 @@ async def test_get_all_schedule_date_types(async_client, test_db_pool):
     assert response2_json[2]["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_get_single_schedule_date_type(async_client, test_db_pool):
+async def test_get_single_schedule_date_type(async_client, seed_schedule_date_types_helper):
     # 1. Test when no schedule date types exist
     response1 = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_1}")
     assert response1.status_code == status.HTTP_404_NOT_FOUND
 
     # Seed schedule date types data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Type 1', 'type_1'),
-                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Type 2', 'type_2'),
-                   ('{SCHEDULE_DATE_TYPE_ID_3}', 'Type 3', 'type_3');
-            """
-        )
+    schedule_date_types = [
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_3, "schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
+    ]
+    await seed_schedule_date_types_helper(schedule_date_types)
 
     # 2. Test when schedule date types exist
     response2 = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
@@ -70,7 +73,7 @@ async def test_get_single_schedule_date_type(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_insert_schedule_date_type(async_client, test_db_pool):
+async def test_insert_schedule_date_type(async_client, seed_schedule_date_types_helper):
     # Set up payloads
     bad_payload_1 = {}
     bad_payload_2 = {"schedule_date_type_name": "Incomplete Type"}
@@ -81,13 +84,8 @@ async def test_insert_schedule_date_type(async_client, test_db_pool):
     }
     
     # Seed another schedule date type directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_4}', 'Another Type', 'another_type');
-            """
-        )
+    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4, "schedule_date_type_name": "Another Type", "schedule_date_type_code": "another_type"}]
+    await seed_schedule_date_types_helper(schedule_date_types)
 
     bad_payload_4 = {
         "schedule_date_type_name": "Duplicate Code",
@@ -130,17 +128,14 @@ async def test_insert_schedule_date_type(async_client, test_db_pool):
     assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_update_schedule_date_type(async_client, test_db_pool):
+async def test_update_schedule_date_type(async_client, seed_schedule_date_types_helper):
     # Seed schedule date type data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Type 1', 'type_1'),
-                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Type 2', 'type_2'),
-                   ('{SCHEDULE_DATE_TYPE_ID_3}', 'Type 3', 'type_3');
-            """
-        )
+    schedule_date_types = [
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_3, "schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
+    ]
+    await seed_schedule_date_types_helper(schedule_date_types)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -202,17 +197,14 @@ async def test_update_schedule_date_type(async_client, test_db_pool):
     assert response8_json["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_delete_schedule_date_type(async_client, test_db_pool):
+async def test_delete_schedule_date_type(async_client, seed_schedule_date_types_helper):
     # Seed schedule date types data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO schedule_date_types (schedule_date_type_id, schedule_date_type_name, schedule_date_type_code)
-            VALUES ('{SCHEDULE_DATE_TYPE_ID_1}', 'Type 1', 'type_1'),
-                   ('{SCHEDULE_DATE_TYPE_ID_2}', 'Type 2', 'type_2'),
-                   ('{SCHEDULE_DATE_TYPE_ID_3}', 'Type 3', 'type_3');
-            """
-        )
+    schedule_date_types = [
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_3, "schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
+    ]
+    await seed_schedule_date_types_helper(schedule_date_types)
 
     # 1. Test schedule date type not found
     response1 = await async_client.delete("/schedule_date_types/00000000-0000-0000-0000-000000000000")

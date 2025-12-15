@@ -1,6 +1,7 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, insert_teams, insert_users, insert_team_users
 
 # Test data constants
 TEAM_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
@@ -9,37 +10,56 @@ USER_ID_1 = "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789"
 USER_ID_2 = "b2c3d4e5-f6a7-4890-b123-c4d5e6f7a890"
 USER_ID_3 = "c3d4e5f6-a7b8-4901-c234-d5e6f7a8b901"
 
+@pytest_asyncio.fixture
+async def seed_teams_helper(test_db_pool):
+    """Helper fixture to seed teams in the database"""
+    async def seed_teams(teams: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_teams(teams))
+    return seed_teams
+
+@pytest_asyncio.fixture
+async def seed_users_helper(test_db_pool):
+    """Helper fixture to seed users in the database"""
+    async def seed_users(users: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_users(users))
+    return seed_users
+
+@pytest_asyncio.fixture
+async def seed_team_users_helper(test_db_pool):
+    """Helper fixture to seed team_users in the database"""
+    async def seed_team_users(team_users: list[dict]):
+        async with test_db_pool.acquire() as conn:
+            await conn.execute(insert_team_users(team_users))
+    return seed_team_users
+
 @pytest.mark.asyncio
-async def test_get_all_team_users(async_client, test_db_pool):
+async def test_get_all_team_users(async_client, seed_teams_helper, seed_users_helper, seed_team_users_helper):
     # 1. Test when no team users exist
     response1 = await async_client.get("/team_users")
     assert_empty_list_200(response1)
 
     # Seed teams and users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1'),
-                   ('{TEAM_ID_2}', 'Team 2', 'team_2');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102'),
-                   ('{USER_ID_3}', 'Bob', 'Johnson', '555-0103');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO team_users (team_id, user_id)
-            VALUES ('{TEAM_ID_1}', '{USER_ID_1}'),
-                   ('{TEAM_ID_1}', '{USER_ID_2}'),
-                   ('{TEAM_ID_2}', '{USER_ID_3}');
-            """
-        )
+    teams = [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+    ]
+    await seed_teams_helper(teams)
+    
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
+    ]
+    await seed_users_helper(users)
+    
+    team_users = [
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_2},
+        {"team_id": TEAM_ID_2, "user_id": USER_ID_3},
+    ]
+    await seed_team_users_helper(team_users)
 
     # 2. Test when team users exist
     response2 = await async_client.get("/team_users")
@@ -54,31 +74,26 @@ async def test_get_all_team_users(async_client, test_db_pool):
     assert response2_json[2]["user_id"] == USER_ID_3
 
 @pytest.mark.asyncio
-async def test_get_team_users_for_team(async_client, test_db_pool):
+async def test_get_team_users_for_team(async_client, seed_teams_helper, seed_users_helper, seed_team_users_helper):
     # Seed teams and users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1'),
-                   ('{TEAM_ID_2}', 'Team 2', 'team_2');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102'),
-                   ('{USER_ID_3}', 'Bob', 'Johnson', '555-0103');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO team_users (team_id, user_id)
-            VALUES ('{TEAM_ID_1}', '{USER_ID_1}'),
-                   ('{TEAM_ID_1}', '{USER_ID_2}');
-            """
-        )
+    teams = [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+    ]
+    await seed_teams_helper(teams)
+    
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
+    ]
+    await seed_users_helper(users)
+    
+    team_users = [
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_2},
+    ]
+    await seed_team_users_helper(team_users)
 
     # 1. Test when team has users
     response1 = await async_client.get(f"/teams/{TEAM_ID_1}/users")
@@ -102,27 +117,16 @@ async def test_get_team_users_for_team(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_get_single_team_user(async_client, test_db_pool):
+async def test_get_single_team_user(async_client, seed_teams_helper, seed_users_helper, seed_team_users_helper):
     # Seed teams and users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO team_users (team_id, user_id)
-            VALUES ('{TEAM_ID_1}', '{USER_ID_1}');
-            """
-        )
+    teams = [{"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"}]
+    await seed_teams_helper(teams)
+    
+    users = [{"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"}]
+    await seed_users_helper(users)
+    
+    team_users = [{"team_id": TEAM_ID_1, "user_id": USER_ID_1}]
+    await seed_team_users_helper(team_users)
 
     # 1. Test when team user exists
     response1 = await async_client.get(f"/teams/{TEAM_ID_1}/users/{USER_ID_1}")
@@ -147,29 +151,22 @@ async def test_get_single_team_user(async_client, test_db_pool):
     assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_insert_team_user(async_client, test_db_pool):
+async def test_insert_team_user(async_client, seed_teams_helper, seed_users_helper, seed_team_users_helper):
     # Seed teams and users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1'),
-                   ('{TEAM_ID_2}', 'Team 2', 'team_2');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO team_users (team_id, user_id)
-            VALUES ('{TEAM_ID_1}', '{USER_ID_1}');
-            """
-        )
+    teams = [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+    ]
+    await seed_teams_helper(teams)
+    
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    team_users = [{"team_id": TEAM_ID_1, "user_id": USER_ID_1}]
+    await seed_team_users_helper(team_users)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -232,30 +229,25 @@ async def test_insert_team_user(async_client, test_db_pool):
     assert response8.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.asyncio
-async def test_update_team_user(async_client, test_db_pool):
+async def test_update_team_user(async_client, seed_teams_helper, seed_users_helper, seed_team_users_helper):
     # Seed teams and users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1'),
-                   ('{TEAM_ID_2}', 'Team 2', 'team_2');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO team_users (team_id, user_id, is_active)
-            VALUES ('{TEAM_ID_1}', '{USER_ID_1}', true),
-                   ('{TEAM_ID_2}', '{USER_ID_2}', true);
-            """
-        )
+    teams = [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+    ]
+    await seed_teams_helper(teams)
+    
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    team_users = [
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_1, "is_active": True},
+        {"team_id": TEAM_ID_2, "user_id": USER_ID_2, "is_active": True},
+    ]
+    await seed_team_users_helper(team_users)
 
     # Set up payloads
     bad_payload_1 = {}
@@ -300,30 +292,25 @@ async def test_update_team_user(async_client, test_db_pool):
     assert response7_json["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_delete_team_user(async_client, test_db_pool):
+async def test_delete_team_user(async_client, seed_teams_helper, seed_users_helper, seed_team_users_helper):
     # Seed teams and users data directly into test DB
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            f"""
-            INSERT INTO teams (team_id, team_name, team_code)
-            VALUES ('{TEAM_ID_1}', 'Team 1', 'team_1'),
-                   ('{TEAM_ID_2}', 'Team 2', 'team_2');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO users (user_id, first_name, last_name, phone)
-            VALUES ('{USER_ID_1}', 'John', 'Doe', '555-0101'),
-                   ('{USER_ID_2}', 'Jane', 'Smith', '555-0102');
-            """
-        )
-        await conn.execute(
-            f"""
-            INSERT INTO team_users (team_id, user_id)
-            VALUES ('{TEAM_ID_1}', '{USER_ID_1}'),
-                   ('{TEAM_ID_2}', '{USER_ID_2}');
-            """
-        )
+    teams = [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+    ]
+    await seed_teams_helper(teams)
+    
+    users = [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+    await seed_users_helper(users)
+    
+    team_users = [
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
+        {"team_id": TEAM_ID_2, "user_id": USER_ID_2},
+    ]
+    await seed_team_users_helper(team_users)
 
     # 1. Test team user not found
     response1 = await async_client.delete(f"/teams/{TEAM_ID_1}/users/{USER_ID_2}")
