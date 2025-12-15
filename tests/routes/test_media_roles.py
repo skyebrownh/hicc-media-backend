@@ -1,23 +1,21 @@
 import pytest
-import pytest_asyncio
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, insert_media_roles
-
-MEDIA_ROLE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
-MEDIA_ROLE_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
-MEDIA_ROLE_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
-MEDIA_ROLE_ID_4 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
+from tests.utils.helpers import assert_empty_list_200
+from tests.utils.constants import BAD_ID_0000, MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, MEDIA_ROLE_ID_3, MEDIA_ROLE_ID_4
 
 # =============================
-# HELPER FIXTURES
+# DATA FIXTURES
 # =============================
-@pytest_asyncio.fixture
-async def seed_media_roles_helper(test_db_pool):
-    """Helper fixture to seed media roles in the database"""
-    async def seed_media_roles(media_roles: list[dict]):
-        async with test_db_pool.acquire() as conn:
-            await conn.execute(insert_media_roles(media_roles))
-    return seed_media_roles
+@pytest.fixture
+def test_media_roles_data():
+    """Fixture providing array of test media role data"""
+    return [
+        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "Role 1", "description": "description 1", "sort_order": 1, "media_role_code": "role_1"},
+        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Role 2", "description": "description 2", "sort_order": 2, "media_role_code": "role_2"},
+        {"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Role 3", "description": "description 3", "sort_order": 3, "media_role_code": "role_3"},
+        {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "New Role", "sort_order": 4, "media_role_code": "new_role"},
+        {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "Another Role", "sort_order": 5, "media_role_code": "another_role"},
+    ]
 
 # =============================
 # GET ALL MEDIA ROLES
@@ -30,14 +28,13 @@ async def test_get_all_media_roles_none_exist(async_client):
 
 
 @pytest.mark.asyncio
-async def test_get_all_media_roles_success(async_client, seed_media_roles_helper):
+async def test_get_all_media_roles_success(async_client, seed_media_roles, test_media_roles_data):
     """Test getting all media roles after inserting a variety"""
-    media_roles = [
+    await seed_media_roles([
         {"media_role_name": "Role 1", "sort_order": 1, "media_role_code": "role_1"},
         {"media_role_name": "Role 2", "sort_order": 2, "media_role_code": "role_2"},
         {"media_role_name": "Role 3", "sort_order": 3, "media_role_code": "role_3"},
-    ]
-    await seed_media_roles_helper(media_roles)
+    ])
 
     response = await async_client.get("/media_roles")
     assert response.status_code == status.HTTP_200_OK
@@ -53,35 +50,23 @@ async def test_get_all_media_roles_success(async_client, seed_media_roles_helper
 # =============================
 # GET SINGLE MEDIA ROLE
 # =============================
-@pytest.mark.parametrize("seed_roles, media_role_id, expected_status", [
-    # No media roles in DB
-    ([], MEDIA_ROLE_ID_1, status.HTTP_404_NOT_FOUND),
+@pytest.mark.parametrize("media_role_id, expected_status", [
     # Media role not present
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "Role 1", "description": "description 1", "sort_order": 1, "media_role_code": "role_1"}],
-        "00000000-0000-0000-0000-000000000000",
-        status.HTTP_404_NOT_FOUND
-    ),
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
     # Invalid UUID format
-    ([], "invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
 @pytest.mark.asyncio
-async def test_get_single_media_role_error_cases(async_client, seed_media_roles_helper, seed_roles, media_role_id, expected_status):
+async def test_get_single_media_role_error_cases(async_client, media_role_id, expected_status):
     """Test GET single media role error cases (404 and 422)"""
-    # Optionally seed DB
-    if seed_roles:
-        await seed_media_roles_helper(seed_roles)
     response = await async_client.get(f"/media_roles/{media_role_id}")
     assert response.status_code == expected_status
 
 
 @pytest.mark.asyncio
-async def test_get_single_media_role_success(async_client, seed_media_roles_helper):
+async def test_get_single_media_role_success(async_client, seed_media_roles, test_media_roles_data):
     """Test GET single media role success case"""
-    media_roles = [
-        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Role 2", "description": "description 2", "sort_order": 2, "media_role_code": "role_2"},
-    ]
-    await seed_media_roles_helper(media_roles)
+    await seed_media_roles([test_media_roles_data[1]])
     
     response = await async_client.get(f"/media_roles/{MEDIA_ROLE_ID_2}")
     assert response.status_code == status.HTTP_200_OK
@@ -95,32 +80,23 @@ async def test_get_single_media_role_success(async_client, seed_media_roles_help
 # =============================
 # INSERT MEDIA ROLE
 # =============================
-@pytest.mark.parametrize("seed_roles, payload, expected_status", [
+@pytest.mark.parametrize("role_indices, payload, expected_status", [
     # empty payload
     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # missing required fields
     ([], {"media_role_name": "Incomplete Role"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # invalid data types
     ([], {"media_role_name": "Bad Role", "sort_order": "not_an_int", "media_role_code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-    # duplicate media_role_code (after inserting new_role successfully, trying again should fail)
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "New Role", "sort_order": 4, "media_role_code": "new_role"}],
-        {"media_role_name": "Duplicate Code", "sort_order": 6, "media_role_code": "new_role"},
-        status.HTTP_409_CONFLICT
-    ),
+    # duplicate media_role_code
+    ([3], {"media_role_name": "Duplicate Code", "sort_order": 6, "media_role_code": "new_role"}, status.HTTP_409_CONFLICT),
     # media_role_id not allowed in payload
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "Another Role", "sort_order": 5, "media_role_code": "another_role"}],
-        {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "Duplicate ID Role", "sort_order": 7, "media_role_code": "duplicate_id_role"},
-        status.HTTP_422_UNPROCESSABLE_CONTENT
-    ),
+    ([4], {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "Duplicate ID Role", "sort_order": 7, "media_role_code": "duplicate_id_role"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
 @pytest.mark.asyncio
-async def test_insert_media_role_error_cases(async_client, seed_media_roles_helper, seed_roles, payload, expected_status):
+async def test_insert_media_role_error_cases(async_client, seed_media_roles, test_media_roles_data, role_indices, payload, expected_status):
     """Test INSERT media role error cases (422 and 409)"""
-    # Optionally seed DB
-    if seed_roles:
-        await seed_media_roles_helper(seed_roles)
+    roles = [test_media_roles_data[i] for i in role_indices] if role_indices else []
+    await seed_media_roles(roles)
     
     response = await async_client.post("/media_roles", json=payload)
     assert response.status_code == expected_status
@@ -129,13 +105,11 @@ async def test_insert_media_role_error_cases(async_client, seed_media_roles_help
 @pytest.mark.asyncio
 async def test_insert_media_role_success(async_client):
     """Test valid media role insertion"""
-    good_payload = {
+    response = await async_client.post("/media_roles", json={
         "media_role_name": "New Role",
         "sort_order": 4,
         "media_role_code": "new_role"
-    }
-    
-    response = await async_client.post("/media_roles", json=good_payload)
+    })
     assert response.status_code == status.HTTP_201_CREATED
     response_json = response.json()
     assert response_json["media_role_id"] is not None
@@ -146,48 +120,23 @@ async def test_insert_media_role_success(async_client):
 # =============================
 # UPDATE MEDIA ROLE
 # =============================
-@pytest.mark.parametrize("seed_roles, media_role_path, payload, expected_status", [
+@pytest.mark.parametrize("role_indices, media_role_path, payload, expected_status", [
     # media role not found
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "Role 1", "description": "description 1", "sort_order": 1, "media_role_code": "role_1"}],
-        "/media_roles/00000000-0000-0000-0000-000000000000",
-        {"media_role_name": "Updated Role Name", "description": "Updated description", "sort_order": 100, "is_active": False},
-        status.HTTP_404_NOT_FOUND
-    ),
+    ([], f"/media_roles/{BAD_ID_0000}", {"media_role_name": "Updated Role Name", "description": "Updated description", "sort_order": 100, "is_active": False}, status.HTTP_404_NOT_FOUND),
     # invalid UUID format
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "Role 1", "description": "description 1", "sort_order": 1, "media_role_code": "role_1"}],
-        "/media_roles/invalid-uuid-format",
-        {"media_role_name": "Updated Role Name", "description": "Updated description", "sort_order": 100, "is_active": False},
-        status.HTTP_422_UNPROCESSABLE_CONTENT
-    ),
+    ([0], "/media_roles/invalid-uuid-format", {"media_role_name": "Updated Role Name", "description": "Updated description", "sort_order": 100, "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # empty payload
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Role 3", "description": "description 3", "sort_order": 3, "media_role_code": "role_3"}],
-        f"/media_roles/{MEDIA_ROLE_ID_3}",
-        {},
-        status.HTTP_400_BAD_REQUEST
-    ),
+    ([2], f"/media_roles/{MEDIA_ROLE_ID_3}", {}, status.HTTP_400_BAD_REQUEST),
     # invalid data types
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Role 3", "description": "description 3", "sort_order": 3, "media_role_code": "role_3"}],
-        f"/media_roles/{MEDIA_ROLE_ID_3}",
-        {"media_role_name": 12345},
-        status.HTTP_422_UNPROCESSABLE_CONTENT
-    ),
+    ([2], f"/media_roles/{MEDIA_ROLE_ID_3}", {"media_role_name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # non-updatable field
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Role 3", "description": "description 3", "sort_order": 3, "media_role_code": "role_3"}],
-        f"/media_roles/{MEDIA_ROLE_ID_3}",
-        {"media_role_name": "Invalid", "media_role_code": "invalid"},
-        status.HTTP_422_UNPROCESSABLE_CONTENT
-    ),
+    ([2], f"/media_roles/{MEDIA_ROLE_ID_3}", {"media_role_name": "Invalid", "media_role_code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
 @pytest.mark.asyncio
-async def test_update_media_role_error_cases(async_client, seed_media_roles_helper, seed_roles, media_role_path, payload, expected_status):
+async def test_update_media_role_error_cases(async_client, seed_media_roles, test_media_roles_data, role_indices, media_role_path, payload, expected_status):
     """Test UPDATE media role error cases (400, 404, and 422)"""
-    # Seed media role data
-    await seed_media_roles_helper(seed_roles)
+    roles = [test_media_roles_data[i] for i in role_indices] if role_indices else []
+    await seed_media_roles(roles)
     
     response = await async_client.patch(media_role_path, json=payload)
     assert response.status_code == expected_status
@@ -217,15 +166,9 @@ async def test_update_media_role_error_cases(async_client, seed_media_roles_help
     ),
 ])
 @pytest.mark.asyncio
-async def test_update_media_role_success(async_client, seed_media_roles_helper, media_role_id, payload, expected_fields, unchanged_fields):
+async def test_update_media_role_success(async_client, seed_media_roles, test_media_roles_data, media_role_id, payload, expected_fields, unchanged_fields):
     """Test valid media role updates"""
-    # Seed media role data
-    media_roles = [
-        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "Role 1", "description": "description 1", "sort_order": 1, "media_role_code": "role_1"},
-        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Role 2", "description": "description 2", "sort_order": 2, "media_role_code": "role_2"},
-        {"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Role 3", "description": "description 3", "sort_order": 3, "media_role_code": "role_3"},
-    ]
-    await seed_media_roles_helper(media_roles)
+    await seed_media_roles(test_media_roles_data[:3])
     
     response = await async_client.patch(f"/media_roles/{media_role_id}", json=payload)
     assert response.status_code == status.HTTP_200_OK
@@ -238,38 +181,26 @@ async def test_update_media_role_success(async_client, seed_media_roles_helper, 
 # =============================
 # DELETE MEDIA ROLE
 # =============================
-@pytest.mark.parametrize("seed_roles, media_role_path, expected_status", [
+@pytest.mark.parametrize("role_indices, media_role_path, expected_status", [
     # media role not found
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "Role 1", "sort_order": 1, "media_role_code": "role_1"}],
-        "/media_roles/00000000-0000-0000-0000-000000000000",
-        status.HTTP_404_NOT_FOUND
-    ),
+    ([], f"/media_roles/{BAD_ID_0000}", status.HTTP_404_NOT_FOUND),
     # invalid UUID format
-    (
-        [{"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "Role 1", "sort_order": 1, "media_role_code": "role_1"}],
-        "/media_roles/invalid-uuid-format",
-        status.HTTP_422_UNPROCESSABLE_CONTENT
-    ),
+    ([0], "/media_roles/invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
 @pytest.mark.asyncio
-async def test_delete_media_role_error_cases(async_client, seed_media_roles_helper, seed_roles, media_role_path, expected_status):
+async def test_delete_media_role_error_cases(async_client, seed_media_roles, test_media_roles_data, role_indices, media_role_path, expected_status):
     """Test DELETE media role error cases (404 and 422)"""
-    # Seed media role data
-    await seed_media_roles_helper(seed_roles)
+    roles = [test_media_roles_data[i] for i in role_indices] if role_indices else []
+    await seed_media_roles(roles)
     
     response = await async_client.delete(media_role_path)
     assert response.status_code == expected_status
 
 
 @pytest.mark.asyncio
-async def test_delete_media_role_success(async_client, seed_media_roles_helper):
+async def test_delete_media_role_success(async_client, seed_media_roles, test_media_roles_data):
     """Test successful media role deletion with verification"""
-    # Seed media roles data directly into test DB
-    media_roles = [
-        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Role 2", "sort_order": 2, "media_role_code": "role_2"},
-    ]
-    await seed_media_roles_helper(media_roles)
+    await seed_media_roles([test_media_roles_data[1]])
 
     # Test successful deletion
     response = await async_client.delete(f"/media_roles/{MEDIA_ROLE_ID_2}")
