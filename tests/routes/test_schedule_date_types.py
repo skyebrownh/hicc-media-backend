@@ -1,221 +1,195 @@
 import pytest
-import pytest_asyncio
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, insert_schedule_date_types
+from tests.utils.helpers import assert_empty_list_200
+from tests.utils.constants import (
+    BAD_ID_0000, SCHEDULE_DATE_TYPE_ID_1, SCHEDULE_DATE_TYPE_ID_2,
+    SCHEDULE_DATE_TYPE_ID_3, SCHEDULE_DATE_TYPE_ID_4
+)
 
-SCHEDULE_DATE_TYPE_ID_1 = "58a6929c-f40d-4363-984c-4c221f41d4f0"
-SCHEDULE_DATE_TYPE_ID_2 = "fb4d832f-6a45-473e-b9e2-c0495938d005"
-SCHEDULE_DATE_TYPE_ID_3 = "c4b13e8c-45e9-49d6-8bf3-2f2fbb4404b1"
-SCHEDULE_DATE_TYPE_ID_4 = "e1fdfd00-e097-415b-c3c7-9579c4c1bb44"
-
-@pytest_asyncio.fixture
-async def seed_schedule_date_types_helper(test_db_pool):
-    """Helper fixture to seed schedule_date_types in the database"""
-    async def seed_schedule_date_types(schedule_date_types: list[dict]):
-        async with test_db_pool.acquire() as conn:
-            await conn.execute(insert_schedule_date_types(schedule_date_types))
-    return seed_schedule_date_types
-
-@pytest.mark.asyncio
-async def test_get_all_schedule_date_types(async_client, seed_schedule_date_types_helper):
-    # 1. Test when no schedule date types exist
-    response1 = await async_client.get("/schedule_date_types")
-    assert_empty_list_200(response1)
-
-    # Seed schedule date types data directly into test DB
-    schedule_date_types = [
-        {"schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
-        {"schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
-        {"schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
-    ]
-    await seed_schedule_date_types_helper(schedule_date_types)
-
-    # 2. Test when schedule date types exist
-    response2 = await async_client.get("/schedule_date_types")
-    assert response2.status_code == status.HTTP_200_OK
-    response2_json = response2.json()
-    assert isinstance(response2_json, list)
-    assert len(response2_json) == 3
-    assert response2_json[0]["schedule_date_type_name"] == "Type 1"
-    assert response2_json[1]["schedule_date_type_id"] is not None
-    assert response2_json[1]["schedule_date_type_code"] == "type_2"
-    assert response2_json[2]["is_active"] is True
-
-@pytest.mark.asyncio
-async def test_get_single_schedule_date_type(async_client, seed_schedule_date_types_helper):
-    # 1. Test when no schedule date types exist
-    response1 = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_1}")
-    assert response1.status_code == status.HTTP_404_NOT_FOUND
-
-    # Seed schedule date types data directly into test DB
-    schedule_date_types = [
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
-    ]
-    await seed_schedule_date_types_helper(schedule_date_types)
-
-    # 2. Test when schedule date types exist
-    response2 = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
-    assert response2.status_code == status.HTTP_200_OK
-    response2_json = response2.json()
-    assert isinstance(response2_json, dict)
-    assert response2_json["schedule_date_type_name"] == "Type 2"
-    assert response2_json["schedule_date_type_code"] == "type_2"
-    assert response2_json["is_active"] is True
-
-    # 3. Test schedule date type not found
-    response3 = await async_client.get("/schedule_date_types/00000000-0000-0000-0000-000000000000")
-    assert response3.status_code == status.HTTP_404_NOT_FOUND
-
-    # 4. Test invalid UUID format
-    response4 = await async_client.get("/schedule_date_types/invalid-uuid-format")
-    assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-@pytest.mark.asyncio
-async def test_insert_schedule_date_type(async_client, seed_schedule_date_types_helper):
-    # Set up payloads
-    bad_payload_1 = {}
-    bad_payload_2 = {"schedule_date_type_name": "Incomplete Type"}
-    bad_payload_3 = {"schedule_date_type_name": "Bad Type", "schedule_date_type_code": 12345}  # schedule_date_type_code should be str
-    good_payload = {
-        "schedule_date_type_name": "New Type",
-        "schedule_date_type_code": "new_type"
-    }
-    
-    # Seed another schedule date type directly into test DB
-    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4, "schedule_date_type_name": "Another Type", "schedule_date_type_code": "another_type"}]
-    await seed_schedule_date_types_helper(schedule_date_types)
-
-    bad_payload_4 = {
-        "schedule_date_type_name": "Duplicate Code",
-        "schedule_date_type_code": "new_type"  # Duplicate schedule_date_type_code
-    }
-    bad_payload_5 = {
-        "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4,  # schedule_date_type_id not allowed in payload
-        "schedule_date_type_name": "Duplicate ID Type",
-        "schedule_date_type_code": "duplicate_id_type"
-    }
-
-    # 1. Test empty payload
-    response1 = await async_client.post("/schedule_date_types", json=bad_payload_1)
-    assert response1.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 2. Test missing required fields
-    response2 = await async_client.post("/schedule_date_types", json=bad_payload_2)
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 3. Test invalid data types
-    response3 = await async_client.post("/schedule_date_types", json=bad_payload_3)
-    assert response3.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 4. Test valid payload
-    response4 = await async_client.post("/schedule_date_types", json=good_payload)
-    assert response4.status_code == status.HTTP_201_CREATED
-    response4_json = response4.json()
-    assert response4_json["schedule_date_type_id"] is not None
-    assert response4_json["schedule_date_type_name"] == "New Type"
-    assert response4_json["schedule_date_type_code"] == "new_type"
-    assert response4_json["is_active"] is True
-
-    # 5. Test duplicate schedule_date_type_code
-    response5 = await async_client.post("/schedule_date_types", json=bad_payload_4)
-    assert response5.status_code == status.HTTP_409_CONFLICT
-
-    # 6. Test schedule_date_type_id not allowed in payload
-    # schedule_date_type_id is not allowed in payload, so this raises 422 Validation Error instead of 409 Conflict
-    response6 = await async_client.post("/schedule_date_types", json=bad_payload_5)
-    assert response6.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-@pytest.mark.asyncio
-async def test_update_schedule_date_type(async_client, seed_schedule_date_types_helper):
-    # Seed schedule date type data directly into test DB
-    schedule_date_types = [
+# =============================
+# DATA FIXTURES
+# =============================
+@pytest.fixture
+def test_schedule_date_types_data():
+    """Fixture providing array of test schedule_date_type data"""
+    return [
         {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
         {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
         {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_3, "schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4, "schedule_date_type_name": "New Type", "schedule_date_type_code": "new_type"},
     ]
-    await seed_schedule_date_types_helper(schedule_date_types)
 
-    # Set up payloads
-    bad_payload_1 = {}
-    bad_payload_2 = {"schedule_date_type_name": 12345}  # schedule_date_type_name should be str
-    bad_payload_3 = {"schedule_date_type_name": "Invalid", "schedule_date_type_code": "invalid"}  # schedule_date_type_code is not updatable
-    good_payload_full = {
-        "schedule_date_type_name": "Updated Type Name",
-        "is_active": False
-    }
-    good_payload_partial_1 = {
-        "is_active": False
-    }
-    good_payload_partial_2 = {
-        "schedule_date_type_name": "Partially Updated Type"
-    }
-
-    # 1. Test schedule date type not found
-    response1 = await async_client.patch("/schedule_date_types/00000000-0000-0000-0000-000000000000", json=good_payload_full)
-    assert response1.status_code == status.HTTP_404_NOT_FOUND
-
-    # 2. Test invalid UUID format
-    response2 = await async_client.patch("/schedule_date_types/invalid-uuid-format", json=good_payload_full)
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 3. Test empty payload
-    response3 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", json=bad_payload_1)
-    assert response3.status_code == status.HTTP_400_BAD_REQUEST
-
-    # 4. Test invalid data types
-    response4 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", json=bad_payload_2)
-    assert response4.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 5. Test non-updatable field
-    response5 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", json=bad_payload_3)
-    assert response5.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    # 6. Test valid payload to update full record
-    response6 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", json=good_payload_full)
-    assert response6.status_code == status.HTTP_200_OK
-    response6_json = response6.json()
-    assert response6_json["schedule_date_type_name"] == "Updated Type Name"
-    assert response6_json["schedule_date_type_code"] == "type_3"
-    assert response6_json["is_active"] is False
-
-    # 7. Test valid payload to update partial record (is_active only)
-    response7 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}", json=good_payload_partial_1)
-    assert response7.status_code == status.HTTP_200_OK
-    response7_json = response7.json()
-    assert response7_json["schedule_date_type_name"] == "Type 2"
-    assert response7_json["schedule_date_type_code"] == "type_2"
-    assert response7_json["is_active"] is False 
-
-    # 8. Test valid payload to update partial record (schedule_date_type_name only)
-    response8 = await async_client.patch(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_1}", json=good_payload_partial_2)
-    assert response8.status_code == status.HTTP_200_OK
-    response8_json = response8.json()
-    assert response8_json["schedule_date_type_name"] == "Partially Updated Type"
-    assert response8_json["schedule_date_type_code"] == "type_1"
-    assert response8_json["is_active"] is True
+# =============================
+# GET ALL SCHEDULE DATE TYPES
+# =============================
+@pytest.mark.asyncio
+async def test_get_all_schedule_date_types_none_exist(async_client):
+    """Test when no schedule date types exist returns empty list"""
+    response = await async_client.get("/schedule_date_types")
+    assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_delete_schedule_date_type(async_client, seed_schedule_date_types_helper):
-    # Seed schedule date types data directly into test DB
-    schedule_date_types = [{"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"}]
-    await seed_schedule_date_types_helper(schedule_date_types)
+async def test_get_all_schedule_date_types_success(async_client, seed_schedule_date_types, test_schedule_date_types_data):
+    """Test getting all schedule date types after inserting a variety"""
+    await seed_schedule_date_types(test_schedule_date_types_data[:3])
 
-    # 1. Test schedule date type not found
-    response1 = await async_client.delete("/schedule_date_types/00000000-0000-0000-0000-000000000000")
-    assert response1.status_code == status.HTTP_404_NOT_FOUND
+    response = await async_client.get("/schedule_date_types")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, list)
+    assert len(response_json) == 3
+    assert response_json[0]["schedule_date_type_name"] == "Type 1"
+    assert response_json[1]["schedule_date_type_id"] is not None
+    assert response_json[1]["schedule_date_type_code"] == "type_2"
+    assert response_json[2]["is_active"] is True
 
-    # 2. Test invalid UUID format
-    response2 = await async_client.delete("/schedule_date_types/invalid-uuid-format")
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+# =============================
+# GET SINGLE SCHEDULE DATE TYPE
+# =============================
+@pytest.mark.parametrize("schedule_date_type_id, expected_status", [
+    # Schedule date type not present
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
+    # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
+])
+@pytest.mark.asyncio
+async def test_get_single_schedule_date_type_error_cases(async_client, schedule_date_type_id, expected_status):
+    """Test GET single schedule date type error cases (404 and 422)"""
+    response = await async_client.get(f"/schedule_date_types/{schedule_date_type_id}")
+    assert response.status_code == expected_status
 
-    # 3. Test when schedule date types exist
-    response3 = await async_client.delete(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
-    assert response3.status_code == status.HTTP_200_OK
-    response3_json = response3.json()
-    assert isinstance(response3_json, dict)
-    assert response3_json["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_2
+@pytest.mark.asyncio
+async def test_get_single_schedule_date_type_success(async_client, seed_schedule_date_types, test_schedule_date_types_data):
+    """Test GET single schedule date type success case"""
+    await seed_schedule_date_types(test_schedule_date_types_data[:2])
+    
+    response = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, dict)
+    assert response_json["schedule_date_type_name"] == "Type 2"
+    assert response_json["schedule_date_type_code"] == "type_2"
+    assert response_json["is_active"] is True
 
-    # 4. Verify deletion by trying to get it again
-    response4 = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
-    assert response4.status_code == status.HTTP_404_NOT_FOUND
+# =============================
+# INSERT SCHEDULE DATE TYPE
+# =============================
+@pytest.mark.parametrize("type_indices, payload, expected_status", [
+    # empty payload
+    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # missing required fields
+    ([], {"schedule_date_type_name": "Incomplete Type"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # invalid data types
+    ([], {"schedule_date_type_name": "Bad Type", "schedule_date_type_code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # duplicate schedule_date_type_code
+    ([3], {"schedule_date_type_name": "Duplicate Code", "schedule_date_type_code": "new_type"}, status.HTTP_409_CONFLICT),
+    # schedule_date_type_id not allowed in payload
+    ([], {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4, "schedule_date_type_name": "Duplicate ID Type", "schedule_date_type_code": "duplicate_id_type"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+])
+@pytest.mark.asyncio
+async def test_insert_schedule_date_type_error_cases(async_client, seed_schedule_date_types, test_schedule_date_types_data, type_indices, payload, expected_status):
+    """Test INSERT schedule date type error cases (422 and 409)"""
+    types = [test_schedule_date_types_data[i] for i in type_indices]
+    await seed_schedule_date_types(types)
+    response = await async_client.post("/schedule_date_types", json=payload)
+    assert response.status_code == expected_status
+
+@pytest.mark.asyncio
+async def test_insert_schedule_date_type_success(async_client):
+    """Test valid schedule date type insertion"""
+    response = await async_client.post("/schedule_date_types", json={
+        "schedule_date_type_name": "New Type",
+        "schedule_date_type_code": "new_type"
+    })
+    assert response.status_code == status.HTTP_201_CREATED
+    response_json = response.json()
+    assert response_json["schedule_date_type_id"] is not None
+    assert response_json["schedule_date_type_name"] == "New Type"
+    assert response_json["schedule_date_type_code"] == "new_type"
+    assert response_json["is_active"] is True
+
+# =============================
+# UPDATE SCHEDULE DATE TYPE
+# =============================
+@pytest.mark.parametrize("schedule_date_type_path, payload, expected_status", [
+    # schedule date type not found
+    (f"/schedule_date_types/{BAD_ID_0000}", {"schedule_date_type_name": "Updated Type Name", "is_active": False}, status.HTTP_404_NOT_FOUND),
+    # invalid UUID format
+    ("/schedule_date_types/invalid-uuid-format", {"schedule_date_type_name": "Updated Type Name", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # empty payload
+    (f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", {}, status.HTTP_400_BAD_REQUEST),
+    # invalid data types
+    (f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", {"schedule_date_type_name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    # non-updatable field
+    (f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_3}", {"schedule_date_type_name": "Invalid", "schedule_date_type_code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+])
+@pytest.mark.asyncio
+async def test_update_schedule_date_type_error_cases(async_client, schedule_date_type_path, payload, expected_status):
+    """Test UPDATE schedule date type error cases (400, 404, and 422)"""
+    response = await async_client.patch(schedule_date_type_path, json=payload)
+    assert response.status_code == expected_status
+
+@pytest.mark.parametrize("schedule_date_type_id, payload, expected_fields, unchanged_fields", [
+    # full update
+    (
+        SCHEDULE_DATE_TYPE_ID_3,
+        {"schedule_date_type_name": "Updated Type Name", "is_active": False},
+        {"schedule_date_type_name": "Updated Type Name", "is_active": False},
+        {"schedule_date_type_code": "type_3"}
+    ),
+    # partial update (is_active only)
+    (
+        SCHEDULE_DATE_TYPE_ID_2,
+        {"is_active": False},
+        {"is_active": False},
+        {"schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"}
+    ),
+    # partial update (schedule_date_type_name only)
+    (
+        SCHEDULE_DATE_TYPE_ID_1,
+        {"schedule_date_type_name": "Partially Updated Type"},
+        {"schedule_date_type_name": "Partially Updated Type"},
+        {"schedule_date_type_code": "type_1", "is_active": True}
+    ),
+])
+@pytest.mark.asyncio
+async def test_update_schedule_date_type_success(async_client, seed_schedule_date_types, test_schedule_date_types_data, schedule_date_type_id, payload, expected_fields, unchanged_fields):
+    """Test valid schedule date type updates"""
+    await seed_schedule_date_types(test_schedule_date_types_data[:3])
+    
+    response = await async_client.patch(f"/schedule_date_types/{schedule_date_type_id}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, expected_value in expected_fields.items():
+        assert response_json[field] == expected_value
+    for field, expected_value in unchanged_fields.items():
+        assert response_json[field] == expected_value
+
+# =============================
+# DELETE SCHEDULE DATE TYPE
+# =============================
+@pytest.mark.parametrize("schedule_date_type_path, expected_status", [
+    # schedule date type not found
+    (f"/schedule_date_types/{BAD_ID_0000}", status.HTTP_404_NOT_FOUND),
+    # invalid UUID format
+    ("/schedule_date_types/invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
+])
+@pytest.mark.asyncio
+async def test_delete_schedule_date_type_error_cases(async_client, schedule_date_type_path, expected_status):
+    """Test DELETE schedule date type error cases (404 and 422)"""
+    response = await async_client.delete(schedule_date_type_path)
+    assert response.status_code == expected_status
+
+@pytest.mark.asyncio
+async def test_delete_schedule_date_type_success(async_client, seed_schedule_date_types, test_schedule_date_types_data):
+    """Test successful schedule date type deletion with verification"""
+    await seed_schedule_date_types([test_schedule_date_types_data[1]])
+
+    response = await async_client.delete(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, dict)
+    assert response_json["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_2
+
+    verify_response = await async_client.get(f"/schedule_date_types/{SCHEDULE_DATE_TYPE_ID_2}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND

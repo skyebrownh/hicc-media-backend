@@ -2,7 +2,8 @@ import pytest_asyncio
 from tests.utils.helpers import (
     insert_dates, insert_users, insert_user_dates, insert_teams,
     insert_media_roles, insert_proficiency_levels, insert_schedules,
-    insert_schedule_date_types, insert_schedule_dates
+    insert_schedule_date_types, insert_schedule_dates, insert_user_roles,
+    insert_team_users, insert_schedule_date_roles
 )
 
 # =============================
@@ -90,3 +91,30 @@ async def seed_schedule_dates(test_db_pool):
             async with test_db_pool.acquire() as conn:
                 await conn.execute(insert_schedule_dates(schedule_dates))
     return _seed_schedule_dates
+
+@pytest_asyncio.fixture
+async def seed_user_roles(test_db_pool):
+    """Helper fixture to seed user_roles in the database"""
+    async def _seed_user_roles(user_roles: list[dict]):
+        if user_roles:
+            async with test_db_pool.acquire() as conn:
+                await conn.execute(insert_user_roles(user_roles))
+    return _seed_user_roles
+
+@pytest_asyncio.fixture
+async def seed_team_users(test_db_pool):
+    """Helper fixture to seed team_users in the database"""
+    async def _seed_team_users(team_users: list[dict]):
+        if team_users:
+            async with test_db_pool.acquire() as conn:
+                await conn.execute(insert_team_users(team_users))
+    return _seed_team_users
+
+@pytest_asyncio.fixture
+async def seed_schedule_date_roles(test_db_pool):
+    """Helper fixture to seed schedule_date_roles in the database"""
+    async def _seed_schedule_date_roles(schedule_date_roles: list[dict]):
+        if schedule_date_roles:
+            async with test_db_pool.acquire() as conn:
+                await conn.execute(insert_schedule_date_roles(schedule_date_roles))
+    return _seed_schedule_date_roles
