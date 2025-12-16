@@ -245,7 +245,7 @@ def test_build_where_clause_invalid_table():
     with pytest.raises(ValueError) as exc_info:
         build_where_clause("invalid_table", {"user_id": "123"})
     assert "Invalid table name" in str(exc_info.value)
-
+    
 
 def test_build_where_clause_empty_filters():
     """Test build_where_clause with empty filters"""
@@ -301,7 +301,7 @@ def test_build_where_clause_with_list_value():
     # Current implementation uses = operator even for lists
     assert "WHERE user_id = $1" in clause
     assert values == [["123", "456", "789"]]
-
+    
 
 def test_build_where_clause_with_mixed_types():
     """Test build_where_clause with mixed value types including None and list"""
