@@ -7,35 +7,6 @@ from tests.utils.constants import (
 )
 
 # =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_teams_data():
-    """Fixture providing array of test team data"""
-    return [
-        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
-        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
-    ]
-
-@pytest.fixture
-def test_users_data():
-    """Fixture providing array of test user data"""
-    return [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
-    ]
-
-@pytest.fixture
-def test_team_users_data():
-    """Fixture providing array of test team_user data"""
-    return [
-        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
-        {"team_id": TEAM_ID_1, "user_id": USER_ID_2},
-        {"team_id": TEAM_ID_2, "user_id": USER_ID_3},
-    ]
-
-# =============================
 # GET ALL TEAM USERS
 # =============================
 @pytest.mark.asyncio
@@ -47,9 +18,9 @@ async def test_get_all_team_users_none_exist(async_client):
 @pytest.mark.asyncio
 async def test_get_all_team_users_success(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
     """Test getting all team users after inserting a variety"""
-    await seed_teams(test_teams_data)
-    await seed_users(test_users_data)
-    await seed_team_users(test_team_users_data)
+    await seed_teams(test_teams_data[:2])
+    await seed_users(test_users_data[:3])
+    await seed_team_users([test_team_users_data[0], test_team_users_data[2], test_team_users_data[3]])
 
     response = await async_client.get("/team_users")
     assert response.status_code == status.HTTP_200_OK
@@ -80,7 +51,7 @@ async def test_get_team_users_for_team_error_cases(async_client, team_id, expect
 @pytest.mark.asyncio
 async def test_get_team_users_for_team_none_exist(async_client, seed_teams, seed_users, test_teams_data, test_users_data):
     """Test GET team users for team when none exist returns empty list"""
-    await seed_teams(test_teams_data)
+    await seed_teams(test_teams_data[:2])
     await seed_users([test_users_data[0]])
 
     response = await async_client.get(f"/teams/{TEAM_ID_2}/users")
@@ -89,9 +60,9 @@ async def test_get_team_users_for_team_none_exist(async_client, seed_teams, seed
 @pytest.mark.asyncio
 async def test_get_team_users_for_team_success(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
     """Test GET team users for team success case"""
-    await seed_teams(test_teams_data)
+    await seed_teams(test_teams_data[:2])
     await seed_users(test_users_data[:2])
-    await seed_team_users(test_team_users_data[:2])
+    await seed_team_users([test_team_users_data[0], test_team_users_data[2]])
 
     response = await async_client.get(f"/teams/{TEAM_ID_1}/users")
     assert response.status_code == status.HTTP_200_OK
