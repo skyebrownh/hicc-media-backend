@@ -8,44 +8,6 @@ from tests.utils.constants import (
 )
 
 # =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_media_roles_data():
-    """Fixture providing array of test media role data"""
-    return [
-        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "Role 1", "description": "description 1", "sort_order": 1, "media_role_code": "role_1"},
-        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Role 2", "description": "description 2", "sort_order": 2, "media_role_code": "role_2"},
-        {"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Role 3", "description": "description 3", "sort_order": 3, "media_role_code": "role_3"},
-        {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "New Role", "sort_order": 4, "media_role_code": "new_role"},
-        {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "Another Role", "sort_order": 5, "media_role_code": "another_role"},
-    ]
-
-@pytest.fixture
-def test_users_data():
-    """Fixture providing array of test user data"""
-    return [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-    ]
-
-@pytest.fixture
-def test_proficiency_levels_data():
-    """Fixture providing array of test proficiency_level data"""
-    return [
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
-    ]
-
-@pytest.fixture
-def test_user_roles_data():
-    """Fixture providing array of test user_role data"""
-    return [
-        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
-        {"user_id": USER_ID_2, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_2},
-    ]
-
-# =============================
 # GET ALL MEDIA ROLES
 # =============================
 @pytest.mark.asyncio
@@ -58,20 +20,16 @@ async def test_get_all_media_roles_none_exist(async_client):
 @pytest.mark.asyncio
 async def test_get_all_media_roles_success(async_client, seed_media_roles, test_media_roles_data):
     """Test getting all media roles after inserting a variety"""
-    await seed_media_roles([
-        {"media_role_name": "Role 1", "sort_order": 1, "media_role_code": "role_1"},
-        {"media_role_name": "Role 2", "sort_order": 2, "media_role_code": "role_2"},
-        {"media_role_name": "Role 3", "sort_order": 3, "media_role_code": "role_3"},
-    ])
+    await seed_media_roles(test_media_roles_data[:3])
 
     response = await async_client.get("/media_roles")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, list)
     assert len(response_json) == 3
-    assert response_json[0]["media_role_name"] == "Role 1"
+    assert response_json[0]["media_role_name"] == "ProPresenter"
     assert response_json[1]["media_role_id"] is not None
-    assert response_json[1]["media_role_code"] == "role_2"
+    assert response_json[1]["media_role_code"] == "sound"
     assert response_json[2]["description"] is None
     assert response_json[2]["is_active"] is True
 
@@ -100,9 +58,9 @@ async def test_get_single_media_role_success(async_client, seed_media_roles, tes
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, dict)
-    assert response_json["media_role_name"] == "Role 2"
-    assert response_json["media_role_code"] == "role_2"
-    assert response_json["description"] == "description 2"
+    assert response_json["media_role_name"] == "Sound"
+    assert response_json["media_role_code"] == "sound"
+    assert response_json["description"] is None
     assert response_json["is_active"] is True
 
 # =============================
@@ -174,21 +132,21 @@ async def test_update_media_role_error_cases(async_client, seed_media_roles, tes
         MEDIA_ROLE_ID_3,
         {"media_role_name": "Updated Role Name", "description": "Updated description", "sort_order": 100, "is_active": False},
         {"media_role_name": "Updated Role Name", "description": "Updated description", "is_active": False},
-        {"media_role_code": "role_3"}
+        {"media_role_code": "lighting"}
     ),
     # partial update (is_active only)
     (
         MEDIA_ROLE_ID_2,
         {"is_active": False},
         {"is_active": False},
-        {"media_role_name": "Role 2", "description": "description 2", "media_role_code": "role_2"}
+        {"media_role_name": "Sound", "media_role_code": "sound"}
     ),
     # partial update (media_role_name only)
     (
         MEDIA_ROLE_ID_1,
         {"media_role_name": "Partially Updated Role"},
         {"media_role_name": "Partially Updated Role"},
-        {"description": "description 1", "media_role_code": "role_1", "is_active": True}
+        {"media_role_code": "propresenter", "is_active": True}
     ),
 ])
 @pytest.mark.asyncio
@@ -260,9 +218,13 @@ async def test_delete_media_role_cascade_user_roles(
     await seed_media_roles([test_media_roles_data[0]])
 
     # Seed child records based on parameters
-    await conditional_seed(user_indices, test_users_data, seed_users)
-    await conditional_seed(proficiency_level_indices, test_proficiency_levels_data, seed_proficiency_levels)
-    await conditional_seed(user_role_indices, test_user_roles_data, seed_user_roles)
+    await conditional_seed(user_indices, test_users_data[:2], seed_users)
+    await conditional_seed(proficiency_level_indices, test_proficiency_levels_data[:2], seed_proficiency_levels)
+    user_roles_for_cascade = [
+        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
+        {"user_id": USER_ID_2, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_2},
+    ]
+    await conditional_seed(user_role_indices, user_roles_for_cascade, seed_user_roles)
 
     # Verify user_roles exist before deletion
     count_before = await count_records(test_db_pool, "user_roles", f"media_role_id = '{MEDIA_ROLE_ID_1}'")

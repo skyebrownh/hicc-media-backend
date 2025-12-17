@@ -36,20 +36,24 @@ def test_teams_data():
 
 @pytest.fixture
 def test_media_roles_data():
-    """Standard fixture providing array of test media_role data (3 roles)"""
+    """Standard fixture providing array of test media_role data"""
     return [
         {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
         {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
         {"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Lighting", "sort_order": 30, "media_role_code": "lighting"},
+        {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "New Role", "sort_order": 4, "media_role_code": "new_role"},
+        {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "Another Role", "sort_order": 5, "media_role_code": "another_role"},
     ]
 
 @pytest.fixture
 def test_proficiency_levels_data():
-    """Standard fixture providing array of test proficiency_level data (3 levels)"""
+    """Standard fixture providing array of test proficiency_level data"""
     return [
         {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
         {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
         {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Untrained", "proficiency_level_number": 0, "proficiency_level_code": "untrained", "is_assignable": True},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_4, "proficiency_level_name": "New Level", "proficiency_level_number": 5, "proficiency_level_code": "new_level"},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_4, "proficiency_level_name": "Another Level", "proficiency_level_number": 5, "proficiency_level_code": "another_level"},
     ]
 
 @pytest.fixture
@@ -59,10 +63,11 @@ def test_dates_data():
 
 @pytest.fixture
 def test_schedule_date_types_data():
-    """Standard fixture providing array of test schedule_date_type data (2 types)"""
+    """Standard fixture providing array of test schedule_date_type data"""
     return [
         {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"},
         {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Rehearsal", "schedule_date_type_code": "rehearsal"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4, "schedule_date_type_name": "New Type", "schedule_date_type_code": "new_type"},
     ]
 
 @pytest.fixture

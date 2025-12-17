@@ -8,19 +8,6 @@ from tests.utils.constants import (
 )
 
 # =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_schedule_date_types_data():
-    """Fixture providing array of test schedule_date_type data"""
-    return [
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Type 1", "schedule_date_type_code": "type_1"},
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"},
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_3, "schedule_date_type_name": "Type 3", "schedule_date_type_code": "type_3"},
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4, "schedule_date_type_name": "New Type", "schedule_date_type_code": "new_type"},
-    ]
-
-# =============================
 # GET ALL SCHEDULE DATE TYPES
 # =============================
 @pytest.mark.asyncio
@@ -32,17 +19,17 @@ async def test_get_all_schedule_date_types_none_exist(async_client):
 @pytest.mark.asyncio
 async def test_get_all_schedule_date_types_success(async_client, seed_schedule_date_types, test_schedule_date_types_data):
     """Test getting all schedule date types after inserting a variety"""
-    await seed_schedule_date_types(test_schedule_date_types_data[:3])
+    await seed_schedule_date_types(test_schedule_date_types_data[:2])
 
     response = await async_client.get("/schedule_date_types")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, list)
-    assert len(response_json) == 3
-    assert response_json[0]["schedule_date_type_name"] == "Type 1"
+    assert len(response_json) == 2
+    assert response_json[0]["schedule_date_type_name"] == "Service"
     assert response_json[1]["schedule_date_type_id"] is not None
-    assert response_json[1]["schedule_date_type_code"] == "type_2"
-    assert response_json[2]["is_active"] is True
+    assert response_json[1]["schedule_date_type_code"] == "rehearsal"
+    assert response_json[1]["is_active"] is True
 
 # =============================
 # GET SINGLE SCHEDULE DATE TYPE
@@ -68,8 +55,8 @@ async def test_get_single_schedule_date_type_success(async_client, seed_schedule
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, dict)
-    assert response_json["schedule_date_type_name"] == "Type 2"
-    assert response_json["schedule_date_type_code"] == "type_2"
+    assert response_json["schedule_date_type_name"] == "Rehearsal"
+    assert response_json["schedule_date_type_code"] == "rehearsal"
     assert response_json["is_active"] is True
 
 # =============================
@@ -83,7 +70,7 @@ async def test_get_single_schedule_date_type_success(async_client, seed_schedule
     # invalid data types
     ([], {"schedule_date_type_name": "Bad Type", "schedule_date_type_code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # duplicate schedule_date_type_code
-    ([3], {"schedule_date_type_name": "Duplicate Code", "schedule_date_type_code": "new_type"}, status.HTTP_409_CONFLICT),
+    ([2], {"schedule_date_type_name": "Duplicate Code", "schedule_date_type_code": "new_type"}, status.HTTP_409_CONFLICT),
     # schedule_date_type_id not allowed in payload
     ([], {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_4, "schedule_date_type_name": "Duplicate ID Type", "schedule_date_type_code": "duplicate_id_type"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
@@ -132,30 +119,30 @@ async def test_update_schedule_date_type_error_cases(async_client, schedule_date
 @pytest.mark.parametrize("schedule_date_type_id, payload, expected_fields, unchanged_fields", [
     # full update
     (
-        SCHEDULE_DATE_TYPE_ID_3,
+        SCHEDULE_DATE_TYPE_ID_2,
         {"schedule_date_type_name": "Updated Type Name", "is_active": False},
         {"schedule_date_type_name": "Updated Type Name", "is_active": False},
-        {"schedule_date_type_code": "type_3"}
+        {"schedule_date_type_code": "rehearsal"}
     ),
     # partial update (is_active only)
     (
         SCHEDULE_DATE_TYPE_ID_2,
         {"is_active": False},
         {"is_active": False},
-        {"schedule_date_type_name": "Type 2", "schedule_date_type_code": "type_2"}
+        {"schedule_date_type_name": "Rehearsal", "schedule_date_type_code": "rehearsal"}
     ),
     # partial update (schedule_date_type_name only)
     (
         SCHEDULE_DATE_TYPE_ID_1,
         {"schedule_date_type_name": "Partially Updated Type"},
         {"schedule_date_type_name": "Partially Updated Type"},
-        {"schedule_date_type_code": "type_1", "is_active": True}
+        {"schedule_date_type_code": "service", "is_active": True}
     ),
 ])
 @pytest.mark.asyncio
 async def test_update_schedule_date_type_success(async_client, seed_schedule_date_types, test_schedule_date_types_data, schedule_date_type_id, payload, expected_fields, unchanged_fields):
     """Test valid schedule date type updates"""
-    await seed_schedule_date_types(test_schedule_date_types_data[:3])
+    await seed_schedule_date_types(test_schedule_date_types_data[:2])
     
     response = await async_client.patch(f"/schedule_date_types/{schedule_date_type_id}", json=payload)
     assert response.status_code == status.HTTP_200_OK

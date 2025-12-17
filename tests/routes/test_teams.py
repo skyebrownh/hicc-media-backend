@@ -2,36 +2,7 @@ import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
 from tests.routes.conftest import conditional_seed, count_records
-from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4, USER_ID_1, USER_ID_2
-
-# =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_teams_data():
-    """Fixture providing array of test team data"""
-    return [
-        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
-        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
-        {"team_id": TEAM_ID_3, "team_name": "Team 3", "team_code": "team_3"},
-        {"team_id": TEAM_ID_4, "team_name": "Another Team", "team_code": "new_team"},
-    ]
-
-@pytest.fixture
-def test_users_data():
-    """Fixture providing array of test user data"""
-    return [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-    ]
-
-@pytest.fixture
-def test_team_users_data():
-    """Fixture providing array of test team_user data"""
-    return [
-        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
-        {"team_id": TEAM_ID_1, "user_id": USER_ID_2},
-    ]
+from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4
 
 # =============================
 # GET ALL TEAMS
@@ -233,8 +204,9 @@ async def test_delete_team_cascade_team_users(
     await seed_teams([test_teams_data[0]])
 
     # Seed child records based on parameters
-    await conditional_seed(user_indices, test_users_data, seed_users)
-    await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
+    await conditional_seed(user_indices, test_users_data[:2], seed_users)
+    team_users_for_team_1 = [test_team_users_data[0], test_team_users_data[2]]
+    await conditional_seed(team_user_indices, team_users_for_team_1, seed_team_users)
 
     # Verify team_users exist before deletion
     count_before = await count_records(test_db_pool, "team_users", f"team_id = '{TEAM_ID_1}'")
