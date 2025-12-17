@@ -90,6 +90,18 @@ def test_user_roles_data():
         {"user_id": USER_ID_3, "media_role_id": MEDIA_ROLE_ID_2, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
     ]
 
+@pytest.fixture
+def test_user_dates_data():
+    """Standard fixture providing array of test user_date data"""
+    return [
+        {"user_id": USER_ID_1, "date": DATE_2024_02_29},
+        {"user_id": USER_ID_1, "date": DATE_2025_01_01},
+        {"user_id": USER_ID_1, "date": DATE_2025_03_31},
+        {"user_id": USER_ID_2, "date": DATE_2024_02_29},
+        {"user_id": USER_ID_2, "date": DATE_2025_01_01},
+        {"user_id": USER_ID_2, "date": DATE_2025_03_31},
+    ]
+
 # =============================
 # CONDITIONAL SEEDING HELPER
 # =============================

@@ -5,15 +5,6 @@ from tests.routes.conftest import conditional_seed
 from tests.utils.constants import DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, DATE_2025_08_31, DATE_2025_12_31
 
 # =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_dates_data():
-    """Fixture providing array of test date strings"""
-    return [DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, DATE_2025_12_31]
-
-
-# =============================
 # GET ALL DATES
 # =============================
 @pytest.mark.asyncio
@@ -25,16 +16,18 @@ async def test_get_all_dates_none_exist(async_client):
 @pytest.mark.asyncio
 async def test_get_all_dates_success(async_client, seed_dates, test_dates_data):
     """Test getting all dates after inserting a variety, asserts on correct date columns per-date"""
-    await seed_dates(test_dates_data)
+    # Use first 2 dates + last 2 dates (general dates: first of year, leap day, end of year, 5th Sunday of August)
+    general_dates = test_dates_data[:2] + test_dates_data[-2:]
+    await seed_dates(general_dates)
 
     response = await async_client.get("/dates")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, list)
     returned_dates = [d["date"] for d in response_json]
-    for d in test_dates_data:
+    for d in general_dates:
         assert d in returned_dates
-    assert len(response_json) == len(test_dates_data) 
+    assert len(response_json) == len(general_dates) 
 
     for row in response_json:
         d = row["date"]
@@ -54,6 +47,11 @@ async def test_get_all_dates_success(async_client, seed_dates, test_dates_data):
             assert row["calendar_day"] == 29
         elif d == DATE_2025_12_31:  # last of year/month
             assert row["is_last_of_month"] is True
+        elif d == DATE_2025_08_31:  # 5th Sunday of August
+            assert row["is_last_of_month"] is True
+            assert row["weekday_of_month"] == 5
+            assert row["calendar_quarter"] == 3
+            assert row["weekday"] == 6 # Sunday
 
 # =============================
 # GET SINGLE DATE
@@ -73,6 +71,7 @@ async def test_get_single_date_error_cases(async_client, seed_dates, test_dates_
 @pytest.mark.asyncio
 async def test_get_single_date_success(async_client, seed_dates, test_dates_data):
     """Test GET single date success case"""
+    # Use DATE_2025_03_31 (index 2)
     await seed_dates([test_dates_data[2]])
     response = await async_client.get(f"/dates/{DATE_2025_03_31}")
     assert response.status_code == status.HTTP_200_OK
@@ -88,7 +87,7 @@ async def test_get_single_date_success(async_client, seed_dates, test_dates_data
     ([], {"date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # invalid date format
     ([], {"date": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # invalid data type
     ([], {"date": DATE_2025_08_31, "calendar_year": 2025}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # extra fields not allowed
-    ([2], {"date": DATE_2025_03_31}, status.HTTP_409_CONFLICT),  # duplicate date
+    ([2], {"date": DATE_2025_03_31}, status.HTTP_409_CONFLICT),  # duplicate date (index 2 = DATE_2025_03_31)
 ])
 @pytest.mark.asyncio
 async def test_insert_date_error_cases(async_client, seed_dates, test_dates_data, date_indices, payload, expected_status):
@@ -143,6 +142,7 @@ async def test_update_date_error_cases(async_client, seed_dates, test_dates_data
 @pytest.mark.asyncio
 async def test_update_date_success(async_client, seed_dates, test_dates_data, date, payload, expected_fields, unchanged_fields):
     """Test valid date updates"""
+    # Use DATE_2025_01_01 and DATE_2025_03_31 (indices 1 and 2)
     await seed_dates(test_dates_data[1:3])
     
     response = await async_client.patch(f"/dates/{date}", json=payload)
@@ -172,6 +172,7 @@ async def test_delete_date_error_cases(async_client, date_path, expected_status)
 @pytest.mark.asyncio
 async def test_delete_date_success(async_client, seed_dates, test_dates_data):
     """Test successful date deletion with verification"""
+    # Use DATE_2025_03_31 (index 2)
     await seed_dates([test_dates_data[2]])
 
     # Test successful deletion
