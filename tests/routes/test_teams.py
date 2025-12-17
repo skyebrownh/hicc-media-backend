@@ -1,8 +1,8 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
-from tests.routes.conftest import conditional_seed
-from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4
+from tests.routes.conftest import conditional_seed, count_records
+from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4, USER_ID_1, USER_ID_2
 
 # =============================
 # DATA FIXTURES
@@ -15,6 +15,22 @@ def test_teams_data():
         {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
         {"team_id": TEAM_ID_3, "team_name": "Team 3", "team_code": "team_3"},
         {"team_id": TEAM_ID_4, "team_name": "Another Team", "team_code": "new_team"},
+    ]
+
+@pytest.fixture
+def test_users_data():
+    """Fixture providing array of test user data"""
+    return [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+
+@pytest.fixture
+def test_team_users_data():
+    """Fixture providing array of test team_user data"""
+    return [
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_2},
     ]
 
 # =============================
@@ -194,3 +210,44 @@ async def test_delete_team_success(async_client, seed_teams, test_teams_data):
     # Verify deletion by trying to get it again
     verify_response = await async_client.get(f"/teams/{TEAM_ID_2}")
     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+# =============================
+# DELETE TEAM CASCADE
+# =============================
+@pytest.mark.parametrize("user_indices, team_user_indices, expected_count_before", [
+    # No team_users to cascade delete
+    ([], [], 0),
+    # One team_user to cascade delete
+    ([0], [0], 1),
+    # Multiple team_users to cascade delete
+    ([0, 1], [0, 1], 2),
+])
+@pytest.mark.asyncio
+async def test_delete_team_cascade_team_users(
+    async_client, test_db_pool, seed_teams, seed_users, seed_team_users,
+    test_teams_data, test_users_data, test_team_users_data,
+    user_indices, team_user_indices, expected_count_before
+):
+    """Test that deleting a team cascades to delete associated team_users"""
+    # Seed parent
+    await seed_teams([test_teams_data[0]])
+
+    # Seed child records based on parameters
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
+
+    # Verify team_users exist before deletion
+    count_before = await count_records(test_db_pool, "team_users", f"team_id = '{TEAM_ID_1}'")
+    assert count_before == expected_count_before
+
+    # Delete parent
+    response = await async_client.delete(f"/teams/{TEAM_ID_1}")
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/teams/{TEAM_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    # Verify all child records are cascade deleted
+    count_after = await count_records(test_db_pool, "team_users", f"team_id = '{TEAM_ID_1}'")
+    assert count_after == 0

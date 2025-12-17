@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
-from tests.routes.conftest import conditional_seed
+from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_DATE_TYPE_ID_1, SCHEDULE_DATE_TYPE_ID_2,
     SCHEDULE_DATE_ID_1, SCHEDULE_DATE_ID_2, SCHEDULE_DATE_ID_3, TEAM_ID_1, USER_ID_1, USER_ID_2,
@@ -363,6 +363,52 @@ async def test_delete_schedule_date_success(async_client, seed_dates, seed_sched
 
     verify_response = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_1}")
     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+# =============================
+# DELETE SCHEDULE DATE CASCADE
+# =============================
+@pytest.mark.parametrize("media_role_indices, schedule_date_role_indices, expected_count_before", [
+    # No schedule_date_roles to cascade delete
+    ([], [], 0),
+    # One schedule_date_role to cascade delete
+    ([0], [0], 1),
+    # Multiple schedule_date_roles to cascade delete
+    ([0, 1], [0, 1], 2),
+])
+@pytest.mark.asyncio
+async def test_delete_schedule_date_cascade_schedule_date_roles(
+    async_client, test_db_pool, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates,
+    seed_media_roles, seed_schedule_date_roles,
+    test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data,
+    test_media_roles_data, test_schedule_date_roles_data,
+    media_role_indices, schedule_date_role_indices, expected_count_before
+):
+    """Test that deleting a schedule_date cascades to delete associated schedule_date_roles"""
+    # Seed parent and dependencies
+    await seed_dates([test_dates_data[0]])
+    await seed_schedules([test_schedules_data[0]])
+    await seed_schedule_date_types([test_schedule_date_types_data[0]])
+    await seed_schedule_dates([test_schedule_dates_data[0]])
+
+    # Seed child records based on parameters
+    await conditional_seed(media_role_indices, test_media_roles_data, seed_media_roles)
+    await conditional_seed(schedule_date_role_indices, test_schedule_date_roles_data, seed_schedule_date_roles)
+
+    # Verify schedule_date_roles exist before deletion
+    count_before = await count_records(test_db_pool, "schedule_date_roles", f"schedule_date_id = '{SCHEDULE_DATE_ID_1}'")
+    assert count_before == expected_count_before
+
+    # Delete parent
+    response = await async_client.delete(f"/schedule_dates/{SCHEDULE_DATE_ID_1}")
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    # Verify all child records are cascade deleted
+    count_after = await count_records(test_db_pool, "schedule_date_roles", f"schedule_date_id = '{SCHEDULE_DATE_ID_1}'")
+    assert count_after == 0
 
 # =============================
 # DELETE SCHEDULE DATE ROLES FOR SCHEDULE DATE
