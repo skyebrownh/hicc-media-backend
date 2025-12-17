@@ -5,35 +5,6 @@ from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, BAD_DATE_2000_01_01
 
 # =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_users_data():
-    """Fixture providing array of test user data"""
-    return [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
-    ]
-
-@pytest.fixture
-def test_dates_data():
-    """Fixture providing array of test date strings"""
-    return [DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31]
-
-@pytest.fixture
-def test_user_dates_data():
-    """Fixture providing array of test user_date data"""
-    return [
-        {"user_id": USER_ID_1, "date": DATE_2024_02_29},
-        {"user_id": USER_ID_1, "date": DATE_2025_01_01},
-        {"user_id": USER_ID_1, "date": DATE_2025_03_31},
-        {"user_id": USER_ID_2, "date": DATE_2024_02_29},
-        {"user_id": USER_ID_2, "date": DATE_2025_01_01},
-        {"user_id": USER_ID_2, "date": DATE_2025_03_31},
-    ]
-
-# =============================
 # GET ALL USER DATES
 # =============================
 @pytest.mark.asyncio
@@ -46,7 +17,8 @@ async def test_get_all_user_dates_none_exist(async_client):
 async def test_get_all_user_dates_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
     """Test getting all user dates after inserting a variety"""
     await seed_users(test_users_data[:2])
-    await seed_dates(test_dates_data)
+    # Use first 3 dates (general dates: leap day, start of year, end of March)
+    await seed_dates(test_dates_data[:3])
     await seed_user_dates(
         [test_user_dates_data[0], 
         test_user_dates_data[1], 
@@ -87,6 +59,7 @@ async def test_get_single_user_date_error_cases(async_client, user_id, date, exp
 async def test_get_single_user_date_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
     """Test GET single user date success case"""
     await seed_users([test_users_data[0]])
+    # Use first 2 dates (DATE_2024_02_29, DATE_2025_01_01)
     await seed_dates(test_dates_data[:2])
     await seed_user_dates([test_user_dates_data[0]])
 
@@ -111,7 +84,7 @@ async def test_get_single_user_date_success(async_client, seed_dates, seed_users
     ([], [], [], {"user_id": "invalid-uuid", "date": DATE_2025_01_01}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # invalid date format
     ([], [], [], {"user_id": USER_ID_1, "date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-    # duplicate user_date
+    # duplicate user_date (index 0 = USER_ID_1 with DATE_2024_02_29)
     ([0], [0, 1], [0], {"user_id": USER_ID_1, "date": DATE_2024_02_29}, status.HTTP_409_CONFLICT),
     # extra fields not allowed
     ([], [], [], {"user_id": USER_ID_1, "date": DATE_2025_01_01, "user_date_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
@@ -134,6 +107,7 @@ async def test_insert_user_date_error_cases(async_client, seed_dates, seed_users
 async def test_insert_user_date_success(async_client, seed_dates, seed_users, test_users_data, test_dates_data):
     """Test valid user date insertion"""
     await seed_users([test_users_data[1]])    
+    # Use DATE_2024_02_29 (index 0)
     await seed_dates([test_dates_data[0]])
     
     response = await async_client.post("/user_dates", json={"user_id": USER_ID_2, "date": DATE_2024_02_29})
@@ -166,7 +140,8 @@ async def test_insert_user_dates_bulk_error_cases(async_client, payload, expecte
 async def test_insert_user_dates_bulk_success(async_client, seed_dates, seed_users, test_users_data, test_dates_data, test_user_dates_data):
     """Test valid user dates bulk insertion"""
     await seed_users(test_users_data[:2])
-    await seed_dates(test_dates_data)
+    # Use first 3 dates (general dates)
+    await seed_dates(test_dates_data[:3])
 
     good_payload = [test_user_dates_data[0], test_user_dates_data[1], test_user_dates_data[4]]
 
@@ -206,6 +181,7 @@ async def test_update_user_date_error_cases(async_client, user_id, date_path, pa
 async def test_update_user_date_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
     """Test valid user date update"""
     await seed_users([test_users_data[0]])    
+    # Use first 2 dates (DATE_2024_02_29, DATE_2025_01_01)
     await seed_dates(test_dates_data[:2])
     await seed_user_dates([test_user_dates_data[0]])
 
@@ -236,6 +212,7 @@ async def test_delete_user_date_error_cases(async_client, user_id, date, expecte
 async def test_delete_user_date_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
     """Test successful user date deletion with verification"""
     await seed_users([test_users_data[0]])
+    # Use DATE_2024_02_29 (index 0)
     await seed_dates([test_dates_data[0]])
     await seed_user_dates([test_user_dates_data[0]])
 
