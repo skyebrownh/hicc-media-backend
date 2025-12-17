@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_DATE_TYPE_ID_1, SCHEDULE_DATE_TYPE_ID_2,
     SCHEDULE_DATE_TYPE_ID_3, SCHEDULE_DATE_TYPE_ID_4
@@ -89,8 +90,7 @@ async def test_get_single_schedule_date_type_success(async_client, seed_schedule
 @pytest.mark.asyncio
 async def test_insert_schedule_date_type_error_cases(async_client, seed_schedule_date_types, test_schedule_date_types_data, type_indices, payload, expected_status):
     """Test INSERT schedule date type error cases (422 and 409)"""
-    types = [test_schedule_date_types_data[i] for i in type_indices]
-    await seed_schedule_date_types(types)
+    await conditional_seed(type_indices, test_schedule_date_types_data, seed_schedule_date_types)
     response = await async_client.post("/schedule_date_types", json=payload)
     assert response.status_code == expected_status
 

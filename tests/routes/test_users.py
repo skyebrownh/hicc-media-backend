@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4
 
 # =============================
@@ -87,8 +88,7 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
 @pytest.mark.asyncio
 async def test_insert_user_error_cases(async_client, seed_users, test_users_data, user_indices, payload, expected_status):
     """Test INSERT user error cases (422)"""
-    users = [test_users_data[i] for i in user_indices] if user_indices else []
-    await seed_users(users)
+    await conditional_seed(user_indices, test_users_data, seed_users)
     
     response = await async_client.post("/users", json=payload)
     assert response.status_code == expected_status
@@ -127,8 +127,7 @@ async def test_insert_user_success(async_client):
 @pytest.mark.asyncio
 async def test_update_user_error_cases(async_client, seed_users, test_users_data, user_indices, user_path, payload, expected_status):
     """Test UPDATE user error cases (400, 404, and 422)"""
-    users = [test_users_data[i] for i in user_indices] if user_indices else []
-    await seed_users(users)
+    await conditional_seed(user_indices, test_users_data, seed_users)
     
     response = await async_client.patch(user_path, json=payload)
     assert response.status_code == expected_status
@@ -181,8 +180,7 @@ async def test_update_user_success(async_client, seed_users, test_users_data, us
 @pytest.mark.asyncio
 async def test_delete_user_error_cases(async_client, seed_users, test_users_data, user_indices, user_path, expected_status):
     """Test DELETE user error cases (404 and 422)"""
-    users = [test_users_data[i] for i in user_indices] if user_indices else []
-    await seed_users(users)
+    await conditional_seed(user_indices, test_users_data, seed_users)
     
     response = await async_client.delete(user_path)
     assert response.status_code == expected_status

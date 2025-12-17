@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, MEDIA_ROLE_ID_3, MEDIA_ROLE_ID_4
 
 # =============================
@@ -95,8 +96,7 @@ async def test_get_single_media_role_success(async_client, seed_media_roles, tes
 @pytest.mark.asyncio
 async def test_insert_media_role_error_cases(async_client, seed_media_roles, test_media_roles_data, role_indices, payload, expected_status):
     """Test INSERT media role error cases (422 and 409)"""
-    roles = [test_media_roles_data[i] for i in role_indices] if role_indices else []
-    await seed_media_roles(roles)
+    await conditional_seed(role_indices, test_media_roles_data, seed_media_roles)
     
     response = await async_client.post("/media_roles", json=payload)
     assert response.status_code == expected_status
@@ -135,8 +135,7 @@ async def test_insert_media_role_success(async_client):
 @pytest.mark.asyncio
 async def test_update_media_role_error_cases(async_client, seed_media_roles, test_media_roles_data, role_indices, media_role_path, payload, expected_status):
     """Test UPDATE media role error cases (400, 404, and 422)"""
-    roles = [test_media_roles_data[i] for i in role_indices] if role_indices else []
-    await seed_media_roles(roles)
+    await conditional_seed(role_indices, test_media_roles_data, seed_media_roles)
     
     response = await async_client.patch(media_role_path, json=payload)
     assert response.status_code == expected_status
@@ -190,8 +189,7 @@ async def test_update_media_role_success(async_client, seed_media_roles, test_me
 @pytest.mark.asyncio
 async def test_delete_media_role_error_cases(async_client, seed_media_roles, test_media_roles_data, role_indices, media_role_path, expected_status):
     """Test DELETE media role error cases (404 and 422)"""
-    roles = [test_media_roles_data[i] for i in role_indices] if role_indices else []
-    await seed_media_roles(roles)
+    await conditional_seed(role_indices, test_media_roles_data, seed_media_roles)
     
     response = await async_client.delete(media_role_path)
     assert response.status_code == expected_status

@@ -7,6 +7,15 @@ from tests.utils.helpers import (
 )
 
 # =============================
+# CONDITIONAL SEEDING HELPER
+# =============================
+async def conditional_seed(indices, data, seed_func):
+    """Conditionally seed data only if indices are provided (non-empty list)"""
+    if indices:
+        items = [data[i] for i in indices]
+        await seed_func(items)
+
+# =============================
 # SEED HELPER FIXTURES
 # =============================
 @pytest_asyncio.fixture

@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4
 
 # =============================
@@ -86,8 +87,7 @@ async def test_get_single_team_success(async_client, seed_teams, test_teams_data
 @pytest.mark.asyncio
 async def test_insert_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, payload, expected_status):
     """Test INSERT team error cases (422 and 409)"""
-    teams = [test_teams_data[i] for i in team_indices] if team_indices else []
-    await seed_teams(teams)
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
     
     response = await async_client.post("/teams", json=payload)
     assert response.status_code == expected_status
@@ -121,8 +121,7 @@ async def test_insert_team_success(async_client):
 @pytest.mark.asyncio
 async def test_update_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, team_path, payload, expected_status):
     """Test UPDATE team error cases (400, 404, and 422)"""
-    teams = [test_teams_data[i] for i in team_indices] if team_indices else []
-    await seed_teams(teams)
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
     
     response = await async_client.patch(team_path, json=payload)
     assert response.status_code == expected_status
@@ -175,8 +174,7 @@ async def test_update_team_success(async_client, seed_teams, test_teams_data, te
 @pytest.mark.asyncio
 async def test_delete_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, team_path, expected_status):
     """Test DELETE team error cases (404 and 422)"""
-    teams = [test_teams_data[i] for i in team_indices] if team_indices else []
-    await seed_teams(teams)
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
     
     response = await async_client.delete(team_path)
     assert response.status_code == expected_status
