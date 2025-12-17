@@ -3,7 +3,7 @@ from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
 from tests.routes.conftest import conditional_seed
 from tests.utils.constants import (
-    BAD_ID_0000, SCHEDULE_ID_1, DATE_1, DATE_2, SCHEDULE_DATE_TYPE_ID_1,
+    BAD_ID_0000, SCHEDULE_ID_1, DATE_2025_05_01, DATE_2025_05_02, SCHEDULE_DATE_TYPE_ID_1,
     SCHEDULE_DATE_ID_1, SCHEDULE_DATE_ID_2, MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, MEDIA_ROLE_ID_3,
     USER_ID_1, USER_ID_2, SCHEDULE_DATE_ROLE_ID_1, SCHEDULE_DATE_ROLE_ID_2, SCHEDULE_DATE_ROLE_ID_3
 )
@@ -14,7 +14,7 @@ from tests.utils.constants import (
 @pytest.fixture
 def test_dates_data():
     """Fixture providing array of test date strings"""
-    return [DATE_1, DATE_2]
+    return [DATE_2025_05_01, DATE_2025_05_02]
 
 @pytest.fixture
 def test_users_data():
@@ -28,7 +28,7 @@ def test_users_data():
 def test_schedules_data():
     """Fixture providing array of test schedule data"""
     return [
-        {"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1},
+        {"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_2025_05_01},
     ]
 
 @pytest.fixture
@@ -42,8 +42,8 @@ def test_schedule_date_types_data():
 def test_schedule_dates_data():
     """Fixture providing array of test schedule_date data"""
     return [
-        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
-        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
     ]
 
 @pytest.fixture

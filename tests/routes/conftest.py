@@ -59,7 +59,7 @@ def test_proficiency_levels_data():
 @pytest.fixture
 def test_dates_data():
     """Standard fixture providing array of test date strings"""
-    return [DATE_1, DATE_2, DATE_3, DATE_5, DATE_6, DATE_8, DATE_12, DATE_13, DATE_14]
+    return [DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, DATE_2025_05_01, DATE_2025_05_02, DATE_2025_05_03, DATE_2025_08_31, DATE_2025_12_31]
 
 @pytest.fixture
 def test_schedule_date_types_data():
