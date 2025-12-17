@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3, PROFICIENCY_LEVEL_ID_4
 
 # =============================
@@ -95,8 +96,7 @@ async def test_get_single_proficiency_level_success(async_client, seed_proficien
 @pytest.mark.asyncio
 async def test_insert_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, level_indices, payload, expected_status):
     """Test INSERT proficiency level error cases (422 and 409)"""
-    levels = [test_proficiency_levels_data[i] for i in level_indices] if level_indices else []
-    await seed_proficiency_levels(levels)
+    await conditional_seed(level_indices, test_proficiency_levels_data, seed_proficiency_levels)
     
     response = await async_client.post("/proficiency_levels", json=payload)
     assert response.status_code == expected_status
@@ -135,8 +135,7 @@ async def test_insert_proficiency_level_success(async_client):
 @pytest.mark.asyncio
 async def test_update_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, level_indices, proficiency_level_path, payload, expected_status):
     """Test UPDATE proficiency level error cases (400, 404, and 422)"""
-    levels = [test_proficiency_levels_data[i] for i in level_indices] if level_indices else []
-    await seed_proficiency_levels(levels)
+    await conditional_seed(level_indices, test_proficiency_levels_data, seed_proficiency_levels)
     
     response = await async_client.patch(proficiency_level_path, json=payload)
     assert response.status_code == expected_status
@@ -189,8 +188,7 @@ async def test_update_proficiency_level_success(async_client, seed_proficiency_l
 @pytest.mark.asyncio
 async def test_delete_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, level_indices, proficiency_level_path, expected_status):
     """Test DELETE proficiency level error cases (404 and 422)"""
-    levels = [test_proficiency_levels_data[i] for i in level_indices] if level_indices else []
-    await seed_proficiency_levels(levels)
+    await conditional_seed(level_indices, test_proficiency_levels_data, seed_proficiency_levels)
     
     response = await async_client.delete(proficiency_level_path)
     assert response.status_code == expected_status

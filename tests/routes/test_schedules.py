@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3, SCHEDULE_DATE_TYPE_ID_1,
     DATE_3, DATE_5, DATE_8, DATE_12, DATE_13, DATE_14, DATE_15
@@ -156,8 +157,7 @@ async def test_get_single_schedule_success(async_client, seed_dates, seed_schedu
 @pytest.mark.asyncio
 async def test_insert_schedule_error_cases(async_client, seed_dates, test_dates_data, date_indices, payload, expected_status):
     """Test INSERT schedule error cases (422 and 404)"""
-    dates = [test_dates_data[i] for i in date_indices] if date_indices else []
-    await seed_dates(dates)
+    await conditional_seed(date_indices, test_dates_data, seed_dates)
     
     response = await async_client.post("/schedules", json=payload)
     assert response.status_code == expected_status
@@ -196,11 +196,8 @@ async def test_insert_schedule_success(async_client, seed_dates, test_dates_data
 @pytest.mark.asyncio
 async def test_update_schedule_error_cases(async_client, seed_dates, seed_schedules, test_schedules_data, schedule_indices, schedule_path, payload, expected_status):
     """Test UPDATE schedule error cases (400, 404, and 422)"""
-    if schedule_indices:
-        schedules = [test_schedules_data[i] for i in schedule_indices]
-        dates = [s["month_start_date"] for s in schedules]
-        await seed_dates(dates)
-        await seed_schedules(schedules)
+    await conditional_seed(range(len(test_schedules_data)), [s["month_start_date"] for s in test_schedules_data], seed_dates)
+    await conditional_seed(schedule_indices, test_schedules_data, seed_schedules)
     
     response = await async_client.patch(schedule_path, json=payload)
     assert response.status_code == expected_status
@@ -254,10 +251,11 @@ async def test_update_schedule_success(async_client, seed_dates, seed_schedules,
 @pytest.mark.asyncio
 async def test_delete_schedule_error_cases(async_client, seed_dates, seed_schedules, test_schedules_data, schedule_indices, schedule_path, expected_status):
     """Test DELETE schedule error cases (404 and 422)"""
-    schedules = [test_schedules_data[i] for i in schedule_indices]
-    dates = [s["month_start_date"] for s in schedules]
-    await seed_dates(dates)
-    await seed_schedules(schedules)
+    if schedule_indices:
+        schedules = [test_schedules_data[i] for i in schedule_indices]
+        dates = [s["month_start_date"] for s in schedules]
+        await seed_dates(dates)
+        await seed_schedules(schedules)
     
     response = await async_client.delete(schedule_path)
     assert response.status_code == expected_status

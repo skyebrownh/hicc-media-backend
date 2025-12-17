@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import status
 from app.db.queries import insert_all_roles_for_user, insert_all_users_for_role
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, MEDIA_ROLE_ID_3,
     PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3
@@ -192,14 +193,10 @@ async def test_get_user_role_success(async_client, seed_users, seed_media_roles,
 @pytest.mark.asyncio
 async def test_insert_user_role_error_cases(async_client, seed_users, seed_media_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_media_roles_data, test_proficiency_levels_data, test_user_roles_data, user_indices, role_indices, proficiency_indices, user_role_indices, payload, expected_status):
     """Test INSERT user role error cases (422, 409, and 404)"""
-    users = [test_users_data[i] for i in user_indices]
-    roles = [test_media_roles_data[i] for i in role_indices]
-    proficiencies = [test_proficiency_levels_data[i] for i in proficiency_indices]
-    user_roles = [test_user_roles_data[i] for i in user_role_indices]
-    await seed_users(users)
-    await seed_media_roles(roles)
-    await seed_proficiency_levels(proficiencies)
-    await seed_user_roles(user_roles)
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(role_indices, test_media_roles_data, seed_media_roles)
+    await conditional_seed(proficiency_indices, test_proficiency_levels_data, seed_proficiency_levels)
+    await conditional_seed(user_role_indices, test_user_roles_data, seed_user_roles)
     response = await async_client.post("/user_roles", json=payload)
     assert response.status_code == expected_status
 
@@ -328,14 +325,10 @@ async def test_insert_all_users_for_role_success(async_client, seed_users, seed_
 @pytest.mark.asyncio
 async def test_update_user_role_error_cases(async_client, seed_users, seed_media_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_media_roles_data, test_proficiency_levels_data, test_user_roles_data, user_indices, role_indices, proficiency_indices, user_role_indices, user_id, role_id, payload, expected_status):
     """Test UPDATE user role error cases (400, 404, and 422)"""
-    users = [test_users_data[i] for i in user_indices]
-    roles = [test_media_roles_data[i] for i in role_indices]
-    proficiencies = [test_proficiency_levels_data[i] for i in proficiency_indices]
-    user_roles = [test_user_roles_data[i] for i in user_role_indices]
-    await seed_users(users)
-    await seed_media_roles(roles)
-    await seed_proficiency_levels(proficiencies)
-    await seed_user_roles(user_roles)
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(role_indices, test_media_roles_data, seed_media_roles)
+    await conditional_seed(proficiency_indices, test_proficiency_levels_data, seed_proficiency_levels)
+    await conditional_seed(user_role_indices, test_user_roles_data, seed_user_roles)
     response = await async_client.patch(f"/users/{user_id}/roles/{role_id}", json=payload)
     assert response.status_code == expected_status
 

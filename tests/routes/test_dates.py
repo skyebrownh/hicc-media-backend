@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import DATE_4, DATE_5, DATE_6, DATE_7, DATE_8, DATE_9, DATE_10, DATE_11
 
 # =============================
@@ -70,8 +71,7 @@ async def test_get_all_dates_success(async_client, seed_dates, test_dates_data):
 @pytest.mark.asyncio
 async def test_get_single_date_error_cases(async_client, seed_dates, test_dates_data, date_indices, query_date, expected_status):
     """Test GET single date error cases (404 and 422)"""
-    dates = [test_dates_data[i] for i in date_indices] if date_indices else []
-    await seed_dates(dates)
+    await conditional_seed(date_indices, test_dates_data, seed_dates)
     response = await async_client.get(f"/dates/{query_date}")
     assert response.status_code == expected_status
 
@@ -99,8 +99,7 @@ async def test_get_single_date_success(async_client, seed_dates, test_dates_data
 @pytest.mark.asyncio
 async def test_insert_date_error_cases(async_client, seed_dates, test_dates_data, date_indices, payload, expected_status):
     """Test INSERT date error cases (422 and 409)"""
-    dates = [test_dates_data[i] for i in date_indices] if date_indices else []
-    await seed_dates(dates)
+    await conditional_seed(date_indices, test_dates_data, seed_dates)
     
     response = await async_client.post("/dates", json=payload)
     assert response.status_code == expected_status
@@ -136,8 +135,7 @@ async def test_insert_date_success(async_client):
 @pytest.mark.asyncio
 async def test_update_date_error_cases(async_client, seed_dates, test_dates_data, date_indices, date_path, payload, expected_status):
     """Test UPDATE date error cases (400, 404, and 422)"""
-    dates = [test_dates_data[i] for i in date_indices] if date_indices else []
-    await seed_dates(dates)
+    await conditional_seed(date_indices, test_dates_data, seed_dates)
     
     response = await async_client.patch(date_path, json=payload)
     assert response.status_code == expected_status
@@ -151,7 +149,7 @@ async def test_update_date_error_cases(async_client, seed_dates, test_dates_data
 @pytest.mark.asyncio
 async def test_update_date_success(async_client, seed_dates, test_dates_data, date, payload, expected_fields, unchanged_fields):
     """Test valid date updates"""
-    await seed_dates([test_dates_data[1], test_dates_data[2], test_dates_data[3]])
+    await seed_dates(test_dates_data[1:4])
     
     response = await async_client.patch(f"/dates/{date}", json=payload)
     assert response.status_code == status.HTTP_200_OK
@@ -173,8 +171,7 @@ async def test_update_date_success(async_client, seed_dates, test_dates_data, da
 @pytest.mark.asyncio
 async def test_delete_date_error_cases(async_client, seed_dates, test_dates_data, date_indices, date_path, expected_status):
     """Test DELETE date error cases (404 and 422)"""
-    dates = [test_dates_data[i] for i in date_indices] if date_indices else []
-    await seed_dates(dates)
+    await conditional_seed(date_indices, test_dates_data, seed_dates)
     
     response = await async_client.delete(date_path)
     assert response.status_code == expected_status

@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, USER_ID_1, USER_ID_2, USER_ID_3
 )
@@ -114,12 +115,9 @@ async def test_get_team_users_for_team_success(async_client, seed_teams, seed_us
 @pytest.mark.asyncio
 async def test_get_single_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_indices, user_indices, team_user_indices, team_id, user_id, expected_status):
     """Test GET single team user error cases (404 and 422)"""
-    teams = [test_teams_data[i] for i in team_indices]
-    users = [test_users_data[i] for i in user_indices]
-    team_users = [test_team_users_data[i] for i in team_user_indices]
-    await seed_teams(teams)
-    await seed_users(users)
-    await seed_team_users(team_users)
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
     response = await async_client.get(f"/teams/{team_id}/users/{user_id}")
     assert response.status_code == expected_status
 
@@ -161,12 +159,9 @@ async def test_get_single_team_user_success(async_client, seed_teams, seed_users
 @pytest.mark.asyncio
 async def test_insert_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_indices, user_indices, team_user_indices, payload, expected_status):
     """Test INSERT team user error cases (422, 409, and 404)"""
-    teams = [test_teams_data[i] for i in team_indices]
-    users = [test_users_data[i] for i in user_indices]
-    team_users = [test_team_users_data[i] for i in team_user_indices]
-    await seed_teams(teams)
-    await seed_users(users)
-    await seed_team_users(team_users)
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
     response = await async_client.post("/team_users", json=payload)
     assert response.status_code == expected_status
 
@@ -205,12 +200,9 @@ async def test_insert_team_user_success(async_client, seed_teams, seed_users, te
 @pytest.mark.asyncio
 async def test_update_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_indices, user_indices, team_user_indices, team_id, user_id, payload, expected_status):
     """Test UPDATE team user error cases (400, 404, and 422)"""
-    teams = [test_teams_data[i] for i in team_indices]
-    users = [test_users_data[i] for i in user_indices]
-    team_users = [test_team_users_data[i] for i in team_user_indices]
-    await seed_teams(teams)
-    await seed_users(users)
-    await seed_team_users(team_users)
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
     response = await async_client.patch(f"/teams/{team_id}/users/{user_id}", json=payload)
     assert response.status_code == expected_status
 
@@ -259,12 +251,9 @@ async def test_update_team_user_success(async_client, seed_teams, seed_users, se
 @pytest.mark.asyncio
 async def test_delete_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_indices, user_indices, team_user_indices, team_id, user_id, expected_status):
     """Test DELETE team user error cases (404 and 422)"""
-    teams = [test_teams_data[i] for i in team_indices]
-    users = [test_users_data[i] for i in user_indices]
-    team_users = [test_team_users_data[i] for i in team_user_indices]
-    await seed_teams(teams)
-    await seed_users(users)
-    await seed_team_users(team_users)
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
     response = await async_client.delete(f"/teams/{team_id}/users/{user_id}")
     assert response.status_code == expected_status
 

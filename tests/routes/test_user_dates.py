@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
+from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, DATE_1, DATE_2, DATE_3
 
 # =============================
@@ -122,14 +123,9 @@ async def test_get_single_user_date_success(async_client, seed_dates, seed_users
 @pytest.mark.asyncio
 async def test_insert_user_date_error_cases(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data, user_indices, date_indices, user_date_indices, payload, expected_status):
     """Test INSERT user date error cases (422, 409, and 404)"""
-    users = [test_users_data[i] for i in user_indices] if user_indices else []
-    dates = [test_dates_data[i] for i in date_indices] if date_indices else []
-    user_dates = [test_user_dates_data[i] for i in user_date_indices] if user_date_indices else []
-    
-    await seed_users(users)
-    await seed_dates(dates)
-    if user_dates:
-        await seed_user_dates(user_dates)
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(date_indices, test_dates_data, seed_dates)
+    await conditional_seed(user_date_indices, test_user_dates_data, seed_user_dates)
     
     response = await async_client.post("/user_dates", json=payload)
     assert response.status_code == expected_status
