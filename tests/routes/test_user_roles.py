@@ -6,48 +6,8 @@ from tests.utils.helpers import assert_empty_list_200
 from tests.routes.conftest import conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, MEDIA_ROLE_ID_3,
-    PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3
+    PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
 )
-
-# =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_users_data():
-    """Fixture providing array of test user data"""
-    return [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-        {"user_id": USER_ID_3, "first_name": "Bob", "last_name": "Johnson", "phone": "555-0103"},
-    ]
-
-@pytest.fixture
-def test_media_roles_data():
-    """Fixture providing array of test media_role data"""
-    return [
-        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
-        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
-        {"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Lighting", "sort_order": 30, "media_role_code": "lighting"},
-    ]
-
-@pytest.fixture
-def test_proficiency_levels_data():
-    """Fixture providing array of test proficiency_level data"""
-    return [
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Untrained", "proficiency_level_number": 0, "proficiency_level_code": "untrained", "is_assignable": True},
-    ]
-
-@pytest.fixture
-def test_user_roles_data():
-    """Fixture providing array of test user_role data"""
-    return [
-        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
-        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_2, "proficiency_level_id": PROFICIENCY_LEVEL_ID_2},
-        {"user_id": USER_ID_2, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
-        {"user_id": USER_ID_3, "media_role_id": MEDIA_ROLE_ID_2, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
-    ]
 
 # =============================
 # GET ROLES FOR USER
@@ -108,8 +68,8 @@ async def test_get_users_for_role_error_cases(async_client, role_id, expected_st
 @pytest.mark.asyncio
 async def test_get_users_for_role_none_exist(async_client, seed_users, seed_media_roles, seed_proficiency_levels, test_users_data, test_media_roles_data, test_proficiency_levels_data):
     """Test GET users for role when none exist returns empty list"""
-    await seed_users(test_users_data)
-    await seed_media_roles(test_media_roles_data)
+    await seed_users(test_users_data[:3])
+    await seed_media_roles(test_media_roles_data[:3])
     await seed_proficiency_levels([test_proficiency_levels_data[0]])
 
     response = await async_client.get(f"/roles/{MEDIA_ROLE_ID_3}/users")
@@ -337,7 +297,7 @@ async def test_update_user_role_success(async_client, seed_users, seed_media_rol
     """Test valid user role update"""
     await seed_users([test_users_data[0], test_users_data[1]])
     await seed_media_roles([test_media_roles_data[0], test_media_roles_data[1]])
-    await seed_proficiency_levels(test_proficiency_levels_data)
+    await seed_proficiency_levels(test_proficiency_levels_data[:3])
     await seed_user_roles([test_user_roles_data[0]])
 
     response = await async_client.patch(f"/users/{USER_ID_1}/roles/{MEDIA_ROLE_ID_1}", json={
