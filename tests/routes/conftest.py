@@ -100,6 +100,8 @@ def test_user_dates_data():
         {"user_id": USER_ID_2, "date": DATE_2024_02_29},
         {"user_id": USER_ID_2, "date": DATE_2025_01_01},
         {"user_id": USER_ID_2, "date": DATE_2025_03_31},
+        {"user_id": USER_ID_1, "date": DATE_2025_05_01},
+        {"user_id": USER_ID_2, "date": DATE_2025_05_01},
     ]
 
 @pytest.fixture

@@ -3,77 +3,10 @@ from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
 from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import (
-    BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_DATE_TYPE_ID_1, SCHEDULE_DATE_TYPE_ID_2,
+    BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_DATE_TYPE_ID_1, SCHEDULE_DATE_TYPE_ID_2,
     SCHEDULE_DATE_ID_1, SCHEDULE_DATE_ID_2, SCHEDULE_DATE_ID_3, TEAM_ID_1, USER_ID_1, USER_ID_2,
     MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, DATE_2025_05_01, DATE_2025_05_02, DATE_2025_05_03, BAD_DATE_2000_01_01
 )
-
-# =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_dates_data():
-    """Fixture providing array of test date strings"""
-    return [DATE_2025_05_01, DATE_2025_05_02, DATE_2025_05_03]
-
-@pytest.fixture
-def test_schedules_data():
-    """Fixture providing array of test schedule data"""
-    return [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_2025_05_01}]
-
-@pytest.fixture
-def test_schedule_date_types_data():
-    """Fixture providing array of test schedule_date_type data"""
-    return [
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"},
-        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Rehearsal", "schedule_date_type_code": "rehearsal"},
-    ]
-
-@pytest.fixture
-def test_teams_data():
-    """Fixture providing array of test team data"""
-    return [{"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"}]
-
-@pytest.fixture
-def test_schedule_dates_data():
-    """Fixture providing array of test schedule_date data"""
-    return [
-        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
-        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
-        {"schedule_date_id": SCHEDULE_DATE_ID_3, "schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_03, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}
-    ]
-
-@pytest.fixture
-def test_users_data():
-    """Fixture providing array of test user data"""
-    return [
-        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
-        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
-    ]
-
-@pytest.fixture
-def test_user_dates_data():
-    """Fixture providing array of test user_date data"""
-    return [
-        {"user_id": USER_ID_1, "date": DATE_2025_05_01},
-        {"user_id": USER_ID_2, "date": DATE_2025_05_01},
-    ]
-
-@pytest.fixture
-def test_media_roles_data():
-    """Fixture providing array of test media_role data"""
-    return [
-        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
-        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
-    ]
-
-@pytest.fixture
-def test_schedule_date_roles_data():
-    """Fixture providing array of test schedule_date_role data"""
-    return [
-        {"schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_1},
-        {"schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_2},
-    ]
 
 # =============================
 # GET ALL SCHEDULE DATES
@@ -87,8 +20,9 @@ async def test_get_all_schedule_dates_none_exist(async_client):
 @pytest.mark.asyncio
 async def test_get_all_schedule_dates_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
     """Test getting all schedule dates after inserting a variety"""
-    await seed_dates(test_dates_data)
-    await seed_schedules(test_schedules_data)
+    # DATE_2025_05_01/02/03 (indices 3,4,5) for schedule_dates
+    await seed_dates([test_dates_data[3], test_dates_data[4], test_dates_data[5]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates(test_schedule_dates_data)
 
@@ -98,7 +32,7 @@ async def test_get_all_schedule_dates_success(async_client, seed_dates, seed_sch
     assert isinstance(response_json, list)
     assert len(response_json) == 3
     assert response_json[0]["schedule_date_id"] is not None
-    assert response_json[0]["schedule_id"] == SCHEDULE_ID_1
+    assert response_json[0]["schedule_id"] == SCHEDULE_ID_2
     assert response_json[0]["date"] == DATE_2025_05_01
     assert response_json[1]["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
     assert response_json[1]["team_id"] is None
@@ -123,8 +57,9 @@ async def test_get_single_schedule_date_error_cases(async_client, schedule_date_
 @pytest.mark.asyncio
 async def test_get_single_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
     """Test GET single schedule date success case"""
-    await seed_dates([test_dates_data[0]])
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
 
@@ -133,7 +68,7 @@ async def test_get_single_schedule_date_success(async_client, seed_dates, seed_s
     response_json = response.json()
     assert isinstance(response_json, dict)
     assert response_json["schedule_date_id"] == SCHEDULE_DATE_ID_1
-    assert response_json["schedule_id"] == SCHEDULE_ID_1
+    assert response_json["schedule_id"] == SCHEDULE_ID_2
     assert response_json["date"] == DATE_2025_05_01
     assert response_json["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
     assert response_json["team_id"] is None
@@ -158,8 +93,9 @@ async def test_get_all_schedule_date_roles_by_schedule_date_error_cases(async_cl
 @pytest.mark.asyncio
 async def test_get_all_schedule_date_roles_by_schedule_date_none_exist(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
     """Test GET all schedule date roles for schedule date when none exist returns empty list"""
-    await seed_dates([test_dates_data[0]])
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
 
@@ -167,14 +103,17 @@ async def test_get_all_schedule_date_roles_by_schedule_date_none_exist(async_cli
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_all_schedule_date_roles_by_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_media_roles, seed_schedule_date_roles, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_media_roles_data, test_schedule_date_roles_data):
+async def test_get_all_schedule_date_roles_by_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_media_roles, seed_schedule_date_roles, seed_users, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_media_roles_data, test_schedule_date_roles_data, test_users_data):
     """Test GET all schedule date roles for schedule date success case"""
-    await seed_dates([test_dates_data[0]])
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
-    await seed_media_roles(test_media_roles_data)
-    await seed_schedule_date_roles(test_schedule_date_roles_data)
+    # Seed user for schedule_date_role with assigned_user_id
+    await seed_users([test_users_data[0]])
+    await seed_media_roles(test_media_roles_data[:2])
+    await seed_schedule_date_roles(test_schedule_date_roles_data[:2])
 
     response = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_1}/roles")
     assert response.status_code == status.HTTP_200_OK
@@ -201,9 +140,10 @@ async def test_get_all_user_dates_by_schedule_date_error_cases(async_client, sch
 @pytest.mark.asyncio
 async def test_get_all_user_dates_by_schedule_date_none_exist(async_client, seed_dates, seed_users, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_users_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
     """Test GET all user dates for schedule date when none exist returns empty list"""
-    await seed_dates([test_dates_data[0]])
-    await seed_users(test_users_data)
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3], test_dates_data[4]])
+    await seed_users(test_users_data[:2])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
 
@@ -213,12 +153,13 @@ async def test_get_all_user_dates_by_schedule_date_none_exist(async_client, seed
 @pytest.mark.asyncio
 async def test_get_all_user_dates_by_schedule_date_success(async_client, seed_dates, seed_users, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_user_dates, test_dates_data, test_users_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_user_dates_data):
     """Test GET all user dates for schedule date success case"""
-    await seed_dates([test_dates_data[0], test_dates_data[1]])
-    await seed_users(test_users_data)
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01/02 (indices 3,4) for schedule_dates
+    await seed_dates([test_dates_data[3], test_dates_data[4]])
+    await seed_users(test_users_data[:2])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
-    await seed_user_dates(test_user_dates_data)
+    await seed_user_dates(test_user_dates_data[-2:])
 
     response = await async_client.get(f"/schedule_dates/{SCHEDULE_DATE_ID_1}/user_dates")
     assert response.status_code == status.HTTP_200_OK
@@ -243,15 +184,15 @@ async def test_get_all_user_dates_by_schedule_date_success(async_client, seed_da
     # invalid UUID format
     ([], [], [], [], {"schedule_id": "invalid-uuid", "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # duplicate schedule_date
-    ([0], [0], [0], [0], {"schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_409_CONFLICT),
+    ([3], [1], [0], [0], {"schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_409_CONFLICT),
     # extra fields not allowed
-    ([], [], [], [], {"schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([], [], [], [], {"schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # foreign key violation (schedule doesn't exist)
-    ([0, 1], [], [0], [], {"schedule_id": BAD_ID_0000, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
+    ([4], [], [0], [], {"schedule_id": BAD_ID_0000, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
     # foreign key violation (date doesn't exist)
-    ([0, 1], [0], [0], [], {"schedule_id": SCHEDULE_ID_1, "date": BAD_DATE_2000_01_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
+    ([3], [1], [0], [], {"schedule_id": SCHEDULE_ID_2, "date": BAD_DATE_2000_01_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
     # foreign key violation (schedule_date_type doesn't exist)
-    ([0, 1], [0], [], [], {"schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_02, "schedule_date_type_id": BAD_ID_0000}, status.HTTP_404_NOT_FOUND),
+    ([3], [1], [], [], {"schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_02, "schedule_date_type_id": BAD_ID_0000}, status.HTTP_404_NOT_FOUND),
 ])
 @pytest.mark.asyncio
 async def test_insert_schedule_date_error_cases(
@@ -260,7 +201,21 @@ async def test_insert_schedule_date_error_cases(
     date_indices, schedule_indices, type_indices, schedule_date_indices, payload, expected_status
 ):
     """Test INSERT schedule date error cases (422, 409, and 404)"""
-    await conditional_seed(date_indices, test_dates_data, seed_dates)
+    # Collect all dates needed
+    all_dates_needed = set()
+    # Dates from date_indices
+    if date_indices:
+        all_dates_needed.update([test_dates_data[i] for i in date_indices])
+    # Dates needed for schedules' month_start_date
+    if schedule_indices:
+        all_dates_needed.update([test_schedules_data[i]["month_start_date"] for i in schedule_indices])
+    # Dates needed for schedule_dates
+    if schedule_date_indices:
+        all_dates_needed.update([test_schedule_dates_data[i]["date"] for i in schedule_date_indices])
+    # Seed all dates at once
+    if all_dates_needed:
+        await seed_dates(list(all_dates_needed))
+    
     await conditional_seed(schedule_indices, test_schedules_data, seed_schedules)
     await conditional_seed(type_indices, test_schedule_date_types_data, seed_schedule_date_types)
     await conditional_seed(schedule_date_indices, test_schedule_dates_data, seed_schedule_dates)
@@ -270,19 +225,20 @@ async def test_insert_schedule_date_error_cases(
 @pytest.mark.asyncio
 async def test_insert_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, test_dates_data, test_schedules_data, test_schedule_date_types_data):
     """Test valid schedule date insertion"""
-    await seed_dates([test_dates_data[0]])
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     
     response = await async_client.post("/schedule_dates", json={
-        "schedule_id": SCHEDULE_ID_1,
+        "schedule_id": SCHEDULE_ID_2,
         "date": DATE_2025_05_01,
         "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1
     })
     assert response.status_code == status.HTTP_201_CREATED
     response_json = response.json()
     assert response_json["schedule_date_id"] is not None
-    assert response_json["schedule_id"] == SCHEDULE_ID_1
+    assert response_json["schedule_id"] == SCHEDULE_ID_2
     assert response_json["date"] == DATE_2025_05_01
     assert response_json["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
     assert response_json["is_active"] is True
@@ -320,10 +276,11 @@ async def test_update_schedule_date_error_cases(async_client, schedule_date_id, 
 @pytest.mark.asyncio
 async def test_update_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_teams, seed_schedule_dates, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_teams_data, test_schedule_dates_data, payload, expected_fields):
     """Test valid schedule date updates"""
-    await seed_dates(test_dates_data)
-    await seed_schedules([test_schedules_data[0]])
-    await seed_schedule_date_types(test_schedule_date_types_data)
-    await seed_teams(test_teams_data)
+    # DATE_2025_05_01/02/03 (indices 3,4,5) for schedule_dates
+    await seed_dates([test_dates_data[3], test_dates_data[4], test_dates_data[5]])
+    await seed_schedules([test_schedules_data[1]])
+    await seed_schedule_date_types(test_schedule_date_types_data[:2])
+    await seed_teams([test_teams_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
     
     response = await async_client.patch(f"/schedule_dates/{SCHEDULE_DATE_ID_1}", json=payload)
@@ -350,8 +307,9 @@ async def test_delete_schedule_date_error_cases(async_client, schedule_date_id, 
 @pytest.mark.asyncio
 async def test_delete_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
     """Test successful schedule date deletion with verification"""
-    await seed_dates([test_dates_data[0]])
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
 
@@ -378,17 +336,24 @@ async def test_delete_schedule_date_success(async_client, seed_dates, seed_sched
 @pytest.mark.asyncio
 async def test_delete_schedule_date_cascade_schedule_date_roles(
     async_client, test_db_pool, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates,
-    seed_media_roles, seed_schedule_date_roles,
+    seed_media_roles, seed_schedule_date_roles, seed_users,
     test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data,
-    test_media_roles_data, test_schedule_date_roles_data,
+    test_media_roles_data, test_schedule_date_roles_data, test_users_data,
     media_role_indices, schedule_date_role_indices, expected_count_before
 ):
     """Test that deleting a schedule_date cascades to delete associated schedule_date_roles"""
     # Seed parent and dependencies
-    await seed_dates([test_dates_data[0]])
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
+
+    # Seed users if any schedule_date_roles have assigned_user_id
+    if schedule_date_role_indices:
+        user_ids_needed = {test_schedule_date_roles_data[i].get("assigned_user_id") for i in schedule_date_role_indices if test_schedule_date_roles_data[i].get("assigned_user_id")}
+        if user_ids_needed:
+            await seed_users([test_users_data[0]])
 
     # Seed child records based on parameters
     await conditional_seed(media_role_indices, test_media_roles_data, seed_media_roles)
@@ -428,8 +393,9 @@ async def test_delete_schedule_date_roles_for_schedule_date_error_cases(async_cl
 @pytest.mark.asyncio
 async def test_delete_schedule_date_roles_for_schedule_date_none_exist(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
     """Test DELETE schedule date roles for schedule date when none exist returns empty list"""
-    await seed_dates([test_dates_data[0]])
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
 
@@ -440,14 +406,17 @@ async def test_delete_schedule_date_roles_for_schedule_date_none_exist(async_cli
     assert len(response_json) == 0
 
 @pytest.mark.asyncio
-async def test_delete_schedule_date_roles_for_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_media_roles, seed_schedule_date_roles, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_media_roles_data, test_schedule_date_roles_data):
+async def test_delete_schedule_date_roles_for_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_media_roles, seed_schedule_date_roles, seed_users, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_media_roles_data, test_schedule_date_roles_data, test_users_data):
     """Test successful deletion of all schedule date roles for a schedule date"""
-    await seed_dates([test_dates_data[0]])
-    await seed_schedules([test_schedules_data[0]])
+    # DATE_2025_05_01 (index 3) for schedule_date
+    await seed_dates([test_dates_data[3]])
+    await seed_schedules([test_schedules_data[1]])
     await seed_schedule_date_types([test_schedule_date_types_data[0]])
     await seed_schedule_dates([test_schedule_dates_data[0]])
-    await seed_media_roles(test_media_roles_data)
-    await seed_schedule_date_roles(test_schedule_date_roles_data)
+    # Seed user for schedule_date_role with assigned_user_id
+    await seed_users([test_users_data[0]])
+    await seed_media_roles(test_media_roles_data[:2])
+    await seed_schedule_date_roles(test_schedule_date_roles_data[:2])
 
     response = await async_client.delete(f"/schedule_dates/{SCHEDULE_DATE_ID_1}/roles")
     assert response.status_code == status.HTTP_200_OK
