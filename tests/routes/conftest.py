@@ -102,6 +102,33 @@ def test_user_dates_data():
         {"user_id": USER_ID_2, "date": DATE_2025_03_31},
     ]
 
+@pytest.fixture
+def test_schedules_data():
+    """Standard fixture providing array of test schedule data"""
+    return [
+        {"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_2025_01_01, "notes": "First schedule"},
+        {"schedule_id": SCHEDULE_ID_2, "month_start_date": DATE_2025_05_01, "notes": "Second schedule"},
+        {"schedule_id": SCHEDULE_ID_3, "month_start_date": DATE_2025_05_01, "notes": None},
+    ]
+
+@pytest.fixture
+def test_schedule_dates_data():
+    """Standard fixture providing array of test schedule_date data"""
+    return [
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_3, "schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_03, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+    ]
+
+@pytest.fixture
+def test_schedule_date_roles_data():
+    """Standard fixture providing array of test schedule_date_role data"""
+    return [
+        {"schedule_date_role_id": SCHEDULE_DATE_ROLE_ID_1, "schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_1, "assigned_user_id": USER_ID_1},
+        {"schedule_date_role_id": SCHEDULE_DATE_ROLE_ID_2, "schedule_date_id": SCHEDULE_DATE_ID_1, "media_role_id": MEDIA_ROLE_ID_2, "assigned_user_id": None},
+        {"schedule_date_role_id": SCHEDULE_DATE_ROLE_ID_3, "schedule_date_id": SCHEDULE_DATE_ID_2, "media_role_id": MEDIA_ROLE_ID_1, "assigned_user_id": None},
+    ]
+
 # =============================
 # CONDITIONAL SEEDING HELPER
 # =============================
