@@ -9,6 +9,7 @@ INSERT INTO public.media_roles (media_role_id, media_role_name, sort_order, is_a
     (gen_random_uuid(), 'Main Camera 1', 50, true, 'main_camera_1'),
     (gen_random_uuid(), 'Main Camera 2', 60, true, 'main_camera_2'),
     (gen_random_uuid(), 'Mobile Camera 3', 70, true, 'mobile_camera_3'),
+    (gen_random_uuid(), 'Mobile Camera 4', 70, true, 'mobile_camera_4'),
     (gen_random_uuid(), 'On Call', 80, true, 'on_call');
 
 -- =============================

@@ -154,7 +154,7 @@ CREATE TABLE public.schedule_date_roles (
     is_preferred boolean DEFAULT false NOT NULL,
     assigned_user_id uuid REFERENCES public.users(user_id),
     is_active boolean DEFAULT true NOT NULL,
-    CONSTRAINT schedule_date_roles_ukey UNIQUE (media_role_id, schedule_date_id, assigned_user_id)
+    CONSTRAINT schedule_date_roles_ukey UNIQUE (media_role_id, schedule_date_id)
 );
 
 --
