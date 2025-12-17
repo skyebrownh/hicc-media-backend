@@ -1,8 +1,11 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
-from tests.routes.conftest import conditional_seed
-from tests.utils.constants import BAD_ID_0000, MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, MEDIA_ROLE_ID_3, MEDIA_ROLE_ID_4
+from tests.routes.conftest import conditional_seed, count_records
+from tests.utils.constants import (
+    BAD_ID_0000, MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, MEDIA_ROLE_ID_3, MEDIA_ROLE_ID_4,
+    USER_ID_1, USER_ID_2, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
+)
 
 # =============================
 # DATA FIXTURES
@@ -16,6 +19,30 @@ def test_media_roles_data():
         {"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Role 3", "description": "description 3", "sort_order": 3, "media_role_code": "role_3"},
         {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "New Role", "sort_order": 4, "media_role_code": "new_role"},
         {"media_role_id": MEDIA_ROLE_ID_4, "media_role_name": "Another Role", "sort_order": 5, "media_role_code": "another_role"},
+    ]
+
+@pytest.fixture
+def test_users_data():
+    """Fixture providing array of test user data"""
+    return [
+        {"user_id": USER_ID_1, "first_name": "John", "last_name": "Doe", "phone": "555-0101"},
+        {"user_id": USER_ID_2, "first_name": "Jane", "last_name": "Smith", "phone": "555-0102"},
+    ]
+
+@pytest.fixture
+def test_proficiency_levels_data():
+    """Fixture providing array of test proficiency_level data"""
+    return [
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
+    ]
+
+@pytest.fixture
+def test_user_roles_data():
+    """Fixture providing array of test user_role data"""
+    return [
+        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
+        {"user_id": USER_ID_2, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_2},
     ]
 
 # =============================
@@ -210,3 +237,45 @@ async def test_delete_media_role_success(async_client, seed_media_roles, test_me
     # Verify deletion by trying to get it again
     verify_response = await async_client.get(f"/media_roles/{MEDIA_ROLE_ID_2}")
     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+# =============================
+# DELETE MEDIA ROLE CASCADE
+# =============================
+@pytest.mark.parametrize("user_indices, proficiency_level_indices, user_role_indices, expected_count_before", [
+    # No user_roles to cascade delete
+    ([], [], [], 0),
+    # One user_role to cascade delete
+    ([0], [0], [0], 1),
+    # Multiple user_roles to cascade delete
+    ([0, 1], [0, 1], [0, 1], 2),
+])
+@pytest.mark.asyncio
+async def test_delete_media_role_cascade_user_roles(
+    async_client, test_db_pool, seed_media_roles, seed_users, seed_proficiency_levels, seed_user_roles,
+    test_media_roles_data, test_users_data, test_proficiency_levels_data, test_user_roles_data,
+    user_indices, proficiency_level_indices, user_role_indices, expected_count_before
+):
+    """Test that deleting a media_role cascades to delete associated user_roles"""
+    # Seed parent
+    await seed_media_roles([test_media_roles_data[0]])
+
+    # Seed child records based on parameters
+    await conditional_seed(user_indices, test_users_data, seed_users)
+    await conditional_seed(proficiency_level_indices, test_proficiency_levels_data, seed_proficiency_levels)
+    await conditional_seed(user_role_indices, test_user_roles_data, seed_user_roles)
+
+    # Verify user_roles exist before deletion
+    count_before = await count_records(test_db_pool, "user_roles", f"media_role_id = '{MEDIA_ROLE_ID_1}'")
+    assert count_before == expected_count_before
+
+    # Delete parent
+    response = await async_client.delete(f"/media_roles/{MEDIA_ROLE_ID_1}")
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/media_roles/{MEDIA_ROLE_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    # Verify all child records are cascade deleted
+    count_after = await count_records(test_db_pool, "user_roles", f"media_role_id = '{MEDIA_ROLE_ID_1}'")
+    assert count_after == 0

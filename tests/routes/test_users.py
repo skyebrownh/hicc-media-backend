@@ -1,8 +1,12 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
-from tests.routes.conftest import conditional_seed
-from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4
+from tests.routes.conftest import conditional_seed, count_records
+from tests.utils.constants import (
+    BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4,
+    TEAM_ID_1, TEAM_ID_2, MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2,
+    PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
+)
 
 # =============================
 # DATA FIXTURES
@@ -15,6 +19,46 @@ def test_users_data():
         {"user_id": USER_ID_2, "first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"},
         {"user_id": USER_ID_3, "first_name": "Carol", "last_name": "Lee", "phone": "555-3333", "email": None},
         {"user_id": USER_ID_4, "first_name": "Another", "last_name": "User", "phone": "555-5555", "email": "another@example.com"},
+    ]
+
+@pytest.fixture
+def test_teams_data():
+    """Fixture providing array of test team data"""
+    return [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+    ]
+
+@pytest.fixture
+def test_team_users_data():
+    """Fixture providing array of test team_user data"""
+    return [
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
+        {"team_id": TEAM_ID_2, "user_id": USER_ID_1},
+    ]
+
+@pytest.fixture
+def test_media_roles_data():
+    """Fixture providing array of test media_role data"""
+    return [
+        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+    ]
+
+@pytest.fixture
+def test_proficiency_levels_data():
+    """Fixture providing array of test proficiency_level data"""
+    return [
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
+    ]
+
+@pytest.fixture
+def test_user_roles_data():
+    """Fixture providing array of test user_role data"""
+    return [
+        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
+        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_2, "proficiency_level_id": PROFICIENCY_LEVEL_ID_2},
     ]
 
 # =============================
@@ -200,3 +244,131 @@ async def test_delete_user_success(async_client, seed_users, test_users_data):
     # Verify deletion by trying to get it again
     verify_response = await async_client.get(f"/users/{USER_ID_2}")
     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+# =============================
+# DELETE USER CASCADE
+# =============================
+@pytest.mark.parametrize("team_indices, team_user_indices, expected_count_before", [
+    # No team_users to cascade delete
+    ([], [], 0),
+    # One team_user to cascade delete
+    ([0], [0], 1),
+    # Multiple team_users to cascade delete
+    ([0, 1], [0, 1], 2),
+])
+@pytest.mark.asyncio
+async def test_delete_user_cascade_team_users(
+    async_client, test_db_pool, seed_users, seed_teams, seed_team_users,
+    test_users_data, test_teams_data, test_team_users_data,
+    team_indices, team_user_indices, expected_count_before
+):
+    """Test that deleting a user cascades to delete associated team_users"""
+    # Seed parent
+    await seed_users([test_users_data[0]])
+
+    # Seed child records based on parameters
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
+    await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
+
+    # Verify team_users exist before deletion
+    count_before = await count_records(test_db_pool, "team_users", f"user_id = '{USER_ID_1}'")
+    assert count_before == expected_count_before
+
+    # Delete parent
+    response = await async_client.delete(f"/users/{USER_ID_1}")
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/users/{USER_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    # Verify all child records are cascade deleted
+    count_after = await count_records(test_db_pool, "team_users", f"user_id = '{USER_ID_1}'")
+    assert count_after == 0
+
+@pytest.mark.parametrize("media_role_indices, proficiency_level_indices, user_role_indices, expected_count_before", [
+    # No user_roles to cascade delete
+    ([], [], [], 0),
+    # One user_role to cascade delete
+    ([0], [0], [0], 1),
+    # Multiple user_roles to cascade delete
+    ([0, 1], [0, 1], [0, 1], 2),
+])
+@pytest.mark.asyncio
+async def test_delete_user_cascade_user_roles(
+    async_client, test_db_pool, seed_users, seed_media_roles, seed_proficiency_levels, seed_user_roles,
+    test_users_data, test_media_roles_data, test_proficiency_levels_data, test_user_roles_data,
+    media_role_indices, proficiency_level_indices, user_role_indices, expected_count_before
+):
+    """Test that deleting a user cascades to delete associated user_roles"""
+    # Seed parent
+    await seed_users([test_users_data[0]])
+
+    # Seed child records based on parameters
+    await conditional_seed(media_role_indices, test_media_roles_data, seed_media_roles)
+    await conditional_seed(proficiency_level_indices, test_proficiency_levels_data, seed_proficiency_levels)
+    await conditional_seed(user_role_indices, test_user_roles_data, seed_user_roles)
+
+    # Verify user_roles exist before deletion
+    count_before = await count_records(test_db_pool, "user_roles", f"user_id = '{USER_ID_1}'")
+    assert count_before == expected_count_before
+
+    # Delete parent
+    response = await async_client.delete(f"/users/{USER_ID_1}")
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/users/{USER_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    # Verify all child records are cascade deleted
+    count_after = await count_records(test_db_pool, "user_roles", f"user_id = '{USER_ID_1}'")
+    assert count_after == 0
+
+@pytest.mark.parametrize("team_indices, team_user_indices, media_role_indices, proficiency_level_indices, user_role_indices, expected_team_user_count, expected_user_role_count", [
+    # No children to cascade delete
+    ([], [], [], [], [], 0, 0),
+    # One team_user, no user_roles
+    ([0], [0], [], [], [], 1, 0),
+    # No team_users, one user_role
+    ([], [], [0], [0], [0], 0, 1),
+    # Multiple team_users and user_roles
+    ([0, 1], [0, 1], [0, 1], [0, 1], [0, 1], 2, 2),
+])
+@pytest.mark.asyncio
+async def test_delete_user_cascade_all_children(
+    async_client, test_db_pool, seed_users, seed_teams, seed_team_users, seed_media_roles, seed_proficiency_levels, seed_user_roles,
+    test_users_data, test_teams_data, test_team_users_data, test_media_roles_data, test_proficiency_levels_data, test_user_roles_data,
+    team_indices, team_user_indices, media_role_indices, proficiency_level_indices, user_role_indices,
+    expected_team_user_count, expected_user_role_count
+):
+    """Test that deleting a user cascades to delete all associated team_users and user_roles"""
+    # Seed parent
+    await seed_users([test_users_data[0]])
+
+    # Seed child records based on parameters
+    await conditional_seed(team_indices, test_teams_data, seed_teams)
+    await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
+    await conditional_seed(media_role_indices, test_media_roles_data, seed_media_roles)
+    await conditional_seed(proficiency_level_indices, test_proficiency_levels_data, seed_proficiency_levels)
+    await conditional_seed(user_role_indices, test_user_roles_data, seed_user_roles)
+
+    # Verify children exist before deletion
+    team_user_count_before = await count_records(test_db_pool, "team_users", f"user_id = '{USER_ID_1}'")
+    user_role_count_before = await count_records(test_db_pool, "user_roles", f"user_id = '{USER_ID_1}'")
+    assert team_user_count_before == expected_team_user_count
+    assert user_role_count_before == expected_user_role_count
+
+    # Delete parent
+    response = await async_client.delete(f"/users/{USER_ID_1}")
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/users/{USER_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    # Verify all child records are cascade deleted
+    team_user_count_after = await count_records(test_db_pool, "team_users", f"user_id = '{USER_ID_1}'")
+    user_role_count_after = await count_records(test_db_pool, "user_roles", f"user_id = '{USER_ID_1}'")
+    assert team_user_count_after == 0
+    assert user_role_count_after == 0

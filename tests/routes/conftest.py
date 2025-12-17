@@ -16,6 +16,18 @@ async def conditional_seed(indices, data, seed_func):
         await seed_func(items)
 
 # =============================
+# DATABASE QUERY HELPER
+# =============================
+async def count_records(test_db_pool, table_name: str, where_clause: str = "") -> int:
+    """Helper to count records in a table, optionally with a WHERE clause"""
+    async with test_db_pool.acquire() as conn:
+        query = f"SELECT COUNT(*) FROM {table_name}"
+        if where_clause:
+            query += f" WHERE {where_clause}"
+        count = await conn.fetchval(query)
+        return count
+
+# =============================
 # SEED HELPER FIXTURES
 # =============================
 @pytest_asyncio.fixture
