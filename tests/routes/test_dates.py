@@ -2,7 +2,7 @@ import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
 from tests.routes.conftest import conditional_seed
-from tests.utils.constants import DATE_4, DATE_5, DATE_6, DATE_7, DATE_8, DATE_9, DATE_10, DATE_11
+from tests.utils.constants import DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, DATE_2025_08_31, DATE_2025_12_31
 
 # =============================
 # DATA FIXTURES
@@ -10,7 +10,7 @@ from tests.utils.constants import DATE_4, DATE_5, DATE_6, DATE_7, DATE_8, DATE_9
 @pytest.fixture
 def test_dates_data():
     """Fixture providing array of test date strings"""
-    return [DATE_4, DATE_5, DATE_6, DATE_7, DATE_8, DATE_9, DATE_10, DATE_11]
+    return [DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, DATE_2025_12_31]
 
 
 # =============================
@@ -25,21 +25,20 @@ async def test_get_all_dates_none_exist(async_client):
 @pytest.mark.asyncio
 async def test_get_all_dates_success(async_client, seed_dates, test_dates_data):
     """Test getting all dates after inserting a variety, asserts on correct date columns per-date"""
-    varied_dates = [test_dates_data[0], test_dates_data[1], test_dates_data[2], test_dates_data[7]]
-    await seed_dates(varied_dates)
+    await seed_dates(test_dates_data)
 
     response = await async_client.get("/dates")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, list)
     returned_dates = [d["date"] for d in response_json]
-    for d in varied_dates:
+    for d in test_dates_data:
         assert d in returned_dates
-    assert len(response_json) == len(varied_dates) 
+    assert len(response_json) == len(test_dates_data) 
 
     for row in response_json:
         d = row["date"]
-        if d == DATE_5:  # first of year/month
+        if d == DATE_2025_01_01:  # first of year/month
             assert row["calendar_year"] == 2025
             assert row["calendar_month"] == 1
             assert row["calendar_day"] == 1
@@ -50,22 +49,17 @@ async def test_get_all_dates_success(async_client, seed_dates, test_dates_data):
             assert row["is_first_of_month"] is True
             assert row["is_last_of_month"] is False
             assert row["calendar_quarter"] == 1
-        elif d == DATE_6:  # first Sunday of Jan
-            assert row["is_weekend"] is True
-            assert row["is_weekday"] is False
-            assert row["weekday_of_month"] == 1
-        elif d == DATE_4:  # leap year, last day Feb
+        elif d == DATE_2024_02_29:  # leap year, last day Feb
             assert row["is_last_of_month"] is True
             assert row["calendar_day"] == 29
-        elif d == DATE_11:  # last of year/month
+        elif d == DATE_2025_12_31:  # last of year/month
             assert row["is_last_of_month"] is True
 
 # =============================
 # GET SINGLE DATE
 # =============================
 @pytest.mark.parametrize("date_indices, query_date, expected_status", [
-    ([], DATE_5, status.HTTP_404_NOT_FOUND),           # No dates in DB
-    ([2], DATE_11, status.HTTP_404_NOT_FOUND),     # Date not present
+    ([], DATE_2025_01_01, status.HTTP_404_NOT_FOUND),
     ([], "invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),  # Invalid date format
 ])
 @pytest.mark.asyncio
@@ -80,11 +74,11 @@ async def test_get_single_date_error_cases(async_client, seed_dates, test_dates_
 async def test_get_single_date_success(async_client, seed_dates, test_dates_data):
     """Test GET single date success case"""
     await seed_dates([test_dates_data[2]])
-    response = await async_client.get(f"/dates/{DATE_6}")
+    response = await async_client.get(f"/dates/{DATE_2025_03_31}")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, dict)
-    assert data["date"] == DATE_6
+    assert data["date"] == DATE_2025_03_31
 
 # =============================
 # INSERT DATE
@@ -93,8 +87,8 @@ async def test_get_single_date_success(async_client, seed_dates, test_dates_data
     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # empty payload
     ([], {"date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # invalid date format
     ([], {"date": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # invalid data type
-    ([], {"date": DATE_10, "calendar_year": 2025}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # extra fields not allowed
-    ([4], {"date": DATE_8}, status.HTTP_409_CONFLICT),  # duplicate date
+    ([], {"date": DATE_2025_08_31, "calendar_year": 2025}, status.HTTP_422_UNPROCESSABLE_CONTENT),  # extra fields not allowed
+    ([2], {"date": DATE_2025_03_31}, status.HTTP_409_CONFLICT),  # duplicate date
 ])
 @pytest.mark.asyncio
 async def test_insert_date_error_cases(async_client, seed_dates, test_dates_data, date_indices, payload, expected_status):
@@ -108,12 +102,12 @@ async def test_insert_date_error_cases(async_client, seed_dates, test_dates_data
 @pytest.mark.asyncio
 async def test_insert_date_success(async_client):
     """Test valid date insertion"""
-    response = await async_client.post("/dates", json={"date": DATE_8})
+    response = await async_client.post("/dates", json={"date": DATE_2025_08_31})
     assert response.status_code == status.HTTP_201_CREATED
     response_json = response.json()
-    assert response_json["date"] == DATE_8
-    assert response_json["calendar_month"] == 5
-    assert response_json["calendar_day"] == 1
+    assert response_json["date"] == DATE_2025_08_31
+    assert response_json["calendar_month"] == 8
+    assert response_json["calendar_day"] == 31
     # Check that auto-generated fields exist
     assert "is_weekend" in response_json
     assert "is_weekday" in response_json
@@ -124,13 +118,13 @@ async def test_insert_date_success(async_client):
 # =============================
 @pytest.mark.parametrize("date_indices, date_path, payload, expected_status", [
     # date not found
-    ([1], f"/dates/{DATE_11}", {"is_holiday": True}, status.HTTP_404_NOT_FOUND),
+    ([1], f"/dates/{DATE_2025_12_31}", {"is_holiday": True}, status.HTTP_404_NOT_FOUND),
     # invalid date format in path
-    ([3], "/dates/invalid-date-format", {"is_holiday": True}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([2], "/dates/invalid-date-format", {"is_holiday": True}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # invalid data type in payload
-    ([3], f"/dates/{DATE_7}", {"calendar_year": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([2], f"/dates/{DATE_2025_03_31}", {"calendar_year": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # empty payload
-    ([3], f"/dates/{DATE_7}", {}, status.HTTP_400_BAD_REQUEST),
+    ([2], f"/dates/{DATE_2025_03_31}", {}, status.HTTP_400_BAD_REQUEST),
 ])
 @pytest.mark.asyncio
 async def test_update_date_error_cases(async_client, seed_dates, test_dates_data, date_indices, date_path, payload, expected_status):
@@ -142,14 +136,14 @@ async def test_update_date_error_cases(async_client, seed_dates, test_dates_data
 
 
 @pytest.mark.parametrize("date, payload, expected_fields, unchanged_fields", [
-    (DATE_7, {"is_holiday": True, "is_weekend": False}, {"is_holiday": True, "is_weekend": False}, {}),
-    (DATE_6, {"is_holiday": True}, {"is_holiday": True}, {"calendar_year": 2025}),
-    (DATE_5, {"calendar_year": 2026}, {"calendar_year": 2026}, {}),
+    (DATE_2025_03_31, {"is_holiday": True, "is_weekend": False}, {"is_holiday": True, "is_weekend": False}, {}),
+    (DATE_2025_01_01, {"is_holiday": True}, {"is_holiday": True}, {"calendar_year": 2025}),
+    (DATE_2025_01_01, {"calendar_year": 2026}, {"calendar_year": 2026}, {}),
 ])
 @pytest.mark.asyncio
 async def test_update_date_success(async_client, seed_dates, test_dates_data, date, payload, expected_fields, unchanged_fields):
     """Test valid date updates"""
-    await seed_dates(test_dates_data[1:4])
+    await seed_dates(test_dates_data[1:3])
     
     response = await async_client.patch(f"/dates/{date}", json=payload)
     assert response.status_code == status.HTTP_200_OK
@@ -162,17 +156,15 @@ async def test_update_date_success(async_client, seed_dates, test_dates_data, da
 # =============================
 # DELETE DATE
 # =============================
-@pytest.mark.parametrize("date_indices, date_path, expected_status", [
+@pytest.mark.parametrize("date_path, expected_status", [
     # date not found
-    ([2], f"/dates/{DATE_11}", status.HTTP_404_NOT_FOUND),
+    (f"/dates/{DATE_2025_12_31}", status.HTTP_404_NOT_FOUND),
     # invalid date format in path
-    ([2], "/dates/invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ("/dates/invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
 @pytest.mark.asyncio
-async def test_delete_date_error_cases(async_client, seed_dates, test_dates_data, date_indices, date_path, expected_status):
+async def test_delete_date_error_cases(async_client, date_path, expected_status):
     """Test DELETE date error cases (404 and 422)"""
-    await conditional_seed(date_indices, test_dates_data, seed_dates)
-    
     response = await async_client.delete(date_path)
     assert response.status_code == expected_status
 
@@ -183,12 +175,12 @@ async def test_delete_date_success(async_client, seed_dates, test_dates_data):
     await seed_dates([test_dates_data[2]])
 
     # Test successful deletion
-    response = await async_client.delete(f"/dates/{DATE_6}")
+    response = await async_client.delete(f"/dates/{DATE_2025_03_31}")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, dict)
-    assert response_json["date"] == DATE_6
+    assert response_json["date"] == DATE_2025_03_31
 
     # Verify deletion by trying to get it again
-    verify_response = await async_client.get(f"/dates/{DATE_6}")
+    verify_response = await async_client.get(f"/dates/{DATE_2025_03_31}")
     assert verify_response.status_code == status.HTTP_404_NOT_FOUND

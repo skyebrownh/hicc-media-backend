@@ -5,7 +5,7 @@ from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_DATE_TYPE_ID_1, SCHEDULE_DATE_TYPE_ID_2,
     SCHEDULE_DATE_ID_1, SCHEDULE_DATE_ID_2, SCHEDULE_DATE_ID_3, TEAM_ID_1, USER_ID_1, USER_ID_2,
-    MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, DATE_1, DATE_2, DATE_6
+    MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, DATE_2025_05_01, DATE_2025_05_02, DATE_2025_05_03, BAD_DATE_2000_01_01
 )
 
 # =============================
@@ -14,12 +14,12 @@ from tests.utils.constants import (
 @pytest.fixture
 def test_dates_data():
     """Fixture providing array of test date strings"""
-    return [DATE_1, DATE_2, DATE_6]
+    return [DATE_2025_05_01, DATE_2025_05_02, DATE_2025_05_03]
 
 @pytest.fixture
 def test_schedules_data():
     """Fixture providing array of test schedule data"""
-    return [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_1}]
+    return [{"schedule_id": SCHEDULE_ID_1, "month_start_date": DATE_2025_05_01}]
 
 @pytest.fixture
 def test_schedule_date_types_data():
@@ -38,9 +38,9 @@ def test_teams_data():
 def test_schedule_dates_data():
     """Fixture providing array of test schedule_date data"""
     return [
-        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
-        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
-        {"schedule_date_id": SCHEDULE_DATE_ID_3, "schedule_id": SCHEDULE_ID_1, "date": DATE_6, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}
+        {"schedule_date_id": SCHEDULE_DATE_ID_1, "schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_2, "schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1},
+        {"schedule_date_id": SCHEDULE_DATE_ID_3, "schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_03, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}
     ]
 
 @pytest.fixture
@@ -55,8 +55,8 @@ def test_users_data():
 def test_user_dates_data():
     """Fixture providing array of test user_date data"""
     return [
-        {"user_id": USER_ID_1, "date": DATE_1},
-        {"user_id": USER_ID_2, "date": DATE_1},
+        {"user_id": USER_ID_1, "date": DATE_2025_05_01},
+        {"user_id": USER_ID_2, "date": DATE_2025_05_01},
     ]
 
 @pytest.fixture
@@ -99,7 +99,7 @@ async def test_get_all_schedule_dates_success(async_client, seed_dates, seed_sch
     assert len(response_json) == 3
     assert response_json[0]["schedule_date_id"] is not None
     assert response_json[0]["schedule_id"] == SCHEDULE_ID_1
-    assert response_json[0]["date"] == DATE_1
+    assert response_json[0]["date"] == DATE_2025_05_01
     assert response_json[1]["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
     assert response_json[1]["team_id"] is None
     assert response_json[2]["notes"] is None
@@ -134,7 +134,7 @@ async def test_get_single_schedule_date_success(async_client, seed_dates, seed_s
     assert isinstance(response_json, dict)
     assert response_json["schedule_date_id"] == SCHEDULE_DATE_ID_1
     assert response_json["schedule_id"] == SCHEDULE_ID_1
-    assert response_json["date"] == DATE_1
+    assert response_json["date"] == DATE_2025_05_01
     assert response_json["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
     assert response_json["team_id"] is None
     assert response_json["notes"] is None
@@ -225,9 +225,9 @@ async def test_get_all_user_dates_by_schedule_date_success(async_client, seed_da
     response_json = response.json()
     assert isinstance(response_json, list)
     assert len(response_json) == 2
-    assert response_json[0]["date"] == DATE_1
+    assert response_json[0]["date"] == DATE_2025_05_01
     assert response_json[0]["user_id"] == USER_ID_1
-    assert response_json[1]["date"] == DATE_1
+    assert response_json[1]["date"] == DATE_2025_05_01
     assert response_json[1]["user_id"] == USER_ID_2
 
 # =============================
@@ -239,19 +239,19 @@ async def test_get_all_user_dates_by_schedule_date_success(async_client, seed_da
     # missing required fields (date and schedule_date_type_id)
     ([], [], [], [], {"schedule_id": SCHEDULE_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # missing required fields (schedule_id and schedule_date_type_id)
-    ([], [], [], [], {"date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([], [], [], [], {"date": DATE_2025_05_02}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # invalid UUID format
-    ([], [], [], [], {"schedule_id": "invalid-uuid", "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([], [], [], [], {"schedule_id": "invalid-uuid", "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # duplicate schedule_date
-    ([0], [0], [0], [0], {"schedule_id": SCHEDULE_ID_1, "date": DATE_1, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_409_CONFLICT),
+    ([0], [0], [0], [0], {"schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_409_CONFLICT),
     # extra fields not allowed
-    ([], [], [], [], {"schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([], [], [], [], {"schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # foreign key violation (schedule doesn't exist)
-    ([0, 1], [], [0], [], {"schedule_id": BAD_ID_0000, "date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
+    ([0, 1], [], [0], [], {"schedule_id": BAD_ID_0000, "date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
     # foreign key violation (date doesn't exist)
-    ([0, 1], [0], [0], [], {"schedule_id": SCHEDULE_ID_1, "date": "2025-12-31", "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
+    ([0, 1], [0], [0], [], {"schedule_id": SCHEDULE_ID_1, "date": BAD_DATE_2000_01_01, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
     # foreign key violation (schedule_date_type doesn't exist)
-    ([0, 1], [0], [], [], {"schedule_id": SCHEDULE_ID_1, "date": DATE_2, "schedule_date_type_id": BAD_ID_0000}, status.HTTP_404_NOT_FOUND),
+    ([0, 1], [0], [], [], {"schedule_id": SCHEDULE_ID_1, "date": DATE_2025_05_02, "schedule_date_type_id": BAD_ID_0000}, status.HTTP_404_NOT_FOUND),
 ])
 @pytest.mark.asyncio
 async def test_insert_schedule_date_error_cases(
@@ -276,14 +276,14 @@ async def test_insert_schedule_date_success(async_client, seed_dates, seed_sched
     
     response = await async_client.post("/schedule_dates", json={
         "schedule_id": SCHEDULE_ID_1,
-        "date": DATE_1,
+        "date": DATE_2025_05_01,
         "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1
     })
     assert response.status_code == status.HTTP_201_CREATED
     response_json = response.json()
     assert response_json["schedule_date_id"] is not None
     assert response_json["schedule_id"] == SCHEDULE_ID_1
-    assert response_json["date"] == DATE_1
+    assert response_json["date"] == DATE_2025_05_01
     assert response_json["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
     assert response_json["is_active"] is True
 
@@ -313,8 +313,8 @@ async def test_update_schedule_date_error_cases(async_client, schedule_date_id, 
     ({"is_active": False}, {"is_active": False}),
     # update date and schedule_date_type_id
     (
-        {"date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2},
-        {"date": DATE_2, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2}
+        {"date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2},
+        {"date": DATE_2025_05_02, "schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2}
     ),
 ])
 @pytest.mark.asyncio

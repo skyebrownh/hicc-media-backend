@@ -2,7 +2,7 @@ import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
 from tests.routes.conftest import conditional_seed
-from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, DATE_1, DATE_2, DATE_3
+from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, BAD_DATE_2000_01_01
 
 # =============================
 # DATA FIXTURES
@@ -19,18 +19,18 @@ def test_users_data():
 @pytest.fixture
 def test_dates_data():
     """Fixture providing array of test date strings"""
-    return [DATE_1, DATE_2, DATE_3]
+    return [DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31]
 
 @pytest.fixture
 def test_user_dates_data():
     """Fixture providing array of test user_date data"""
     return [
-        {"user_id": USER_ID_1, "date": DATE_1},
-        {"user_id": USER_ID_1, "date": DATE_2},
-        {"user_id": USER_ID_1, "date": DATE_3},
-        {"user_id": USER_ID_2, "date": DATE_1},
-        {"user_id": USER_ID_2, "date": DATE_2},
-        {"user_id": USER_ID_2, "date": DATE_3},
+        {"user_id": USER_ID_1, "date": DATE_2024_02_29},
+        {"user_id": USER_ID_1, "date": DATE_2025_01_01},
+        {"user_id": USER_ID_1, "date": DATE_2025_03_31},
+        {"user_id": USER_ID_2, "date": DATE_2024_02_29},
+        {"user_id": USER_ID_2, "date": DATE_2025_01_01},
+        {"user_id": USER_ID_2, "date": DATE_2025_03_31},
     ]
 
 # =============================
@@ -60,20 +60,20 @@ async def test_get_all_user_dates_success(async_client, seed_dates, seed_users, 
     assert len(response_json) == 3
     assert response_json[0]["user_date_id"] is not None
     assert response_json[0]["user_id"] == USER_ID_1
-    assert response_json[0]["date"] == DATE_1
+    assert response_json[0]["date"] == DATE_2024_02_29
     assert response_json[1]["user_id"] == USER_ID_1
-    assert response_json[1]["date"] == DATE_2
+    assert response_json[1]["date"] == DATE_2025_01_01
     assert response_json[2]["user_id"] == USER_ID_2
-    assert response_json[2]["date"] == DATE_2
+    assert response_json[2]["date"] == DATE_2025_01_01
 
 # =============================
 # GET SINGLE USER DATE
 # =============================
 @pytest.mark.parametrize("user_id, date, expected_status", [
     # User date not found
-    (USER_ID_1, DATE_2, status.HTTP_404_NOT_FOUND),
+    (USER_ID_1, DATE_2025_01_01, status.HTTP_404_NOT_FOUND),
     # Invalid UUID format for user_id
-    ("invalid-uuid-format", DATE_1, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ("invalid-uuid-format", DATE_2024_02_29, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # Invalid date format
     (USER_ID_1, "invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
@@ -90,12 +90,12 @@ async def test_get_single_user_date_success(async_client, seed_dates, seed_users
     await seed_dates(test_dates_data[:2])
     await seed_user_dates([test_user_dates_data[0]])
 
-    response = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_1}")
+    response = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, dict)
     assert response_json["user_id"] == USER_ID_1
-    assert response_json["date"] == DATE_1
+    assert response_json["date"] == DATE_2024_02_29
 
 # =============================
 # INSERT USER DATE
@@ -106,19 +106,19 @@ async def test_get_single_user_date_success(async_client, seed_dates, seed_users
     # missing required fields (date)
     ([], [], [], {"user_id": USER_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # missing required fields (user_id)
-    ([], [], [], {"date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([], [], [], {"date": DATE_2025_01_01}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # invalid UUID format
-    ([], [], [], {"user_id": "invalid-uuid", "date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([], [], [], {"user_id": "invalid-uuid", "date": DATE_2025_01_01}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # invalid date format
     ([], [], [], {"user_id": USER_ID_1, "date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # duplicate user_date
-    ([0], [0, 1], [0], {"user_id": USER_ID_1, "date": DATE_1}, status.HTTP_409_CONFLICT),
+    ([0], [0, 1], [0], {"user_id": USER_ID_1, "date": DATE_2024_02_29}, status.HTTP_409_CONFLICT),
     # extra fields not allowed
-    ([], [], [], {"user_id": USER_ID_1, "date": DATE_2, "user_date_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([], [], [], {"user_id": USER_ID_1, "date": DATE_2025_01_01, "user_date_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # foreign key violation (user doesn't exist)
-    ([], [1], [], {"user_id": BAD_ID_0000, "date": DATE_2}, status.HTTP_404_NOT_FOUND),
+    ([], [1], [], {"user_id": BAD_ID_0000, "date": DATE_2025_01_01}, status.HTTP_404_NOT_FOUND),
     # foreign key violation (date doesn't exist)
-    ([0], [], [], {"user_id": USER_ID_1, "date": "2025-12-31"}, status.HTTP_404_NOT_FOUND),
+    ([0], [], [], {"user_id": USER_ID_1, "date": BAD_DATE_2000_01_01}, status.HTTP_404_NOT_FOUND),
 ])
 @pytest.mark.asyncio
 async def test_insert_user_date_error_cases(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data, user_indices, date_indices, user_date_indices, payload, expected_status):
@@ -136,12 +136,12 @@ async def test_insert_user_date_success(async_client, seed_dates, seed_users, te
     await seed_users([test_users_data[1]])    
     await seed_dates([test_dates_data[0]])
     
-    response = await async_client.post("/user_dates", json={"user_id": USER_ID_2, "date": DATE_1})
+    response = await async_client.post("/user_dates", json={"user_id": USER_ID_2, "date": DATE_2024_02_29})
     assert response.status_code == status.HTTP_201_CREATED
     response_json = response.json()
     assert response_json["user_date_id"] is not None
     assert response_json["user_id"] == USER_ID_2
-    assert response_json["date"] == DATE_1
+    assert response_json["date"] == DATE_2024_02_29
 
 # =============================
 # INSERT USER DATES BULK
@@ -152,9 +152,9 @@ async def test_insert_user_date_success(async_client, seed_dates, seed_users, te
     # missing required fields (date)
     ([{"user_id": USER_ID_1}], status.HTTP_422_UNPROCESSABLE_CONTENT),
     # missing required fields (user_id)
-    ([{"date": DATE_1}], status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([{"date": DATE_2024_02_29}], status.HTTP_422_UNPROCESSABLE_CONTENT),
     # extra fields not allowed
-    ([{"user_id": USER_ID_1, "date": DATE_2, "is_active": "False"}], status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ([{"user_id": USER_ID_1, "date": DATE_2025_01_01, "is_active": "False"}], status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
 @pytest.mark.asyncio
 async def test_insert_user_dates_bulk_error_cases(async_client, payload, expected_status):
@@ -177,24 +177,24 @@ async def test_insert_user_dates_bulk_success(async_client, seed_dates, seed_use
     assert len(response_json) == 3
     assert all(ud["user_date_id"] is not None for ud in response_json)
     assert {ud["user_id"] for ud in response_json} == {USER_ID_1, USER_ID_2}
-    assert {ud["date"] for ud in response_json} == {DATE_1, DATE_2}
+    assert {ud["date"] for ud in response_json} == {DATE_2024_02_29, DATE_2025_01_01}
 
 # =============================
 # UPDATE USER DATE
 # =============================
 @pytest.mark.parametrize("user_id, date_path, payload, expected_status", [
     # user date not found
-    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2}", {"date": DATE_2}, status.HTTP_404_NOT_FOUND),
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2025_01_01}", {"date": DATE_2025_01_01}, status.HTTP_404_NOT_FOUND),
     # invalid UUID format for user_id
-    ("invalid-uuid-format", f"/users/invalid-uuid-format/dates/{DATE_1}", {"date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ("invalid-uuid-format", f"/users/invalid-uuid-format/dates/{DATE_2024_02_29}", {"date": DATE_2025_01_01}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # invalid date format in path
-    (USER_ID_1, f"/users/{USER_ID_1}/dates/invalid-date-format", {"date": DATE_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/invalid-date-format", {"date": DATE_2025_01_01}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # empty payload
-    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_1}", {}, status.HTTP_400_BAD_REQUEST),
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}", {}, status.HTTP_400_BAD_REQUEST),
     # invalid date format in payload
-    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_1}", {"date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}", {"date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # foreign key violation (date doesn't exist)
-    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2}", {"date": "2025-12-31"}, status.HTTP_404_NOT_FOUND),
+    (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2025_01_01}", {"date": BAD_DATE_2000_01_01}, status.HTTP_404_NOT_FOUND),
 ])
 @pytest.mark.asyncio
 async def test_update_user_date_error_cases(async_client, user_id, date_path, payload, expected_status):
@@ -209,20 +209,20 @@ async def test_update_user_date_success(async_client, seed_dates, seed_users, se
     await seed_dates(test_dates_data[:2])
     await seed_user_dates([test_user_dates_data[0]])
 
-    response = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_1}", json={"date": DATE_2})
+    response = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}", json={"date": DATE_2025_01_01})
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert response_json["user_id"] == USER_ID_1
-    assert response_json["date"] == DATE_2
+    assert response_json["date"] == DATE_2025_01_01
 
 # =============================
 # DELETE USER DATE
 # =============================
 @pytest.mark.parametrize("user_id, date, expected_status", [
     # user date not found
-    (USER_ID_1, DATE_2, status.HTTP_404_NOT_FOUND),
+    (USER_ID_1, DATE_2025_01_01, status.HTTP_404_NOT_FOUND),
     # invalid UUID format for user_id
-    ("invalid-uuid-format", DATE_1, status.HTTP_422_UNPROCESSABLE_CONTENT),
+    ("invalid-uuid-format", DATE_2024_02_29, status.HTTP_422_UNPROCESSABLE_CONTENT),
     # invalid date format
     (USER_ID_1, "invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
 ])
@@ -240,13 +240,13 @@ async def test_delete_user_date_success(async_client, seed_dates, seed_users, se
     await seed_user_dates([test_user_dates_data[0]])
 
     # Test successful deletion
-    response = await async_client.delete(f"/users/{USER_ID_1}/dates/{DATE_1}")
+    response = await async_client.delete(f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, dict)
     assert response_json["user_id"] == USER_ID_1
-    assert response_json["date"] == DATE_1
+    assert response_json["date"] == DATE_2024_02_29
 
     # Verify deletion by trying to get it again
-    verify_response = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_1}")
+    verify_response = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}")
     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
