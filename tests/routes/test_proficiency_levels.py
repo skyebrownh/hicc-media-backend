@@ -5,20 +5,6 @@ from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3, PROFICIENCY_LEVEL_ID_4
 
 # =============================
-# DATA FIXTURES
-# =============================
-@pytest.fixture
-def test_proficiency_levels_data():
-    """Fixture providing array of test proficiency level data"""
-    return [
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Level 1", "proficiency_level_number": 1, "proficiency_level_code": "level_1"},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Level 3", "proficiency_level_number": 3, "proficiency_level_code": "level_3"},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_4, "proficiency_level_name": "New Level", "proficiency_level_number": 5, "proficiency_level_code": "new_level"},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_4, "proficiency_level_name": "Another Level", "proficiency_level_number": 5, "proficiency_level_code": "another_level"},
-    ]
-
-# =============================
 # GET ALL PROFICIENCY LEVELS
 # =============================
 @pytest.mark.asyncio
@@ -30,23 +16,19 @@ async def test_get_all_proficiency_levels_none_exist(async_client):
 @pytest.mark.asyncio
 async def test_get_all_proficiency_levels_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
     """Test getting all proficiency levels after inserting a variety"""
-    await seed_proficiency_levels([
-        {"proficiency_level_name": "Level 1", "proficiency_level_number": 1, "proficiency_level_code": "level_1"},
-        {"proficiency_level_name": "Level 2", "proficiency_level_number": 2, "proficiency_level_code": "level_2"},
-        {"proficiency_level_name": "Level 3", "proficiency_level_number": 3, "proficiency_level_code": "level_3"},
-    ])
+    await seed_proficiency_levels(test_proficiency_levels_data[:3])
 
     response = await async_client.get("/proficiency_levels")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, list)
     assert len(response_json) == 3
-    assert response_json[0]["proficiency_level_name"] == "Level 1"
+    assert response_json[0]["proficiency_level_name"] == "Novice"
     assert response_json[1]["proficiency_level_id"] is not None
-    assert response_json[1]["proficiency_level_code"] == "level_2"
-    assert response_json[1]["proficiency_level_number"] == 2
+    assert response_json[1]["proficiency_level_code"] == "proficient"
+    assert response_json[1]["proficiency_level_number"] == 4
     assert response_json[2]["is_active"] is True
-    assert response_json[2]["is_assignable"] is False
+    assert response_json[2]["is_assignable"] is True
 
 # =============================
 # GET SINGLE PROFICIENCY LEVEL
@@ -72,11 +54,11 @@ async def test_get_single_proficiency_level_success(async_client, seed_proficien
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, dict)
-    assert response_json["proficiency_level_name"] == "Level 2"
-    assert response_json["proficiency_level_number"] == 2
-    assert response_json["proficiency_level_code"] == "level_2"
+    assert response_json["proficiency_level_name"] == "Proficient"
+    assert response_json["proficiency_level_number"] == 4
+    assert response_json["proficiency_level_code"] == "proficient"
     assert response_json["is_active"] is True
-    assert response_json["is_assignable"] is False
+    assert response_json["is_assignable"] is True
 
 # =============================
 # INSERT PROFICIENCY LEVEL
@@ -146,21 +128,21 @@ async def test_update_proficiency_level_error_cases(async_client, seed_proficien
         PROFICIENCY_LEVEL_ID_3,
         {"proficiency_level_name": "Updated Level Name", "proficiency_level_number": 100, "is_active": False, "is_assignable": True},
         {"proficiency_level_name": "Updated Level Name", "proficiency_level_number": 100, "is_active": False, "is_assignable": True},
-        {"proficiency_level_code": "level_3"}
+        {"proficiency_level_code": "untrained"}
     ),
     # partial update (is_active only)
     (
         PROFICIENCY_LEVEL_ID_2,
         {"is_active": False},
         {"is_active": False},
-        {"proficiency_level_name": "Level 2", "proficiency_level_code": "level_2"}
+        {"proficiency_level_name": "Proficient", "proficiency_level_code": "proficient"}
     ),
     # partial update (proficiency_level_name only)
     (
         PROFICIENCY_LEVEL_ID_1,
         {"proficiency_level_name": "Partially Updated Level"},
         {"proficiency_level_name": "Partially Updated Level"},
-        {"proficiency_level_code": "level_1", "is_active": True}
+        {"proficiency_level_code": "novice", "is_active": True}
     ),
 ])
 @pytest.mark.asyncio
