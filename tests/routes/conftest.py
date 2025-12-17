@@ -1,10 +1,89 @@
+import pytest
 import pytest_asyncio
+from tests.utils.constants import *
 from tests.utils.helpers import (
     insert_dates, insert_users, insert_user_dates, insert_teams,
     insert_media_roles, insert_proficiency_levels, insert_schedules,
     insert_schedule_date_types, insert_schedule_dates, insert_user_roles,
     insert_team_users, insert_schedule_date_roles
 )
+
+# =============================
+# SHARED DATA FIXTURES
+# =============================
+# These fixtures provide standardized test data that can be reused across test files.
+# Tests can use slicing/indexing to get subsets as needed (e.g., test_users_data[:2])
+
+@pytest.fixture
+def test_users_data():
+    """Standard fixture providing array of test user data (4 users with various fields)"""
+    return [
+        {"user_id": USER_ID_1, "first_name": "Alice", "last_name": "Smith", "phone": "555-1111", "email": "alice@example.com"},
+        {"user_id": USER_ID_2, "first_name": "Bob", "last_name": "Jones", "phone": "555-2222", "email": "bob@example.com"},
+        {"user_id": USER_ID_3, "first_name": "Carol", "last_name": "Lee", "phone": "555-3333", "email": None},
+        {"user_id": USER_ID_4, "first_name": "Another", "last_name": "User", "phone": "555-5555", "email": "another@example.com"},
+    ]
+
+@pytest.fixture
+def test_teams_data():
+    """Standard fixture providing array of test team data (4 teams)"""
+    return [
+        {"team_id": TEAM_ID_1, "team_name": "Team 1", "team_code": "team_1"},
+        {"team_id": TEAM_ID_2, "team_name": "Team 2", "team_code": "team_2"},
+        {"team_id": TEAM_ID_3, "team_name": "Team 3", "team_code": "team_3"},
+        {"team_id": TEAM_ID_4, "team_name": "Another Team", "team_code": "new_team"},
+    ]
+
+@pytest.fixture
+def test_media_roles_data():
+    """Standard fixture providing array of test media_role data (3 roles)"""
+    return [
+        {"media_role_id": MEDIA_ROLE_ID_1, "media_role_name": "ProPresenter", "sort_order": 10, "media_role_code": "propresenter"},
+        {"media_role_id": MEDIA_ROLE_ID_2, "media_role_name": "Sound", "sort_order": 20, "media_role_code": "sound"},
+        {"media_role_id": MEDIA_ROLE_ID_3, "media_role_name": "Lighting", "sort_order": 30, "media_role_code": "lighting"},
+    ]
+
+@pytest.fixture
+def test_proficiency_levels_data():
+    """Standard fixture providing array of test proficiency_level data (3 levels)"""
+    return [
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
+        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Untrained", "proficiency_level_number": 0, "proficiency_level_code": "untrained", "is_assignable": True},
+    ]
+
+@pytest.fixture
+def test_dates_data():
+    """Standard fixture providing array of test date strings"""
+    return [DATE_1, DATE_2, DATE_3, DATE_5, DATE_6, DATE_8, DATE_12, DATE_13, DATE_14]
+
+@pytest.fixture
+def test_schedule_date_types_data():
+    """Standard fixture providing array of test schedule_date_type data (2 types)"""
+    return [
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_1, "schedule_date_type_name": "Service", "schedule_date_type_code": "service"},
+        {"schedule_date_type_id": SCHEDULE_DATE_TYPE_ID_2, "schedule_date_type_name": "Rehearsal", "schedule_date_type_code": "rehearsal"},
+    ]
+
+@pytest.fixture
+def test_team_users_data():
+    """Standard fixture providing array of test team_user data"""
+    return [
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_1},
+        {"team_id": TEAM_ID_2, "user_id": USER_ID_1},
+        {"team_id": TEAM_ID_1, "user_id": USER_ID_2},
+        {"team_id": TEAM_ID_2, "user_id": USER_ID_3},
+    ]
+
+@pytest.fixture
+def test_user_roles_data():
+    """Standard fixture providing array of test user_role data"""
+    return [
+        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
+        {"user_id": USER_ID_1, "media_role_id": MEDIA_ROLE_ID_2, "proficiency_level_id": PROFICIENCY_LEVEL_ID_2},
+        {"user_id": USER_ID_2, "media_role_id": MEDIA_ROLE_ID_1, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
+        {"user_id": USER_ID_3, "media_role_id": MEDIA_ROLE_ID_2, "proficiency_level_id": PROFICIENCY_LEVEL_ID_1},
+    ]
 
 # =============================
 # CONDITIONAL SEEDING HELPER
