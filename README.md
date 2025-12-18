@@ -37,6 +37,6 @@ FastAPI + Railway Postgres DB + Redis backend for a scheduling application (spec
 -   [x] Refactor to Railway Postgres DB
 -   [x] Refactor FastAPI that runs CRUDs on Railway DB
         routes
--   [ ] Refactor unit testing and integration testing with Railway DB
+-   [x] Refactor unit testing and integration testing with Railway DB
 -   [ ] Implement Redis as a cache
 -   [ ] Create an auto-scheduling algorithm
