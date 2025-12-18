@@ -1,6 +1,16 @@
 import pytest
 import pytest_asyncio
-from tests.utils.constants import *
+from tests.utils.constants import (
+    USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4,
+    TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4,
+    MEDIA_ROLE_ID_1, MEDIA_ROLE_ID_2, MEDIA_ROLE_ID_3, MEDIA_ROLE_ID_4,
+    PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3, PROFICIENCY_LEVEL_ID_4,
+    SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3,
+    SCHEDULE_DATE_TYPE_ID_1, SCHEDULE_DATE_TYPE_ID_2, SCHEDULE_DATE_TYPE_ID_4,
+    SCHEDULE_DATE_ID_1, SCHEDULE_DATE_ID_2, SCHEDULE_DATE_ID_3,
+    SCHEDULE_DATE_ROLE_ID_1, SCHEDULE_DATE_ROLE_ID_2, SCHEDULE_DATE_ROLE_ID_3,
+    DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, DATE_2025_05_01, DATE_2025_05_02, DATE_2025_05_03, DATE_2025_08_31, DATE_2025_12_31,
+)
 from tests.utils.helpers import (
     insert_dates, insert_users, insert_user_dates, insert_teams,
     insert_media_roles, insert_proficiency_levels, insert_schedules,

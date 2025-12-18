@@ -2,7 +2,7 @@ import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200
 from tests.routes.conftest import conditional_seed
-from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, DATE_2024_02_29, DATE_2025_01_01, DATE_2025_03_31, BAD_DATE_2000_01_01
+from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, DATE_2024_02_29, DATE_2025_01_01, BAD_DATE_2000_01_01
 
 # =============================
 # GET ALL USER DATES

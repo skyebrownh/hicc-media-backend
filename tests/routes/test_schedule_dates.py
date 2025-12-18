@@ -5,7 +5,7 @@ from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_DATE_TYPE_ID_1, SCHEDULE_DATE_TYPE_ID_2,
     SCHEDULE_DATE_ID_1, TEAM_ID_1, USER_ID_1, USER_ID_2,
-    DATE_2025_05_01, DATE_2025_05_02, DATE_2025_05_03, BAD_DATE_2000_01_01
+    DATE_2025_05_01, DATE_2025_05_02, BAD_DATE_2000_01_01
 )
 
 # =============================
