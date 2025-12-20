@@ -347,7 +347,7 @@ class SchedulePublic(ScheduleBase):
 # =============================
 class EventBase(SQLModel):
     title: str | None = Field(default=None)
-    starts_at: datetime = Field(sa_column=Column(TIMESTAMP(timezone=True)), index=True)
+    starts_at: datetime = Field(sa_column=Column(TIMESTAMP(timezone=True), index=True))
     ends_at: datetime = Field(sa_column=Column(TIMESTAMP(timezone=True)))
     team_id: UUID | None = Field(default=None, foreign_key="teams.id")
     event_type_id: UUID = Field(index=True, foreign_key="event_types.id")
@@ -412,6 +412,9 @@ class RequirementLevel(str, Enum):
     OPTIONAL = "optional"
 
 class EventAssignmentBase(SQLModel):
+    # is_applicable: bool - whether the role is applicable to the event
+    is_applicable: bool = Field(default=True)
+    # requirement_level: RequirementLevel - importance to fill the role for the event
     requirement_level: RequirementLevel = Field(default=RequirementLevel.REQUIRED, sa_column=Column(SAEnum(RequirementLevel, name="requirement_level")))
     assigned_user_id: UUID | None = Field(default=None, foreign_key="users.id", index=True)
     is_active: bool = Field(default=True)
@@ -487,7 +490,7 @@ class EventAssignmentPublic(EventAssignmentBase):
 # USER UNAVAILABLE PERIODS
 # =============================
 class UserUnavailablePeriodBase(SQLModel):
-    starts_at: datetime = Field(sa_column=Column(TIMESTAMP(timezone=True)), index=True)
+    starts_at: datetime = Field(sa_column=Column(TIMESTAMP(timezone=True), index=True))
     ends_at: datetime = Field(sa_column=Column(TIMESTAMP(timezone=True)))
 
 class UserUnavailablePeriod(UserUnavailablePeriodBase, table=True):
