@@ -277,23 +277,32 @@ def seed_data():
         event_types = create_event_types()
         teams = create_teams()
         users = create_users()
-        team_users = create_team_users(teams, users)
-        user_roles = create_user_roles(users, roles, proficiency_levels)
         schedules = create_schedules()
-        events = create_events(schedules, event_types, teams)
-        event_assignments = create_event_assignments(events, roles, users, event_types)
-        user_unavailable_periods = create_user_unavailable_periods(users)
+
+        # Add and flush referenced objects first so they exist in the database
         session.add_all(roles)
         session.add_all(proficiency_levels)
         session.add_all(event_types)
         session.add_all(teams)
         session.add_all(users)
+        session.add_all(schedules)
+        session.flush()
+
+        # Now create objects that reference the previously added objects
+        team_users = create_team_users(teams, users)
+        user_roles = create_user_roles(users, roles, proficiency_levels)
+        events = create_events(schedules, event_types, teams)
+        event_assignments = create_event_assignments(events, roles, users, event_types)
+        user_unavailable_periods = create_user_unavailable_periods(users)
+
+        # Add child objects
         session.add_all(team_users)
         session.add_all(user_roles)
-        session.add_all(schedules)
         session.add_all(events)
         session.add_all(event_assignments)
         session.add_all(user_unavailable_periods)
+
+        # Commit the transaction
         session.commit()
         print("Data seeded successfully")
 
