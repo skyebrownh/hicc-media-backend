@@ -1,3 +1,9 @@
+"""
+This script is used to drop and recreate the schema in the database.
+
+DO NOT RUN NOW THAT ALEMBIC IS USED FOR MIGRATIONS.
+"""
+
 import sys
 from pathlib import Path
 
