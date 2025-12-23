@@ -10,11 +10,11 @@ from app.routers import (
     roles_router,
     proficiency_levels_router,
     event_types_router,
-    # users_router,
-    # teams_router,
+    users_router,
+    teams_router,
     # team_users_router,
     # user_roles_router,
-    # schedules_router,
+    schedules_router,
     # events_router,
     # event_assignments_router,
     # user_unavailable_periods_router,
@@ -85,11 +85,11 @@ async def health(request: Request, session: Session = Depends(get_db_session)):
 app.include_router(roles_router)
 app.include_router(proficiency_levels_router)
 app.include_router(event_types_router)
-# app.include_router(users_router)
-# app.include_router(teams_router)
+app.include_router(users_router)
+app.include_router(teams_router)
 # app.include_router(team_users_router)
 # app.include_router(user_roles_router)
-# app.include_router(schedules_router)
+app.include_router(schedules_router)
 # app.include_router(events_router)
 # app.include_router(event_assignments_router)
 # app.include_router(user_unavailable_periods_router)
