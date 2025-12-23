@@ -2,7 +2,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status
 from sqlmodel import Session, select
 from app.db.models import ProficiencyLevel, ProficiencyLevelCreate, ProficiencyLevelUpdate 
-from app.db.queries import fetch_all, fetch_one, delete_one, insert_proficiency_level, update_proficiency_level
 from app.utils.dependencies import get_db_session
 
 router = APIRouter(prefix="/proficiency_levels")

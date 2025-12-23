@@ -6,7 +6,19 @@ from contextlib import asynccontextmanager
 from app.utils.dependencies import verify_api_key, get_db_session
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
-from app.routers import proficiency_level_router
+from app.routers import (
+    roles_router,
+    proficiency_levels_router,
+    event_types_router,
+    # users_router,
+    # teams_router,
+    # team_users_router,
+    # user_roles_router,
+    # schedules_router,
+    # events_router,
+    # event_assignments_router,
+    # user_unavailable_periods_router,
+)
 from app.db.database import connect_db, close_db
 
 # Set up logging configuration
@@ -70,15 +82,14 @@ async def health(request: Request, session: Session = Depends(get_db_session)):
     }
 
 # Include routers for different resources
-# app.include_router(user_router)
-# app.include_router(team_router)
-# app.include_router(media_role_router)
-app.include_router(proficiency_level_router)
-# app.include_router(schedule_date_type_router)
-# app.include_router(date_router)
-# app.include_router(schedule_router)
-# app.include_router(user_dates_router)
-# app.include_router(team_user_router)
-# app.include_router(user_role_router)
-# app.include_router(schedule_date_router)
-# app.include_router(schedule_date_role_router)
+app.include_router(roles_router)
+app.include_router(proficiency_levels_router)
+app.include_router(event_types_router)
+# app.include_router(users_router)
+# app.include_router(teams_router)
+# app.include_router(team_users_router)
+# app.include_router(user_roles_router)
+# app.include_router(schedules_router)
+# app.include_router(events_router)
+# app.include_router(event_assignments_router)
+# app.include_router(user_unavailable_periods_router)
