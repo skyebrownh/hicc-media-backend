@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from app.utils.dependencies import verify_api_key, get_db_session
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
-# from app.routers import *
+from app.routers import proficiency_level_router
 from app.db.database import connect_db, close_db
 
 # Set up logging configuration
@@ -73,7 +73,7 @@ async def health(request: Request, session: Session = Depends(get_db_session)):
 # app.include_router(user_router)
 # app.include_router(team_router)
 # app.include_router(media_role_router)
-# app.include_router(proficiency_level_router)
+app.include_router(proficiency_level_router)
 # app.include_router(schedule_date_type_router)
 # app.include_router(date_router)
 # app.include_router(schedule_router)
