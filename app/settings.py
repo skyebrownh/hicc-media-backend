@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     # Environment variables
     fast_api_key: str = Field(..., validation_alias=AliasChoices("FAST_API_KEY"))
-    railway_database_url: str = Field(..., validation_alias=AliasChoices("RAILWAY_DATABASE_URL"))
+    railway_db_url: str = Field(..., validation_alias=AliasChoices("RAILWAY_DB_URL"))
     local_test_db_url: str = Field(..., validation_alias=AliasChoices("LOCAL_TEST_DB_URL"))
 
 

@@ -1,3 +1,5 @@
+from typing import AsyncGenerator
+from sqlmodel import Session
 from fastapi import Request, HTTPException, status
 from app.settings import settings
 
@@ -22,3 +24,16 @@ def verify_api_key(request: Request):
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Unauthorized: Invalid or missing API Key"
         )
+
+async def get_db_session(request: Request) -> AsyncGenerator[Session, None]:
+    """
+    Dependency that provides a database session for each request.
+    
+    Each request uses its own session from the engine. The session is
+    automatically closed when the request completes.
+    
+    Yields:
+        A database session from the engine
+    """
+    with Session(request.app.state.db_engine) as session:
+        yield session

@@ -4,18 +4,17 @@ from fastapi import HTTPException
 
 # Whitelist of valid table names to prevent SQL injection
 VALID_TABLES = {
-    "dates",
-    "media_roles",
+    "roles",
     "proficiency_levels",
-    "schedule_date_roles",
-    "schedule_date_types",
-    "schedule_dates",
-    "schedules",
-    "team_users",
+    "event_types",
     "teams",
-    "user_dates",
-    "user_roles",
     "users",
+    "team_users",
+    "user_roles",
+    "schedules",
+    "events",
+    "event_assignments",
+    "user_unavailable_periods",
 }
 
 def validate_table_name(table: str) -> None:
