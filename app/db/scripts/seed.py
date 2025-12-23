@@ -12,7 +12,7 @@ from sqlmodel import create_engine, Session
 from app.settings import settings
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
 
-engine = create_engine(settings.railway_database_url)
+engine = create_engine(settings.railway_db_url)
 
 def create_roles():
     roles = [

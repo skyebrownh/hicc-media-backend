@@ -5,13 +5,20 @@ from contextlib import asynccontextmanager
 import asyncio
 import pytest
 import pytest_asyncio
-import asyncpg
-from pathlib import Path
+
 from httpx import AsyncClient, ASGITransport
 from fastapi import Request
+
+from sqlmodel import create_engine, Session, text
+from alembic.config import Config
+from alembic import command
+
 from app.main import app
-from app.db.database import get_db_connection
+from app.utils.dependencies import get_db_session
+from app.utils.helpers import VALID_TABLES
 from app.settings import settings
+
+TEST_SCHEMA = "test_schema"
 
 # =============================
 # LIFESPAN OVERRIDE
@@ -24,6 +31,7 @@ async def _noop_lifespan(_app):
 # Override the app's lifespan with the no-op lifespan for testing
 @pytest.fixture(scope="session", autouse=True)
 def disable_app_lifespan():
+    """Disable the app's lifespan for testing"""
     app.router.lifespan_context = _noop_lifespan
 
 # =============================
@@ -32,57 +40,85 @@ def disable_app_lifespan():
 # Use a single loop for session-scoped async fixtures to avoid cross-loop issues.
 @pytest.fixture(scope="session")
 def event_loop():
+    """Create and teardown a event loop"""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
 
-# Apply schema once per session on the same loop pytest-asyncio uses
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def ensure_schema():
-    schema_sql = Path("tests/test_schema.sql").read_text()
-    conn = await asyncpg.connect(settings.local_test_db_url)
-    try:
-        await conn.execute(schema_sql)
-    finally:
-        await conn.close()
-
-
-# Fixture to create and teardown a test database pool, session-scoped
-@pytest_asyncio.fixture(scope="session")
-async def test_db_pool(ensure_schema):
-    pool = await asyncpg.create_pool(
+@pytest.fixture(scope="session")
+def test_db_engine():
+    """Sync engine for testing"""
+    engine = create_engine(
         settings.local_test_db_url,
-        min_size=1,
-        max_size=5,
-        # Keep every pooled connection pinned to test_schema.
-        server_settings={"search_path": "test_schema"},
-        init=lambda conn: conn.execute("SET search_path TO test_schema;"),
+        pool_pre_ping=True,
+        connect_args={"options": f"-csearch_path={TEST_SCHEMA}"}
     )
+    try:
+        yield engine
+    finally:
+        engine.dispose()
 
-    yield pool
-    await pool.close()
+@pytest.fixture(scope="session", autouse=True)
+def apply_migrations(test_db_engine):
+    """
+    Apply migrations to the test database:
+    1. Ensure test_schema exists
+    2. Run alembic upgrade head against the test DB URL
+    """
+    with test_db_engine.begin() as conn:
+        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {TEST_SCHEMA};"))
 
+    # Run alembic migrations to build schema in test_schema
+    alembic_config = Config("alembic.ini")
+    alembic_config.set_main_option("sqlalchemy.url", settings.local_test_db_url)
+    alembic_config.set_main_option("search_path", TEST_SCHEMA)
+    command.upgrade(alembic_config, "head")
 
-# Fixture to provide an async HTTP client for testing
+@pytest.fixture(scope="function")
+def get_test_db_session(test_db_engine):
+    """
+    Provide a database session for the test database.
+    """
+    with Session(test_db_engine) as session:
+        yield session
+
 @pytest_asyncio.fixture(scope="function")
-async def async_client(test_db_pool):
+async def async_client(test_db_engine, request):
     """
     Create an async HTTP client for testing with database connection override.
     
-    Sets up the app state with the test database pool and overrides the
-    get_db_connection dependency to use the test pool.
+    Sets up the app state with the test database engine and overrides the
+    get_db_session dependency to use the test engine.
+    
+    Headers can be customized by using pytest.mark.parametrize with indirect=True.
+    Default includes API key. Custom headers override defaults.
+    
+    Example:
+        @pytest.mark.parametrize("async_client", [{"x-api-key": "custom-key"}], indirect=True)
+        async def test_with_custom_headers(async_client):
+            ...
     """
-    headers = {"x-api-key": settings.fast_api_key}
+    # Get custom headers from fixture parameter if parametrized
+    # If parametrized with a dict (even empty), use it as-is (allows testing without auth)
+    # If not parametrized, use default headers with API key
+    default_headers = {"x-api-key": settings.fast_api_key}
     
-    # Set app state with test pool (needed for health endpoint and get_db_connection)
-    app.state.db_pool = test_db_pool
+    if hasattr(request, "param") and isinstance(request.param, dict):
+        # Use provided headers as-is (empty dict = no headers for auth testing)
+        headers = request.param
+    else:
+        # Not parametrized, use default headers
+        headers = default_headers
     
-    # Override the get_db_connection dependency to use test pool
-    async def get_test_db_connection(request: Request):
-        async with test_db_pool.acquire() as conn:
-            yield conn
+    # Set app state with test engine (needed for health endpoint and get_db_session)
+    app.state.db_engine = test_db_engine
     
-    app.dependency_overrides[get_db_connection] = get_test_db_connection
+    # Override the get_db_session dependency to use test engine
+    def get_test_session(request: Request):
+        with Session(test_db_engine) as session:
+            yield session
+
+    app.dependency_overrides[get_db_session] = get_test_session
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as client:
@@ -91,27 +127,18 @@ async def async_client(test_db_pool):
     # Clean up dependency override after test
     app.dependency_overrides.clear()
 
-
-# Truncate tables before each test to keep state isolated without recreating schema/pool
 @pytest_asyncio.fixture(autouse=True, scope="function")
-async def truncate_tables(test_db_pool):
-    async with test_db_pool.acquire() as conn:
-        await conn.execute(
-            """
-            TRUNCATE TABLE
-                user_dates,
-                schedule_date_roles,
-                schedule_dates,
-                schedules,
-                dates,
-                team_users,
-                user_roles,
-                users,
-                teams,
-                schedule_date_types,
-                media_roles,
-                proficiency_levels
-            RESTART IDENTITY CASCADE;
-            """
-        )
+async def truncate_tables(test_db_engine):
+    """
+    Truncate tables before each test to keep state isolated without recreating schema.
+    Assumes search_path=test_schema so unqualified table names resolve correctly.
+    """
+    truncate_sql = f"""
+    TRUNCATE TABLE
+        {', '.join(VALID_TABLES)}
+    RESTART IDENTITY CASCADE;
+    """
+
+    with test_db_engine.begin() as conn:
+        conn.execute(text(truncate_sql))
     yield

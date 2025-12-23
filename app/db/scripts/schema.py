@@ -15,7 +15,7 @@ from sqlmodel import create_engine, SQLModel
 from app.settings import settings
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
 
-engine = create_engine(settings.railway_database_url)
+engine = create_engine(settings.railway_db_url)
 
 def drop_and_recreate_schema():
     # Close any existing connections
@@ -28,7 +28,7 @@ def drop_and_recreate_schema():
         conn.commit()
 
     # Create all tables using the engine directly
-    SQLModel.metadata.create_all(engine)
+    # SQLModel.metadata.create_all(engine)
     print("Schema dropped and recreated successfully")
 
 if __name__ == "__main__":

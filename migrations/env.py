@@ -14,7 +14,9 @@ from app.settings import settings
 config = context.config
 
 # Override the sqlalchemy.url with the actual database URL from settings
-config.set_main_option("sqlalchemy.url", settings.railway_database_url)
+url = config.get_main_option("sqlalchemy.url")
+if not url or url == "DB_URL":
+    config.set_main_option("sqlalchemy.url", settings.railway_db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -64,15 +66,23 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    test_schema = config.get_main_option("search_path") # may be None
+    connect_args = {}
+    if test_schema:
+        connect_args["options"] = f"-csearch_path={test_schema}"
+    
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=target_metadata,
+            version_table_schema=test_schema if test_schema else None,
         )
 
         with context.begin_transaction():
