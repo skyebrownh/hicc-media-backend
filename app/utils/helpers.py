@@ -18,28 +18,12 @@ VALID_TABLES = {
 }
 
 def validate_table_name(table: str) -> None:
-    """
-    Validate that a table name is in the whitelist to prevent SQL injection.
-    
-    Args:
-        table: The table name to validate
-        
-    Raises:
-        ValueError: If the table name is not in the whitelist
-    """
+    """Validate that a table name is in the whitelist to prevent SQL injection."""
     if table not in VALID_TABLES:
         raise ValueError(f"Invalid table name: {table}. Must be one of {sorted(VALID_TABLES)}")
 
 def table_id(table: str) -> str:
-    """
-    Return the primary key column name for a given table.
-    
-    Args:
-        table: Table name
-        
-    Returns:
-        Primary key column name (e.g., "user_id" for "users", "date" for "dates")
-    """
+    """Return the primary key column name for a given table."""
     if table == "dates":
         return "date"
 
@@ -47,16 +31,7 @@ def table_id(table: str) -> str:
 
 
 def get_date_details(date: datetime.date) -> dict:
-    """
-    Calculate and return detailed date information.
-    
-    Args:
-        date: Date object to analyze
-        
-    Returns:
-        Dictionary containing calendar year, month, day, weekday, quarter,
-        week number, and various boolean flags (is_weekend, is_weekday, etc.)
-    """
+    """Calculate and return detailed date information."""
     return {
         "calendar_year": date.year,
         "calendar_month": date.month,
@@ -91,9 +66,6 @@ def build_update_query(
 
     Returns:
         (query, values)
-        
-    Raises:
-        ValueError: If table name is not in the whitelist
     """
     validate_table_name(table)
     raise_bad_request_empty_payload(payload)
@@ -135,9 +107,6 @@ def build_insert_query(table: str, payloads: list[dict]) -> tuple[str, list]:
         
     Returns:
         (query, values)
-        
-    Raises:
-        ValueError: If table name is not in the whitelist or payloads are invalid
     """
     validate_table_name(table)
     if not isinstance(payloads, list) or not payloads or not all(isinstance(p, dict) and p for p in payloads):
@@ -175,9 +144,6 @@ def build_where_clause(table: str, filters: dict[str, str | datetime.date]) -> t
         
     Returns:
         (where_clause_string, list_of_values)
-        
-    Raises:
-        ValueError: If table name is not in the whitelist
     """
     validate_table_name(table)
     if not filters:
@@ -239,14 +205,6 @@ async def fetch_single_row(conn: Connection, query: str, params: list) -> Record
     return row
 
 def raise_bad_request_empty_payload(payload):
-    """
-    Validate that a payload is not empty, raising HTTPException if it is.
-    
-    Args:
-        payload: The payload to validate (dict, list, or other truthy value)
-        
-    Raises:
-        HTTPException(400): If payload is empty or falsy
-    """
+    """Validate that a payload is not empty, raising HTTPException if it is."""
     if not payload:
         raise HTTPException(status_code=400, detail="Payload cannot be empty")
