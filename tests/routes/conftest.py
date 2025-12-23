@@ -1,5 +1,6 @@
 import pytest
 import pytest_asyncio
+from app.db.models import ProficiencyLevel
 from tests.utils.constants import (
     USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4,
     TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4,
@@ -58,13 +59,13 @@ def test_media_roles_data():
 @pytest.fixture
 def test_proficiency_levels_data():
     """Standard fixture providing array of test proficiency_level data"""
-    return [
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_1, "proficiency_level_name": "Novice", "proficiency_level_number": 3, "proficiency_level_code": "novice", "is_assignable": True},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "proficiency_level_name": "Proficient", "proficiency_level_number": 4, "proficiency_level_code": "proficient", "is_assignable": True},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_3, "proficiency_level_name": "Untrained", "proficiency_level_number": 0, "proficiency_level_code": "untrained", "is_assignable": True},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_4, "proficiency_level_name": "New Level", "proficiency_level_number": 5, "proficiency_level_code": "new_level"},
-        {"proficiency_level_id": PROFICIENCY_LEVEL_ID_4, "proficiency_level_name": "Another Level", "proficiency_level_number": 5, "proficiency_level_code": "another_level"},
-    ]
+    pl_1 = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_1, name="Novice", code="novice", rank=3, is_assignable=True)
+    pl_2 = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_2, name="Proficient", code="proficient", rank=4, is_assignable=True)
+    pl_3 = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_3, name="Untrained", code="untrained", rank=0, is_assignable=True)
+    pl_4 = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_4, name="New Level", code="new_level", rank=5, is_assignable=False)
+    pl_5 = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_4, name="Another Level", code="another_level", rank=5, is_assignable=False)
+    
+    return [pl_1, pl_2, pl_3, pl_4, pl_5]
 
 @pytest.fixture
 def test_dates_data():
@@ -212,13 +213,14 @@ async def seed_media_roles(test_db_pool):
                 await conn.execute(insert_media_roles(media_roles))
     return _seed_media_roles
 
-@pytest_asyncio.fixture
-async def seed_proficiency_levels(test_db_pool):
+@pytest.fixture
+def seed_proficiency_levels(get_test_db_session):
     """Helper fixture to seed proficiency_levels in the database"""
-    async def _seed_proficiency_levels(proficiency_levels: list[dict]):
+    def _seed_proficiency_levels(proficiency_levels: list[ProficiencyLevel]):
         if proficiency_levels:
-            async with test_db_pool.acquire() as conn:
-                await conn.execute(insert_proficiency_levels(proficiency_levels))
+            for pl in proficiency_levels:
+                get_test_db_session.add(pl)
+        get_test_db_session.commit()
     return _seed_proficiency_levels
 
 @pytest_asyncio.fixture

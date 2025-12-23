@@ -41,10 +41,6 @@ class RoleUpdate(SQLModel):
     order: int | None = None
     is_active: bool | None = None
 
-class RolePublic(RoleBase):
-    id: UUID
-    code: str
-
 # =============================
 # PROFICIENCY LEVELS
 # =============================
@@ -81,10 +77,6 @@ class ProficiencyLevelUpdate(SQLModel):
     is_active: bool | None = None
     is_assignable: bool | None = None
 
-class ProficiencyLevelPublic(ProficiencyLevelBase):
-    id: UUID
-    code: str
-
 # =============================
 # EVENT TYPES
 # =============================
@@ -117,10 +109,6 @@ class EventTypeUpdate(SQLModel):
     name: str | None = None
     is_active: bool | None = None
 
-class EventTypePublic(EventTypeBase):
-    id: UUID
-    code: str
-
 # =============================
 # TEAMS
 # =============================
@@ -151,10 +139,6 @@ class TeamUpdate(SQLModel):
     # team.id is used to update the team
     name: str | None = None
     is_active: bool | None = None
-
-class TeamPublic(TeamBase):
-    id: UUID
-    code: str
 
 # =============================
 # USERS
@@ -190,9 +174,6 @@ class UserUpdate(SQLModel):
     email: str | None = None
     phone: str | None = None
     is_active: bool | None = None
-
-class UserPublic(UserBase):
-    id: UUID
 
 # =============================
 # TEAM USERS
@@ -336,11 +317,6 @@ class ScheduleUpdate(SQLModel):
     # schedule.id is used to update the schedule
     is_active: bool | None = None
     notes: str | None = None
-
-class SchedulePublic(ScheduleBase):
-    id: UUID
-    month: int
-    year: int
 
 # =============================
 # EVENTS
