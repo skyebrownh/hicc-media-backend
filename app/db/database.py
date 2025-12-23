@@ -11,12 +11,6 @@ async def connect_db(app: FastAPI):
     
     This is called during application startup. Raises exceptions (not HTTPException)
     so FastAPI can properly handle startup failures.
-    
-    Args:
-        app: FastAPI application instance
-        
-    Raises:
-        Exception: If database connection fails (will cause application startup to fail)
     """
     try:
         app.state.db_engine = create_engine(settings.railway_db_url)
@@ -29,9 +23,6 @@ async def connect_db(app: FastAPI):
 async def close_db(app: FastAPI):
     """
     Close the database engine during application shutdown.
-    
-    Args:
-        app: FastAPI application instance
     """
     if hasattr(app.state, 'db_engine') and app.state.db_engine:
         await app.state.db_engine.dispose()
