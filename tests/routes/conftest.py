@@ -69,8 +69,8 @@ def test_event_types_data():
 def test_team_users_data():
     """Standard fixture providing array of test team_user data"""
     team_user_1 = TeamUser(team_id=TEAM_ID_1, user_id=USER_ID_1)
-    team_user_2 = TeamUser(team_id=TEAM_ID_2, user_id=USER_ID_1)
-    team_user_3 = TeamUser(team_id=TEAM_ID_1, user_id=USER_ID_2)
+    team_user_2 = TeamUser(team_id=TEAM_ID_1, user_id=USER_ID_2)
+    team_user_3 = TeamUser(team_id=TEAM_ID_2, user_id=USER_ID_1)
     team_user_4 = TeamUser(team_id=TEAM_ID_2, user_id=USER_ID_3)
     return [team_user_1, team_user_2, team_user_3, team_user_4]
 

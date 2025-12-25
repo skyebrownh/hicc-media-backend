@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3
@@ -21,10 +21,8 @@ async def test_get_all_schedules_success(async_client, seed_schedules, test_sche
     seed_schedules(test_schedules_data)
 
     response = await async_client.get("/schedules")
-    assert response.status_code == status.HTTP_200_OK
+    assert_list_200(response, expected_length=3)
     response_json = response.json()
-    assert isinstance(response_json, list)
-    assert len(response_json) == 3
     assert response_json[0]["month"] == 1
     assert response_json[0]["year"] == 2025
     assert response_json[1]["id"] is not None

@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2, EVENT_TYPE_ID_3, EVENT_TYPE_ID_4
 
@@ -19,10 +19,8 @@ async def test_get_all_event_types_success(async_client, seed_event_types, test_
     seed_event_types(test_event_types_data[:2])
 
     response = await async_client.get("/event_types")
-    assert response.status_code == status.HTTP_200_OK
+    assert_list_200(response, expected_length=2)
     response_json = response.json()
-    assert isinstance(response_json, list)
-    assert len(response_json) == 2
     assert response_json[0]["name"] == "Service"
     assert response_json[1]["id"] is not None
     assert response_json[1]["code"] == "rehearsal"
