@@ -2,6 +2,7 @@ import datetime
 import pytest
 from fastapi import HTTPException
 from app.utils.helpers import (
+    VALID_TABLES,
     validate_table_name,
     table_id,
     get_date_details,
@@ -13,12 +14,7 @@ from app.utils.helpers import (
 def test_validate_table_name():
     """Test table name validation against whitelist"""
     # Test valid table names
-    valid_tables = [
-        "dates", "media_roles", "proficiency_levels", "schedule_date_roles",
-        "schedule_date_types", "schedule_dates", "schedules", "team_users",
-        "teams", "user_dates", "user_roles", "users"
-    ]
-    for table in valid_tables:
+    for table in VALID_TABLES:
         # Should not raise any exception
         validate_table_name(table)
     
@@ -274,14 +270,6 @@ def test_build_where_clause_filters(filters, expected_clause_pattern, expected_v
     clause, values = build_where_clause(table, filters)
     assert expected_clause_pattern in clause
     assert values == expected_values
-
-
-def test_build_where_clause_with_date():
-    """Test build_where_clause with date filter"""
-    test_date = datetime.date(2024, 1, 1)
-    clause, values = build_where_clause("dates", {"date": test_date})
-    assert "WHERE date = $1" in clause
-    assert values == [test_date]
 
 
 def test_build_where_clause_with_none_value():

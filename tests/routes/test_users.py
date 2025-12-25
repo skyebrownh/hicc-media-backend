@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4
 
@@ -19,10 +19,8 @@ async def test_get_all_users_success(async_client, seed_users, test_users_data):
     seed_users(test_users_data[:3])
 
     response = await async_client.get("/users")
-    assert response.status_code == status.HTTP_200_OK
+    assert_list_200(response, expected_length=3)
     response_json = response.json()
-    assert isinstance(response_json, list)
-    assert len(response_json) == 3
     assert response_json[0]["first_name"] == "Alice"
     assert response_json[1]["id"] is not None
     assert response_json[1]["email"] == "bob@example.com"

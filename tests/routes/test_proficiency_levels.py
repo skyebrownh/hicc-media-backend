@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3, PROFICIENCY_LEVEL_ID_4
 
@@ -19,10 +19,8 @@ async def test_get_all_proficiency_levels_success(async_client, seed_proficiency
     seed_proficiency_levels(test_proficiency_levels_data[:3])
 
     response = await async_client.get("/proficiency_levels")
-    assert response.status_code == status.HTTP_200_OK
+    assert_list_200(response, expected_length=3)
     response_json = response.json()
-    assert isinstance(response_json, list)
-    assert len(response_json) == 3
     assert response_json[0]["name"] == "Novice"
     assert response_json[1]["id"] is not None
     assert response_json[1]["code"] == "proficient"
