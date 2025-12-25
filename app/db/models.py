@@ -1,8 +1,8 @@
 from uuid import UUID, uuid4
 from pydantic import ConfigDict
-from sqlmodel import TIMESTAMP, SQLModel, Field, Column, UniqueConstraint, CheckConstraint
+from sqlmodel import TIMESTAMP, SQLModel, Field, Column, UniqueConstraint, CheckConstraint, Relationship
 from enum import Enum
-from sqlalchemy import Enum as SAEnum
+from sqlalchemy import Enum as SAEnum, ForeignKey
 from datetime import datetime, timezone
 
 # =============================
@@ -24,8 +24,11 @@ class Role(RoleBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    user_roles: list["UserRole"] = Relationship(back_populates="role")
 
 class RoleCreate(RoleBase):
     model_config = ConfigDict(extra="forbid")
@@ -60,7 +63,7 @@ class ProficiencyLevel(ProficiencyLevelBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
 
 class ProficiencyLevelCreate(ProficiencyLevelBase):
@@ -94,7 +97,7 @@ class EventType(EventTypeBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
 
 class EventTypeCreate(EventTypeBase):
@@ -126,8 +129,11 @@ class Team(TeamBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    team_users: list["TeamUser"] = Relationship(back_populates="team")
 
 class TeamCreate(TeamBase):
     model_config = ConfigDict(extra="forbid")
@@ -159,8 +165,12 @@ class User(UserBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    user_roles: list["UserRole"] = Relationship(back_populates="user")
+    user_unavailable_periods: list["UserUnavailablePeriod"] = Relationship(back_populates="user")
 
 class UserCreate(UserBase):
     model_config = ConfigDict(extra="forbid")
@@ -184,16 +194,20 @@ class TeamUserBase(SQLModel):
 class TeamUser(TeamUserBase, table=True):
     __tablename__ = "team_users"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    team_id: UUID = Field(index=True, foreign_key="teams.id")
-    user_id: UUID = Field(index=True, foreign_key="users.id")
+    team_id: UUID = Field(sa_column=Column(ForeignKey("teams.id", ondelete="CASCADE"), index=True, nullable=False))
+    user_id: UUID = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(TIMESTAMP(timezone=True))
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    team: Team = Relationship(back_populates="team_users")
+    user: User = Relationship()
 
     __table_args__ = (
         UniqueConstraint("team_id", "user_id", name="team_user_ukey"),
@@ -228,21 +242,26 @@ class TeamUserPublic(TeamUserBase):
 # USER ROLES
 # =============================
 class UserRoleBase(SQLModel):
-    proficiency_level_id: UUID = Field(index=True, foreign_key="proficiency_levels.id")
+    proficiency_level_id: UUID = Field(sa_column=Column(ForeignKey("proficiency_levels.id"), index=True, nullable=False))
 
 class UserRole(UserRoleBase, table=True):
     __tablename__ = "user_roles"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(index=True, foreign_key="users.id")
-    role_id: UUID = Field(index=True, foreign_key="roles.id")
+    user_id: UUID = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False))
+    role_id: UUID = Field(sa_column=Column(ForeignKey("roles.id", ondelete="CASCADE"), index=True, nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(TIMESTAMP(timezone=True))
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    user: User = Relationship(back_populates="user_roles")
+    role: Role = Relationship(back_populates="user_roles")
+    proficiency_level: ProficiencyLevel = Relationship()
 
     __table_args__ = (
         UniqueConstraint("user_id", "role_id", name="user_role_ukey"),
@@ -299,8 +318,11 @@ class Schedule(ScheduleBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    events: list["Event"] = Relationship(back_populates="schedule")
 
     __table_args__ = (
         CheckConstraint("month >= 1 AND month <= 12", name="schedule_check_month"),
@@ -325,23 +347,29 @@ class EventBase(SQLModel):
     title: str | None = Field(default=None)
     starts_at: datetime = Field(sa_column=Column(TIMESTAMP(timezone=True), index=True))
     ends_at: datetime = Field(sa_column=Column(TIMESTAMP(timezone=True)))
-    team_id: UUID | None = Field(default=None, foreign_key="teams.id")
-    event_type_id: UUID = Field(index=True, foreign_key="event_types.id")
+    team_id: UUID | None = Field(default=None, sa_column=Column(ForeignKey("teams.id"), nullable=True))
+    event_type_id: UUID = Field(sa_column=Column(ForeignKey("event_types.id"), index=True, nullable=False))
     notes: str | None = Field(default=None)
     is_active: bool = Field(default=True)
 
 class Event(EventBase, table=True):
     __tablename__ = "events"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    schedule_id: UUID = Field(index=True, foreign_key="schedules.id")
+    schedule_id: UUID = Field(sa_column=Column(ForeignKey("schedules.id", ondelete="CASCADE"), index=True, nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(TIMESTAMP(timezone=True))
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    schedule: Schedule = Relationship(back_populates="events")
+    team: Team = Relationship()
+    event_type: EventType = Relationship()
+    event_assignments: list["EventAssignment"] = Relationship(back_populates="event")
 
     __table_args__ = (
         CheckConstraint("starts_at < ends_at", name="event_check_time_range"),
@@ -383,31 +411,36 @@ class EventPublic(EventBase):
 # EVENT ASSIGNMENTS
 # =============================
 class RequirementLevel(str, Enum):
-    REQUIRED = "required"
-    PREFERRED = "preferred"
-    OPTIONAL = "optional"
+    REQUIRED = "REQUIRED"
+    PREFERRED = "PREFERRED"
+    OPTIONAL = "OPTIONAL"
 
 class EventAssignmentBase(SQLModel):
     # is_applicable: bool - whether the role is applicable to the event
     is_applicable: bool = Field(default=True)
     # requirement_level: RequirementLevel - importance to fill the role for the event
     requirement_level: RequirementLevel = Field(default=RequirementLevel.REQUIRED, sa_column=Column(SAEnum(RequirementLevel, name="requirement_level")))
-    assigned_user_id: UUID | None = Field(default=None, foreign_key="users.id", index=True)
+    assigned_user_id: UUID | None = Field(default=None, sa_column=Column(ForeignKey("users.id"), index=True, nullable=True))
     is_active: bool = Field(default=True)
 
 class EventAssignment(EventAssignmentBase, table=True):
     __tablename__ = "event_assignments"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    event_id: UUID = Field(index=True, foreign_key="events.id")
-    role_id: UUID = Field(index=True, foreign_key="roles.id")
+    event_id: UUID = Field(sa_column=Column(ForeignKey("events.id", ondelete="CASCADE"), index=True, nullable=False))
+    role_id: UUID = Field(sa_column=Column(ForeignKey("roles.id"), index=True, nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(TIMESTAMP(timezone=True))
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    event: Event = Relationship(back_populates="event_assignments")
+    role: Role = Relationship()
+    assigned_user: User = Relationship()
 
     __table_args__ = (
         UniqueConstraint("event_id", "role_id", name="event_assignment_ukey"),
@@ -472,15 +505,18 @@ class UserUnavailablePeriodBase(SQLModel):
 class UserUnavailablePeriod(UserUnavailablePeriodBase, table=True):
     __tablename__ = "user_unavailable_periods"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(index=True, foreign_key="users.id")
+    user_id: UUID = Field(sa_column=Column(ForeignKey("users.id"), index=True, nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(TIMESTAMP(timezone=True))
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(TIMESTAMP(timezone=True))
+        sa_column=Column(TIMESTAMP(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     )
+
+    # Relationships
+    user: User = Relationship(back_populates="user_unavailable_periods")
 
     __table_args__ = (
         CheckConstraint("starts_at < ends_at", name="user_unavailable_period_check_time_range"),
