@@ -1,7 +1,6 @@
 import pytest
 from uuid import UUID
 from fastapi import status
-from app.db.queries import insert_all_roles_for_user, insert_all_users_for_role
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.routes.conftest import conditional_seed
 from tests.utils.constants import (
