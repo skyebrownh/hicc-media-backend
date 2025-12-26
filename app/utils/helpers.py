@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 from asyncpg import Connection, Record, exceptions
 from fastapi import HTTPException
 
@@ -29,6 +30,9 @@ def table_id(table: str) -> str:
 
     return f"{table[0:len(table) - 1] if table.endswith("s") else table}_id"
 
+def maybe(value: Any, attr: str):
+    """Return the value of an attribute if it is not None, otherwise return None."""
+    return getattr(value, attr) if value else None
 
 def get_date_details(date: datetime.date) -> dict:
     """Calculate and return detailed date information."""

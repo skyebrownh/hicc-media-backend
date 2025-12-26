@@ -15,9 +15,9 @@ from app.routers import (
     team_users_router,
     user_roles_router,
     schedules_router,
-    # events_router,
-    # event_assignments_router,
-    # user_unavailable_periods_router,
+    events_router,
+    event_assignments_router,
+    user_unavailable_periods_router,
 )
 from app.db.database import connect_db, close_db
 
@@ -90,6 +90,6 @@ app.include_router(teams_router)
 app.include_router(team_users_router)
 app.include_router(user_roles_router)
 app.include_router(schedules_router)
-# app.include_router(events_router)
-# app.include_router(event_assignments_router)
-# app.include_router(user_unavailable_periods_router)
+app.include_router(events_router)
+app.include_router(event_assignments_router)
+app.include_router(user_unavailable_periods_router)
