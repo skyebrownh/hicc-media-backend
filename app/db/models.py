@@ -463,12 +463,18 @@ class EventAssignmentUpdate(SQLModel):
 class EventAssignmentPublic(EventAssignmentBase):
     id: UUID
     event_id: UUID
+    role_id: UUID
     # join fields
     event_title: str | None
     event_starts_at: datetime
     event_ends_at: datetime
     event_notes: str | None
     event_is_active: bool
+    event_schedule_id: UUID
+    event_schedule_month: int
+    event_schedule_year: int
+    event_schedule_notes: str | None
+    event_schedule_is_active: bool
     event_team_id: UUID | None
     event_team_name: str | None
     event_team_code: str | None
@@ -482,18 +488,19 @@ class EventAssignmentPublic(EventAssignmentBase):
     role_order: int
     role_code: str
     role_is_active: bool
+    assigned_user_id: UUID | None
     assigned_user_first_name: str | None
     assigned_user_last_name: str | None
     assigned_user_email: str | None
     assigned_user_phone: str | None
     assigned_user_is_active: bool | None
     # from user_roles table
-    proficiency_level_id: UUID
-    proficiency_level_name: str
+    proficiency_level_id: UUID | None
+    proficiency_level_name: str | None
     proficiency_level_rank: int | None
-    proficiency_level_is_assignable: bool
+    proficiency_level_is_assignable: bool | None
     proficiency_level_is_active: bool | None
-    proficiency_level_code: str
+    proficiency_level_code: str | None
 
 # =============================
 # USER UNAVAILABLE PERIODS
