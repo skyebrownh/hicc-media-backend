@@ -1,10 +1,8 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
 from tests.routes.conftest import conditional_seed, count_records
-from tests.utils.constants import (
-    BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3
-)
+from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3
 
 # =============================
 # GET ALL SCHEDULES
@@ -30,6 +28,32 @@ async def test_get_all_schedules_success(async_client, seed_schedules, test_sche
     assert response_json[1]["year"] == 2025
     assert response_json[1]["notes"] == "Second schedule"
     assert response_json[2]["is_active"] is True
+
+# =============================
+# GET SINGLE SCHEDULE
+# =============================
+@pytest.mark.parametrize("id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Schedule not present
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
+@pytest.mark.asyncio
+async def test_get_single_schedule_error_cases(async_client, id, expected_status):
+    """Test GET single schedule error cases (404 and 422)"""
+    response = await async_client.get(f"/schedules/{id}")
+    assert response.status_code == expected_status
+
+@pytest.mark.asyncio
+async def test_get_single_schedule_success(async_client, seed_schedules, test_schedules_data):
+    """Test GET single schedule success case"""
+    seed_schedules([test_schedules_data[0]])
+    response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}")
+    assert_single_item_200(response, expected_item={
+        "id": SCHEDULE_ID_1,
+        "month": 1,
+        "year": 2025,
+        "notes": "First schedule",
+        "is_active": True
+    })
 
 # # =============================
 # # GET ALL SCHEDULE DATES FOR SCHEDULE
@@ -77,36 +101,6 @@ async def test_get_all_schedules_success(async_client, seed_schedules, test_sche
 #     assert response_json[1]["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
 #     assert response_json[1]["notes"] is None
 #     assert response_json[2]["is_active"] is True
-
-# # =============================
-# # GET SINGLE SCHEDULE
-# # =============================
-# @pytest.mark.parametrize("schedule_id, expected_status", [
-#     # Schedule not present
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_schedule_error_cases(async_client, schedule_id, expected_status):
-#     """Test GET single schedule error cases (404 and 422)"""
-#     response = await async_client.get(f"/schedules/{schedule_id}")
-#     assert response.status_code == expected_status
-
-# @pytest.mark.asyncio
-# async def test_get_single_schedule_success(async_client, seed_dates, seed_schedules, test_schedules_data, test_dates_data):
-#     """Test GET single schedule success case"""
-#     # Use DATE_2025_05_01 (index 3)
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
-
-#     response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["month_start_date"] == DATE_2025_05_01
-#     assert response_json["notes"] == "Second schedule"
-#     assert response_json["is_active"] is True
 
 # # =============================
 # # INSERT SCHEDULE

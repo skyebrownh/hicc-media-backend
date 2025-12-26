@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
 from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2, EVENT_TYPE_ID_3, EVENT_TYPE_ID_4
 
@@ -26,33 +26,30 @@ async def test_get_all_event_types_success(async_client, seed_event_types, test_
     assert response_json[1]["code"] == "rehearsal"
     assert response_json[1]["is_active"] is True
 
-# # =============================
-# # GET SINGLE EVENT TYPE
-# # =============================
-# @pytest.mark.parametrize("event_type_id, expected_status", [
-#     # Schedule date type not present
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_event_type_error_cases(async_client, event_type_id, expected_status):
-#     """Test GET single event type error cases (404 and 422)"""
-#     response = await async_client.get(f"/event_types/{event_type_id}")
-#     assert response.status_code == expected_status
+# =============================
+# GET SINGLE EVENT TYPE
+# =============================
+@pytest.mark.parametrize("id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Event type not present
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
+@pytest.mark.asyncio
+async def test_get_single_event_type_error_cases(async_client, id, expected_status):
+    """Test GET single event type error cases (404 and 422)"""
+    response = await async_client.get(f"/event_types/{id}")
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_get_single_event_type_success(async_client, seed_event_types, test_event_types_data):
-#     """Test GET single event type success case"""
-#     await seed_event_types(test_event_types_data[:2])
-    
-#     response = await async_client.get(f"/event_types/{EVENT_TYPE_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["name"] == "Rehearsal"
-#     assert response_json["code"] == "rehearsal"
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_get_single_event_type_success(async_client, seed_event_types, test_event_types_data):
+    """Test GET single event type success case"""
+    seed_event_types([test_event_types_data[0]])
+    response = await async_client.get(f"/event_types/{EVENT_TYPE_ID_1}")
+    assert_single_item_200(response, expected_item={
+        "id": EVENT_TYPE_ID_1,
+        "name": "Service",
+        "code": "service",
+        "is_active": True
+    })
 
 # # =============================
 # # INSERT EVENT TYPE
