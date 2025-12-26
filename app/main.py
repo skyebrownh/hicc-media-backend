@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from app.utils.dependencies import verify_api_key, get_db_session
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
+from app.db.database import connect_db, close_db
 from app.routers import (
     roles_router,
     proficiency_levels_router,
@@ -19,7 +20,6 @@ from app.routers import (
     event_assignments_router,
     user_unavailable_periods_router,
 )
-from app.db.database import connect_db, close_db
 
 # Set up logging configuration
 setup_logging()
