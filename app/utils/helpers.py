@@ -1,7 +1,7 @@
-import datetime
-from typing import Any
-from asyncpg import Connection, Record, exceptions
-from fastapi import HTTPException
+from typing import Any, Type
+from fastapi import HTTPException, status
+from uuid import UUID
+from sqlmodel import Session, SQLModel
 
 # Whitelist of valid table names to prevent SQL injection
 VALID_TABLES = {
@@ -33,3 +33,10 @@ def raise_bad_request_empty_payload(payload):
     """Validate that a payload is not empty, raising HTTPException if it is."""
     if not payload:
         raise HTTPException(status_code=400, detail="Payload cannot be empty")
+
+def get_or_404(session: Session, model: Type[SQLModel], id: UUID) -> Any:
+    """Get an object by ID, raising HTTPException if it is not found."""
+    obj = session.get(model, id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{model.__name__} not found")
+    return obj
