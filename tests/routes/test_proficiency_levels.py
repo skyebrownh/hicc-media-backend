@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
 from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3, PROFICIENCY_LEVEL_ID_4
 
@@ -28,35 +28,32 @@ async def test_get_all_proficiency_levels_success(async_client, seed_proficiency
     assert response_json[2]["is_active"] is True
     assert response_json[2]["is_assignable"] is True
 
-# # =============================
-# # GET SINGLE PROFICIENCY LEVEL
-# # =============================
-# @pytest.mark.parametrize("proficiency_level_id, expected_status", [
-#     # Proficiency level not present
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_proficiency_level_error_cases(async_client, proficiency_level_id, expected_status):
-#     """Test GET single proficiency level error cases (404 and 422)"""
-#     response = await async_client.get(f"/proficiency_levels/{proficiency_level_id}")
-#     assert response.status_code == expected_status
+# =============================
+# GET SINGLE PROFICIENCY LEVEL
+# =============================
+@pytest.mark.parametrize("id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Proficiency level not present
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
+@pytest.mark.asyncio
+async def test_get_single_proficiency_level_error_cases(async_client, id, expected_status):
+    """Test GET single proficiency level error cases (404 and 422)"""
+    response = await async_client.get(f"/proficiency_levels/{id}")
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_get_single_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
-#     """Test GET single proficiency level success case"""
-#     await seed_proficiency_levels([test_proficiency_levels_data[0], test_proficiency_levels_data[1]])
-    
-#     response = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["proficiency_level_name"] == "Proficient"
-#     assert response_json["proficiency_level_number"] == 4
-#     assert response_json["proficiency_level_code"] == "proficient"
-#     assert response_json["is_active"] is True
-#     assert response_json["is_assignable"] is True
+@pytest.mark.asyncio
+async def test_get_single_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
+    """Test GET single proficiency level success case"""
+    seed_proficiency_levels([test_proficiency_levels_data[0]])
+    response = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_1}")
+    assert_single_item_200(response, expected_item={
+        "id": PROFICIENCY_LEVEL_ID_1,
+        "name": "Novice",
+        "code": "novice",
+        "rank": 3,
+        "is_active": True,
+        "is_assignable": True
+    })
 
 # # =============================
 # # INSERT PROFICIENCY LEVEL
