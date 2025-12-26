@@ -3,14 +3,20 @@ from fastapi import APIRouter, Depends, Body, status
 from sqlmodel import Session, select
 from app.db.models import Team, TeamCreate, TeamUpdate
 from app.utils.dependencies import get_db_session
+from app.utils.helpers import get_or_404
 
 router = APIRouter(prefix="/teams")
 
 @router.get("", response_model=list[Team])
 async def get_teams(session: Session = Depends(get_db_session)):
+    """Get all teams"""
     return session.exec(select(Team)).all()
 
-# @router.get("/{team_id}", response_model=TeamOut)
+@router.get("/{id}", response_model=Team)
+async def get_team(id: UUID, session: Session = Depends(get_db_session)):
+    """Get a team by ID"""
+    return get_or_404(session, Team, id)
+
 # async def get_team(team_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
 #         return await fetch_one(conn, table="teams", filters={"team_id": team_id})
 

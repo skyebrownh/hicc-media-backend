@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
 from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4
 
@@ -27,35 +27,32 @@ async def test_get_all_users_success(async_client, seed_users, test_users_data):
     assert response_json[2]["phone"] == "555-3333"
     assert response_json[2]["is_active"] is True
 
-# # =============================
-# # GET SINGLE USER
-# # =============================
-# @pytest.mark.parametrize("user_id, expected_status", [
-#     # User not present
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_user_error_cases(async_client, user_id, expected_status):
-#     """Test GET single user error cases (404 and 422)"""
-#     response = await async_client.get(f"/users/{user_id}")
-#     assert response.status_code == expected_status
+# =============================
+# GET SINGLE USER
+# =============================
+@pytest.mark.parametrize("id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # User not present
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
+@pytest.mark.asyncio
+async def test_get_single_user_error_cases(async_client, id, expected_status):
+    """Test GET single user error cases (404 and 422)"""
+    response = await async_client.get(f"/users/{id}")
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_get_single_user_success(async_client, seed_users, test_users_data):
-#     """Test GET single user success case"""
-#     await seed_users([test_users_data[1]])
-    
-#     response = await async_client.get(f"/users/{USER_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["first_name"] == "Bob"
-#     assert response_json["phone"] == "555-2222"
-#     assert response_json["email"] == "bob@example.com"
-#     assert response_json["last_name"] == "Jones"
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_get_single_user_success(async_client, seed_users, test_users_data):
+    """Test GET single user success case"""
+    seed_users([test_users_data[0]])
+    response = await async_client.get(f"/users/{USER_ID_1}")
+    assert_single_item_200(response, expected_item={
+        "id": USER_ID_1,
+        "first_name": "Alice",
+        "last_name": "Smith",
+        "email": "alice@example.com",
+        "phone": "555-1111",
+        "is_active": True
+    })
 
 # # =============================
 # # INSERT USER

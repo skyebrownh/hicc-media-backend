@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
 from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4
 
@@ -26,33 +26,30 @@ async def test_get_all_teams_success(async_client, seed_teams, test_teams_data):
     assert response_json[1]["code"] == "team_2"
     assert response_json[2]["is_active"] is True
 
-# # =============================
-# # GET SINGLE TEAM
-# # =============================
-# @pytest.mark.parametrize("team_id, expected_status", [
-#     # Team not present
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_team_error_cases(async_client, team_id, expected_status):
-#     """Test GET single team error cases (404 and 422)"""
-#     response = await async_client.get(f"/teams/{team_id}")
-#     assert response.status_code == expected_status
+# =============================
+# GET SINGLE TEAM
+# =============================
+@pytest.mark.parametrize("id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Team not present
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
+@pytest.mark.asyncio
+async def test_get_single_team_error_cases(async_client, id, expected_status):
+    """Test GET single team error cases (404 and 422)"""
+    response = await async_client.get(f"/teams/{id}")
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_get_single_team_success(async_client, seed_teams, test_teams_data):
-#     """Test GET single team success case"""
-#     await seed_teams([test_teams_data[0], test_teams_data[1]])
-    
-#     response = await async_client.get(f"/teams/{TEAM_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["name"] == "Team 2"
-#     assert response_json["code"] == "team_2"
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_get_single_team_success(async_client, seed_teams, test_teams_data):
+    """Test GET single team success case"""
+    seed_teams([test_teams_data[0]])
+    response = await async_client.get(f"/teams/{TEAM_ID_1}")
+    assert_single_item_200(response, expected_item={
+        "id": TEAM_ID_1,
+        "name": "Team 1",
+        "code": "team_1",
+        "is_active": True
+    })
 
 # # =============================
 # # INSERT TEAM

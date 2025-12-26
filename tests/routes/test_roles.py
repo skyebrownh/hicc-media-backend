@@ -1,11 +1,8 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
 from tests.routes.conftest import conditional_seed, count_records
-from tests.utils.constants import (
-    BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4,
-    USER_ID_1, USER_ID_2, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
-)
+from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4, USER_ID_1, USER_ID_2, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
 
 # =============================
 # GET ALL ROLES
@@ -33,35 +30,32 @@ async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
     assert response_json[2]["description"] is None
     assert response_json[2]["is_active"] is True
 
-# # =============================
-# # GET SINGLE ROLE
-# # =============================
-# @pytest.mark.parametrize("role_id, expected_status", [
-#     # Role not present
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_role_error_cases(async_client, role_id, expected_status):
-#     """Test GET single role error cases (404 and 422)"""
-#     response = await async_client.get(f"/roles/{role_id}")
-#     assert response.status_code == expected_status
+# =============================
+# GET SINGLE ROLE
+# =============================
+@pytest.mark.parametrize("id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Role not present
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
+@pytest.mark.asyncio
+async def test_get_single_role_error_cases(async_client, id, expected_status):
+    """Test GET single role error cases (404 and 422)"""
+    response = await async_client.get(f"/roles/{id}")
+    assert response.status_code == expected_status
 
-
-# @pytest.mark.asyncio
-# async def test_get_single_role_success(async_client, seed_roles, test_roles_data):
-#     """Test GET single role success case"""
-#     await seed_roles([test_roles_data[1]])
-    
-#     response = await async_client.get(f"/roles/{role_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["name"] == "Sound"
-#     assert response_json["code"] == "sound"
-#     assert response_json["description"] is None
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_get_single_role_success(async_client, seed_roles, test_roles_data):
+    """Test GET single role success case"""
+    seed_roles([test_roles_data[0]])
+    response = await async_client.get(f"/roles/{ROLE_ID_1}")
+    assert_single_item_200(response, expected_item={
+        "id": ROLE_ID_1,
+        "name": "ProPresenter",
+        "code": "propresenter",
+        "order": 10,
+        "description": None,
+        "is_active": True
+    })
 
 # # =============================
 # # INSERT ROLE
