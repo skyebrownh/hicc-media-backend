@@ -7,9 +7,9 @@ from app.utils.dependencies import get_db_session
 
 router = APIRouter()
 
-# Get all roles for a user
 @router.get("/users/{user_id}/roles", response_model=list[UserRolePublic])
 async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_session)):
+    """Get all roles for a user"""
     user = session.exec(
         select(User)
         .where(User.id == user_id)
@@ -45,9 +45,9 @@ async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_se
         for ur in user.user_roles
     ]
 
-# Get all users for a role
 @router.get("/roles/{role_id}/users", response_model=list[UserRolePublic])
 async def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_session)):
+    """Get all users for a role"""
     role = session.exec(
         select(Role)
         .where(Role.id == role_id)
@@ -82,11 +82,6 @@ async def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_se
         )
         for ur in role.user_roles
     ]
-
-# # Get single user role
-# @router.get("/users/{user_id}/roles/{role_id}", response_model=UserRoleOut)
-# async def get_role_for_user(user_id: UUID, role_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await fetch_one(conn, table="user_roles", filters={"user_id": user_id, "media_role_id": role_id})
 
 # # Insert all roles for a user
 # @router.post("/users/{user_id}/roles", response_model=list[UserRoleOut], status_code=status.HTTP_201_CREATED)
