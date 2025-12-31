@@ -8,16 +8,19 @@ from tests.utils.constants import (
 )
 
 # =============================
-# GET ALL EVENT ASSIGNMENTS
+# GET ALL EVENT ASSIGNMENTS FOR EVENT
 # =============================
 @pytest.mark.asyncio
-async def test_get_all_event_assignments_none_exist(async_client):
-    """Test GET all event assignments when none exist"""
-    response = await async_client.get("/event_assignments")
+async def test_get_all_event_assignments_for_event_none_exist(async_client, seed_schedules, seed_event_types, seed_events, test_schedules_data, test_event_types_data, test_events_data):
+    """Test GET all event assignments for event when none exist returns empty list"""
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    seed_events([test_events_data[0]])
+    response = await async_client.get(f"/events/{EVENT_ID_1}/assignments")
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_all_event_assignments_success(async_client, seed_roles, seed_proficiency_levels, seed_users, seed_user_roles, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_roles_data, test_proficiency_levels_data, test_users_data, test_user_roles_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data):
+async def test_get_all_event_assignments_for_event_success(async_client, seed_roles, seed_proficiency_levels, seed_users, seed_user_roles, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_roles_data, test_proficiency_levels_data, test_users_data, test_user_roles_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data):
     """Test GET all event assignments success case"""
     seed_roles(test_roles_data[:2])
     seed_proficiency_levels([test_proficiency_levels_data[0]])
@@ -25,11 +28,11 @@ async def test_get_all_event_assignments_success(async_client, seed_roles, seed_
     seed_user_roles([test_user_roles_data[0]])
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])
-    seed_events(test_events_data[:2])
-    seed_event_assignments(test_event_assignments_data)
+    seed_events([test_events_data[0]])
+    seed_event_assignments(test_event_assignments_data[:2])
 
-    response = await async_client.get("/event_assignments")
-    assert_list_200(response, expected_length=3)
+    response = await async_client.get(f"/events/{EVENT_ID_1}/assignments")
+    assert_list_200(response, expected_length=2)
     response_json = response.json()
 
     # shape assertions
@@ -58,47 +61,8 @@ async def test_get_all_event_assignments_success(async_client, seed_roles, seed_
     assert response_json[1]["assigned_user_phone"] is None
     assert response_json[1]["event_schedule_id"] == SCHEDULE_ID_2
     assert response_json[1]["event_team_name"] is None
-    assert response_json[2]["event_type_code"] == "service"
-    assert response_json[2]["role_code"] == "propresenter"
-
-# # =============================
-# # GET SINGLE EVENT ASSIGNMENT
-# # =============================
-# @pytest.mark.parametrize("event_assignment_id, expected_status", [
-#     # Event assignment not found
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_event_assignment_error_cases(async_client, event_assignment_id, expected_status):
-#     """Test GET single schedule date role error cases (404 and 422)"""
-#     response = await async_client.get(f"/event_assignments/{event_assignment_id}")
-#     assert response.status_code == expected_status
-
-# @pytest.mark.asyncio
-# async def test_get_single_event_assignment_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_media_roles, seed_schedule_date_roles, seed_users, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_media_roles_data, test_schedule_date_roles_data, test_users_data):
-#     """Test GET single event assignment success case"""
-#     # DATE_2025_05_01 (index 3) for schedule_date
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_schedule_date_types([test_schedule_date_types_data[0]])
-#     await seed_schedule_dates([test_schedule_dates_data[0]])
-#     await seed_users([test_users_data[0]])
-#     await seed_media_roles([test_media_roles_data[0]])
-#     await seed_schedule_date_roles([test_schedule_date_roles_data[0]])
-    
-#     response = await async_client.get(f"/event_assignments/{EVENT_ASSIGNMENT_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["event_assignment_id"] == EVENT_ASSIGNMENT_ID_1
-#     assert response_json["schedule_date_id"] == SCHEDULE_DATE_ID_1
-#     assert response_json["media_role_id"] == MEDIA_ROLE_ID_1
-#     assert response_json["assigned_user_id"] == USER_ID_1
-#     assert response_json["is_required"] is True
-#     assert response_json["is_preferred"] is False
-#     assert response_json["is_active"] is True
+    assert response_json[1]["event_type_code"] == "service"
+    assert response_json[1]["role_code"] == "sound"
 
 # # =============================
 # # INSERT EVENT ASSIGNMENT
