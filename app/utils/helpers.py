@@ -34,7 +34,7 @@ def raise_bad_request_empty_payload(payload):
     if not payload:
         raise HTTPException(status_code=400, detail="Payload cannot be empty")
 
-def get_or_404(session: Session, model: Type[SQLModel], id: UUID) -> Any:
+def get_or_404(session: Session, model: Type[SQLModel], id: UUID) -> SQLModel:
     """Get an object by ID, raising HTTPException if it is not found."""
     obj = session.get(model, id)
     if not obj:

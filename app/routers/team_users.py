@@ -7,9 +7,9 @@ from app.utils.dependencies import get_db_session
 
 router = APIRouter()
 
-# Get all users for a team
 @router.get("/teams/{team_id}/users", response_model=list[TeamUserPublic])
 async def get_team_users_for_team(team_id: UUID, session: Session = Depends(get_db_session)):
+    """Get all users for a team"""
     team = session.exec(
         select(Team)
         .where(Team.id == team_id)
@@ -36,11 +36,6 @@ async def get_team_users_for_team(team_id: UUID, session: Session = Depends(get_
         )
         for tu in team.team_users
     ]
-
-# # Get single team user
-# @router.get("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
-# async def get_team_user(team_id: UUID, user_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await fetch_one(conn, table="team_users", filters={"team_id": team_id, "user_id": user_id})
 
 # # Insert new team user
 # @router.post("/team_users", response_model=TeamUserOut, status_code=status.HTTP_201_CREATED)

@@ -1,7 +1,7 @@
 import pytest
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc
 from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
@@ -9,22 +9,23 @@ from tests.utils.constants import (
 )
 
 # =============================
-# GET ALL EVENTS
+# GET ALL EVENTS FOR SCHEDULE
 # =============================
 @pytest.mark.asyncio
-async def test_get_all_events_none_exist(async_client):
-    """Test when no events exist returns empty list"""
-    response = await async_client.get("/events")
+async def test_get_all_events_for_schedule_none_exist(async_client, seed_schedules, test_schedules_data):
+    """Test GET all events for schedule when none exist returns empty list"""
+    seed_schedules([test_schedules_data[0]])
+    response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/events")
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_all_events_success(async_client, seed_schedules, seed_event_types, seed_events, test_schedules_data, test_event_types_data, test_events_data):
-    """Test getting all events after inserting a variety"""
+async def test_get_all_events_for_schedule_success(async_client, seed_schedules, seed_event_types, seed_events, test_schedules_data, test_event_types_data, test_events_data):
+    """Test GET all events for schedule success case"""
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])
     seed_events(test_events_data)
 
-    response = await async_client.get("/events")
+    response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/events")
     assert_list_200(response, expected_length=3)
     response_json = response.json()
 
@@ -39,46 +40,54 @@ async def test_get_all_events_success(async_client, seed_schedules, seed_event_t
     assert response_json[0]["id"] is not None
     assert response_json[0]["schedule_id"] == SCHEDULE_ID_2
     assert response_json[1]["event_type_id"] == EVENT_TYPE_ID_1
-    assert datetime.fromisoformat(response_json[1]["starts_at"]).date() == date(2025, 5, 2)
-    assert datetime.fromisoformat(response_json[2]["ends_at"]).date() == date(2025, 5, 4)
+    assert parse_to_utc(response_json[1]["starts_at"]) == datetime(2025, 5, 2, tzinfo=timezone.utc)
+    assert parse_to_utc(response_json[2]["ends_at"]) == datetime(2025, 5, 4, tzinfo=timezone.utc)
     assert response_json[2]["team_id"] is None
 
-# # =============================
-# # GET SINGLE EVENT
-# # =============================
-# @pytest.mark.parametrize("event_id, expected_status", [
-#     # Event not found
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_event_error_cases(async_client, event_id, expected_status):
-#     """Test GET single schedule date error cases (404 and 422)"""
-#     response = await async_client.get(f"/events/{event_id}")
-#     assert response.status_code == expected_status
+# =============================
+# GET SINGLE EVENT
+# =============================
+@pytest.mark.parametrize("event_id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Event not found
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
+@pytest.mark.asyncio
+async def test_get_single_event_error_cases(async_client, event_id, expected_status):
+    """Test GET single schedule date error cases (404 and 422)"""
+    response = await async_client.get(f"/events/{event_id}")
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_get_single_schedule_date_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
-#     """Test GET single event success case"""
-#     # DATE_2025_05_01 (index 3) for event
-#     await seed_events([test_events_data[0]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_schedule_date_types([test_schedule_date_types_data[0]])
-#     await seed_schedule_dates([test_schedule_dates_data[0]])
+@pytest.mark.asyncio
+async def test_get_single_event_success(async_client, seed_events, seed_schedules, seed_event_types, test_events_data, test_schedules_data, test_event_types_data):
+    """Test GET single event success case"""
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    seed_events([test_events_data[0]])
+    response = await async_client.get(f"/events/{EVENT_ID_1}")
 
-#     response = await async_client.get(f"/events/{EVENT_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["event_id"] == EVENT_ID_1
-#     assert response_json["schedule_id"] == SCHEDULE_ID_2
-#     assert response_json["starts_at"] == datetime(2025, 5, 1)
-#     assert response_json["ends_at"] == datetime(2025, 5, 2)
-#     assert response_json["team_id"] is None
-#     assert response_json["event_type_id"] == EVENT_TYPE_ID_1
-#     assert response_json["notes"] is None
-#     assert response_json["is_active"] is True
+    response_json = response.json()
+    assert parse_to_utc(response_json["starts_at"]) == datetime(2025, 5, 1, tzinfo=timezone.utc)
+    assert parse_to_utc(response_json["ends_at"]) == datetime(2025, 5, 2, tzinfo=timezone.utc)
+    
+    assert_single_item_200(response, expected_item={
+        "id": EVENT_ID_1,
+        "title": None,
+        "schedule_id": SCHEDULE_ID_2,
+        "team_id": None,
+        "event_type_id": EVENT_TYPE_ID_1,
+        "notes": None,
+        "is_active": True,
+        "schedule_month": 5,
+        "schedule_year": 2025,
+        "schedule_notes": "Second schedule",
+        "schedule_is_active": True,
+        "team_name": None,
+        "team_code": None,
+        "team_is_active": None,
+        "event_type_name": "Service",
+        "event_type_code": "service",
+        "event_type_is_active": True
+    })
 
 # # =============================
 # # GET ALL EVENT ASSIGNMENTS BY EVENT
