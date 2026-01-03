@@ -2,7 +2,7 @@ import pytest
 import json
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc
-from tests.routes.conftest import conditional_seed, count_records
+from tests.api.conftest import conditional_seed, count_records
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
     EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, TEAM_ID_1, USER_ID_1, USER_ID_2, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
