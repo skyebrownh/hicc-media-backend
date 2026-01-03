@@ -4,6 +4,7 @@ from sqlmodel import TIMESTAMP, SQLModel, Field, Column, UniqueConstraint, Check
 from enum import Enum
 from sqlalchemy import Enum as SAEnum, ForeignKey
 from datetime import datetime, timezone
+from app.utils.helpers import maybe
 
 # =============================
 # ROLES
@@ -237,6 +238,29 @@ class TeamUserPublic(TeamUserBase):
     user_email: str | None
     user_phone: str
     user_is_active: bool
+    
+    @classmethod
+    def from_objects(
+        cls,
+        team_user: "TeamUser",
+        team: "Team",
+        user: "User",
+    ):
+        """Create a TeamUserPublic from the related objects."""
+        return cls(
+            id=team_user.id,
+            team_id=team_user.team_id,
+            user_id=team_user.user_id,
+            is_active=team_user.is_active,
+            team_name=team.name,
+            team_code=team.code,
+            team_is_active=team.is_active,
+            user_first_name=user.first_name,
+            user_last_name=user.last_name,
+            user_email=user.email,
+            user_phone=user.phone,
+            user_is_active=user.is_active,
+        )
 
 # =============================
 # USER ROLES
@@ -299,6 +323,37 @@ class UserRolePublic(UserRoleBase):
     proficiency_level_is_assignable: bool
     proficiency_level_is_active: bool
     proficiency_level_code: str
+    
+    @classmethod
+    def from_objects(
+        cls,
+        user_role: "UserRole",
+        user: "User",
+        role: "Role",
+        proficiency_level: "ProficiencyLevel",
+    ):
+        """Create a UserRolePublic from the related objects."""
+        return cls(
+            id=user_role.id,
+            user_id=user_role.user_id,
+            role_id=user_role.role_id,
+            proficiency_level_id=user_role.proficiency_level_id,
+            user_first_name=user.first_name,
+            user_last_name=user.last_name,
+            user_email=user.email,
+            user_phone=user.phone,
+            user_is_active=user.is_active,
+            role_name=role.name,
+            role_description=role.description,
+            role_order=role.order,
+            role_is_active=role.is_active,
+            role_code=role.code,
+            proficiency_level_name=proficiency_level.name,
+            proficiency_level_rank=proficiency_level.rank,
+            proficiency_level_is_assignable=proficiency_level.is_assignable,
+            proficiency_level_is_active=proficiency_level.is_active,
+            proficiency_level_code=proficiency_level.code,
+        )
 
 # =============================
 # SCHEDULES
@@ -406,6 +461,37 @@ class EventPublic(EventBase):
     event_type_name: str
     event_type_code: str
     event_type_is_active: bool
+    
+    @classmethod
+    def from_objects(
+        cls,
+        event: "Event",
+        schedule: "Schedule",
+        event_type: "EventType",
+        team: "Team | None" = None,
+    ):
+        """Create an EventPublic from the related objects."""
+        return cls(
+            id=event.id,
+            schedule_id=event.schedule_id,
+            title=event.title,
+            starts_at=event.starts_at,
+            ends_at=event.ends_at,
+            team_id=event.team_id,
+            event_type_id=event.event_type_id,
+            notes=event.notes,
+            is_active=event.is_active,
+            schedule_month=schedule.month,
+            schedule_year=schedule.year,
+            schedule_notes=schedule.notes,
+            schedule_is_active=schedule.is_active,
+            team_name=maybe(team, "name"),
+            team_code=maybe(team, "code"),
+            team_is_active=maybe(team, "is_active"),
+            event_type_name=event_type.name,
+            event_type_code=event_type.code,
+            event_type_is_active=event_type.is_active,
+        )
 
 # =============================
 # EVENT ASSIGNMENTS
@@ -501,6 +587,62 @@ class EventAssignmentPublic(EventAssignmentBase):
     proficiency_level_is_assignable: bool | None
     proficiency_level_is_active: bool | None
     proficiency_level_code: str | None
+    
+    @classmethod
+    def from_objects(
+        cls,
+        event_assignment: "EventAssignment",
+        event: "Event",
+        role: "Role",
+        event_type: "EventType",
+        team: "Team | None" = None,
+        assigned_user: "User | None" = None,
+        proficiency_level: "ProficiencyLevel | None" = None,
+    ):
+        """Create an EventAssignmentPublic from the related objects."""
+        return cls(
+            id=event_assignment.id,
+            event_id=event.id,
+            role_id=role.id,
+            is_applicable=event_assignment.is_applicable,
+            requirement_level=event_assignment.requirement_level,
+            assigned_user_id=event_assignment.assigned_user_id,
+            is_active=event_assignment.is_active,
+            event_title=event.title,
+            event_starts_at=event.starts_at,
+            event_ends_at=event.ends_at,
+            event_notes=event.notes,
+            event_is_active=event.is_active,
+            event_schedule_id=event.schedule_id,
+            event_schedule_month=event.schedule.month,
+            event_schedule_year=event.schedule.year,
+            event_schedule_notes=event.schedule.notes,
+            event_schedule_is_active=event.schedule.is_active,
+            event_team_id=maybe(team, "id"),
+            event_team_name=maybe(team, "name"),
+            event_team_code=maybe(team, "code"),
+            event_team_is_active=maybe(team, "is_active"),
+            event_type_id=event_type.id,
+            event_type_name=event_type.name,
+            event_type_code=event_type.code,
+            event_type_is_active=event_type.is_active,
+            role_name=role.name,
+            role_description=role.description,
+            role_order=role.order,
+            role_code=role.code,
+            role_is_active=role.is_active,
+            assigned_user_first_name=maybe(assigned_user, "first_name"),
+            assigned_user_last_name=maybe(assigned_user, "last_name"),
+            assigned_user_email=maybe(assigned_user, "email"),
+            assigned_user_phone=maybe(assigned_user, "phone"),
+            assigned_user_is_active=maybe(assigned_user, "is_active"),
+            proficiency_level_id=maybe(proficiency_level, "id"),
+            proficiency_level_name=maybe(proficiency_level, "name"),
+            proficiency_level_rank=maybe(proficiency_level, "rank"),
+            proficiency_level_is_assignable=maybe(proficiency_level, "is_assignable"),
+            proficiency_level_is_active=maybe(proficiency_level, "is_active"),
+            proficiency_level_code=maybe(proficiency_level, "code"),
+        )
 
 class EventAssignmentEmbeddedPublic(EventAssignmentBase):
     id: UUID
@@ -511,6 +653,28 @@ class EventAssignmentEmbeddedPublic(EventAssignmentBase):
     role_code: str
     assigned_user_first_name: str | None
     assigned_user_last_name: str | None
+    
+    @classmethod
+    def from_objects(
+        cls,
+        event_assignment: "EventAssignment",
+        role: "Role",
+        assigned_user: "User | None" = None,
+    ):
+        """Create an EventAssignmentEmbeddedPublic from the related objects."""
+        return cls(
+            id=event_assignment.id,
+            is_applicable=event_assignment.is_applicable,
+            requirement_level=event_assignment.requirement_level,
+            assigned_user_id=event_assignment.assigned_user_id,
+            is_active=event_assignment.is_active,
+            role_id=role.id,
+            role_name=role.name,
+            role_order=role.order,
+            role_code=role.code,
+            assigned_user_first_name=maybe(assigned_user, "first_name"),
+            assigned_user_last_name=maybe(assigned_user, "last_name"),
+        )
 
 class EventWithAssignmentsPublic(SQLModel):
     event: EventPublic

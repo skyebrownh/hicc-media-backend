@@ -17,7 +17,6 @@ async def test_get_all_proficiency_levels_none_exist(async_client):
 async def test_get_all_proficiency_levels_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
     """Test getting all proficiency levels after inserting a variety"""
     seed_proficiency_levels(test_proficiency_levels_data[:3])
-
     response = await async_client.get("/proficiency_levels")
     assert_list_200(response, expected_length=3)
     response_json = response.json()

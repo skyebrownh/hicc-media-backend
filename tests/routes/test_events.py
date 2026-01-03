@@ -10,6 +10,18 @@ from tests.utils.constants import (
 )
 
 # =============================
+# FIXTURES
+# =============================
+@pytest.fixture
+def seed_for_events_tests(seed_users, seed_roles, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_users_data, test_roles_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data):
+    seed_users([test_users_data[0]])
+    seed_roles(test_roles_data[:2])
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    seed_events(test_events_data)
+    seed_event_assignments(test_event_assignments_data[:2])
+
+# =============================
 # GET ALL EVENTS FOR SCHEDULE
 # =============================
 @pytest.mark.asyncio
@@ -20,15 +32,8 @@ async def test_get_all_events_for_schedule_none_exist(async_client, seed_schedul
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_all_events_for_schedule_success(async_client, seed_users, seed_roles, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_users_data, test_roles_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data):
+async def test_get_all_events_for_schedule_success(async_client, seed_for_events_tests):
     """Test GET all events for schedule success case"""
-    seed_users([test_users_data[0]])
-    seed_roles(test_roles_data[:2])
-    seed_schedules([test_schedules_data[1]])
-    seed_event_types([test_event_types_data[0]])
-    seed_events(test_events_data)
-    seed_event_assignments(test_event_assignments_data[:2])
-
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/events")
     assert_list_200(response, expected_length=3)
     response_json = response.json()
@@ -84,16 +89,9 @@ async def test_get_single_event_error_cases(async_client, event_id, expected_sta
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
-async def test_get_single_event_success(async_client, seed_users, seed_roles, seed_events, seed_schedules, seed_event_types, seed_event_assignments, test_users_data, test_roles_data, test_events_data, test_schedules_data, test_event_types_data, test_event_assignments_data):
+async def test_get_single_event_success(async_client, seed_for_events_tests):
     """Test GET single event success case"""
-    seed_users([test_users_data[0]])
-    seed_roles([test_roles_data[0]])
-    seed_schedules([test_schedules_data[1]])
-    seed_event_types([test_event_types_data[0]])
-    seed_events([test_events_data[0]])
-    seed_event_assignments([test_event_assignments_data[0]])
     response = await async_client.get(f"/events/{EVENT_ID_1}")
-
     response_json = response.json()
     assert parse_to_utc(response_json["event"]["starts_at"]) == DATETIME_2025_05_01
     assert parse_to_utc(response_json["event"]["ends_at"]) == DATETIME_2025_05_02
@@ -130,6 +128,19 @@ async def test_get_single_event_success(async_client, seed_users, seed_roles, se
                 "assigned_user_id": USER_ID_1,
                 "assigned_user_first_name": "Alice",
                 "assigned_user_last_name": "Smith",
+                "is_active": True,
+            },
+            {
+                "id": EVENT_ASSIGNMENT_ID_2,
+                "role_id": ROLE_ID_2,
+                "role_name": "Sound",
+                "role_order": 20,
+                "role_code": "sound",
+                "is_applicable": True,
+                "requirement_level": "REQUIRED",
+                "assigned_user_id": None,
+                "assigned_user_first_name": None,
+                "assigned_user_last_name": None,
                 "is_active": True,
             }
         ]

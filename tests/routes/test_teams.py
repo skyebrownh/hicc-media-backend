@@ -17,7 +17,6 @@ async def test_get_all_teams_none_exist(async_client):
 async def test_get_all_teams_success(async_client, seed_teams, test_teams_data):
     """Test getting all teams after inserting a variety"""
     seed_teams(test_teams_data[:3])
-
     response = await async_client.get("/teams")
     assert_list_200(response, expected_length=3)
     response_json = response.json()

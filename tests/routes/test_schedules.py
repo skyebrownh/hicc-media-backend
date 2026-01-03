@@ -17,7 +17,6 @@ async def test_get_all_schedules_none_exist(async_client):
 async def test_get_all_schedules_success(async_client, seed_schedules, test_schedules_data):
     """Test getting all schedules after inserting a variety"""
     seed_schedules(test_schedules_data)
-
     response = await async_client.get("/schedules")
     assert_list_200(response, expected_length=3)
     response_json = response.json()

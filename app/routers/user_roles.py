@@ -21,26 +21,11 @@ async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_se
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return [
-        UserRolePublic(
-            id=ur.id,
-            user_id=ur.user_id,
-            role_id=ur.role_id,
-            proficiency_level_id=ur.proficiency_level_id,
-            user_first_name=user.first_name,
-            user_last_name=user.last_name,
-            user_email=user.email,
-            user_phone=user.phone,
-            user_is_active=user.is_active,
-            role_name=ur.role.name,
-            role_description=ur.role.description,
-            role_order=ur.role.order,
-            role_is_active=ur.role.is_active,
-            role_code=ur.role.code,
-            proficiency_level_name=ur.proficiency_level.name,
-            proficiency_level_rank=ur.proficiency_level.rank,
-            proficiency_level_is_assignable=ur.proficiency_level.is_assignable,
-            proficiency_level_is_active=ur.proficiency_level.is_active,
-            proficiency_level_code=ur.proficiency_level.code,
+        UserRolePublic.from_objects(
+            user_role=ur,
+            user=user,
+            role=ur.role,
+            proficiency_level=ur.proficiency_level,
         )
         for ur in user.user_roles
     ]
@@ -59,26 +44,11 @@ async def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_se
     if not role:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     return [
-        UserRolePublic(
-            id=ur.id,
-            user_id=ur.user_id,
-            role_id=ur.role_id,
-            proficiency_level_id=ur.proficiency_level_id,
-            user_first_name=ur.user.first_name,
-            user_last_name=ur.user.last_name,
-            user_email=ur.user.email,
-            user_phone=ur.user.phone,
-            user_is_active=ur.user.is_active,
-            role_name=ur.role.name,
-            role_description=ur.role.description,
-            role_order=ur.role.order,
-            role_is_active=ur.role.is_active,
-            role_code=ur.role.code,
-            proficiency_level_name=ur.proficiency_level.name,
-            proficiency_level_rank=ur.proficiency_level.rank,
-            proficiency_level_is_assignable=ur.proficiency_level.is_assignable,
-            proficiency_level_is_active=ur.proficiency_level.is_active,
-            proficiency_level_code=ur.proficiency_level.code,
+        UserRolePublic.from_objects(
+            user_role=ur,
+            user=ur.user,
+            role=role,
+            proficiency_level=ur.proficiency_level,
         )
         for ur in role.user_roles
     ]

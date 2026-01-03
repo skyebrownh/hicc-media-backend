@@ -18,11 +18,6 @@ VALID_TABLES = {
     "user_unavailable_periods",
 }
 
-def validate_table_name(table: str) -> None:
-    """Validate that a table name is in the whitelist to prevent SQL injection."""
-    if table not in VALID_TABLES:
-        raise ValueError(f"Invalid table name: {table}. Must be one of {sorted(VALID_TABLES)}")
-
 def maybe(value: Any, attr: str):
     """Return the value of an attribute if it is not None, otherwise return None."""
     if value is None:

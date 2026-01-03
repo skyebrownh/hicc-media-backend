@@ -9,6 +9,16 @@ from tests.utils.constants import (
 )
 
 # =============================
+# FIXTURES
+# =============================
+@pytest.fixture
+def seed_for_user_roles_tests(seed_users, seed_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_roles_data, test_proficiency_levels_data, test_user_roles_data):
+    seed_users(test_users_data[:2])
+    seed_roles(test_roles_data[:2])
+    seed_proficiency_levels(test_proficiency_levels_data[:2])
+    seed_user_roles(test_user_roles_data[:3])
+
+# =============================
 # GET ROLES FOR USER
 # =============================
 @pytest.mark.parametrize("user_id, expected_status", [
@@ -29,13 +39,8 @@ async def test_get_roles_for_user_none_exist(async_client, seed_users, test_user
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_roles_for_user_success(async_client, seed_users, seed_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_roles_data, test_proficiency_levels_data, test_user_roles_data):
+async def test_get_roles_for_user_success(async_client, seed_for_user_roles_tests):
     """Test GET roles for user success case"""
-    seed_users([test_users_data[0]])
-    seed_roles(test_roles_data[:2])
-    seed_proficiency_levels(test_proficiency_levels_data[:2])
-    seed_user_roles(test_user_roles_data[:2])
-
     response = await async_client.get(f"/users/{USER_ID_1}/roles")
     assert_list_200(response, expected_length=2)
     response_json = response.json()
@@ -78,13 +83,8 @@ async def test_get_users_for_role_none_exist(async_client, seed_roles, test_role
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_users_for_role_success(async_client, seed_users, seed_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_roles_data, test_proficiency_levels_data, test_user_roles_data):
+async def test_get_users_for_role_success(async_client, seed_for_user_roles_tests):
     """Test GET users for role success case"""
-    seed_users(test_users_data[:2])
-    seed_roles([test_roles_data[0]])
-    seed_proficiency_levels([test_proficiency_levels_data[0]])
-    seed_user_roles([test_user_roles_data[0], test_user_roles_data[2]])
-
     response = await async_client.get(f"/roles/{ROLE_ID_1}/users")
     assert_list_200(response, expected_length=2)
     response_json = response.json()
