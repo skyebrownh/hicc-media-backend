@@ -1,11 +1,12 @@
 import pytest
-from datetime import datetime, date, timezone
+import json
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc
 from tests.routes.conftest import conditional_seed, count_records
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
-    EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, TEAM_ID_1, USER_ID_1, USER_ID_2
+    EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, TEAM_ID_1, USER_ID_1, USER_ID_2, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
+    DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, DATETIME_2025_05_04
 )
 
 # =============================
@@ -19,30 +20,55 @@ async def test_get_all_events_for_schedule_none_exist(async_client, seed_schedul
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_all_events_for_schedule_success(async_client, seed_schedules, seed_event_types, seed_events, test_schedules_data, test_event_types_data, test_events_data):
+async def test_get_all_events_for_schedule_success(async_client, seed_users, seed_roles, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_users_data, test_roles_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data):
     """Test GET all events for schedule success case"""
+    seed_users([test_users_data[0]])
+    seed_roles(test_roles_data[:2])
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])
     seed_events(test_events_data)
+    seed_event_assignments(test_event_assignments_data[:2])
 
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/events")
     assert_list_200(response, expected_length=3)
     response_json = response.json()
+    print(f"GET all events for schedule response_json: {json.dumps(response_json, indent=4)}")
 
     # shape assertions
-    assert all("id" in e for e in response_json)
-    assert all("schedule_id" in e for e in response_json)
-    assert all("event_type_id" in e for e in response_json)
-    assert all("starts_at" in e for e in response_json)
-    assert all("ends_at" in e for e in response_json)
-    assert all("team_id" in e for e in response_json)
+    for obj in response_json:
+        assert "event" in obj
+        assert "event_assignments" in obj
+        
+        event = obj["event"]
+        assert "id" in event
+        assert "schedule_id" in event
+        assert "event_type_id" in event
+        assert "starts_at" in event
+        assert "ends_at" in event
+        assert "team_id" in event
 
-    assert response_json[0]["id"] is not None
-    assert response_json[0]["schedule_id"] == SCHEDULE_ID_2
-    assert response_json[1]["event_type_id"] == EVENT_TYPE_ID_1
-    assert parse_to_utc(response_json[1]["starts_at"]) == datetime(2025, 5, 2, tzinfo=timezone.utc)
-    assert parse_to_utc(response_json[2]["ends_at"]) == datetime(2025, 5, 4, tzinfo=timezone.utc)
-    assert response_json[2]["team_id"] is None
+        for ea in obj["event_assignments"]:
+            assert "id" in ea
+            assert "role_id" in ea
+            assert "role_name" in ea
+            assert "is_applicable" in ea
+            assert "requirement_level" in ea
+            assert "assigned_user_id" in ea
+            assert "assigned_user_first_name" in ea
+
+    assert response_json[0]["event"]["id"] is not None
+    assert response_json[0]["event"]["schedule_id"] == SCHEDULE_ID_2
+    assert response_json[1]["event"]["event_type_id"] == EVENT_TYPE_ID_1
+    assert parse_to_utc(response_json[1]["event"]["starts_at"]) == DATETIME_2025_05_02
+    assert parse_to_utc(response_json[2]["event"]["ends_at"]) == DATETIME_2025_05_04
+    assert response_json[2]["event"]["team_id"] is None
+    assert response_json[0]["event_assignments"][0]["id"] is not None
+    assert response_json[0]["event_assignments"][0]["role_id"] == ROLE_ID_1
+    assert response_json[0]["event_assignments"][0]["role_name"] == "ProPresenter"
+    assert response_json[0]["event_assignments"][0]["is_applicable"] is True
+    assert response_json[0]["event_assignments"][0]["requirement_level"] == "REQUIRED"
+    assert response_json[0]["event_assignments"][0]["assigned_user_id"] == USER_ID_1
+    assert response_json[0]["event_assignments"][0]["assigned_user_first_name"] == "Alice"
 
 # =============================
 # GET SINGLE EVENT
@@ -58,35 +84,55 @@ async def test_get_single_event_error_cases(async_client, event_id, expected_sta
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
-async def test_get_single_event_success(async_client, seed_events, seed_schedules, seed_event_types, test_events_data, test_schedules_data, test_event_types_data):
+async def test_get_single_event_success(async_client, seed_users, seed_roles, seed_events, seed_schedules, seed_event_types, seed_event_assignments, test_users_data, test_roles_data, test_events_data, test_schedules_data, test_event_types_data, test_event_assignments_data):
     """Test GET single event success case"""
+    seed_users([test_users_data[0]])
+    seed_roles([test_roles_data[0]])
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])
     seed_events([test_events_data[0]])
+    seed_event_assignments([test_event_assignments_data[0]])
     response = await async_client.get(f"/events/{EVENT_ID_1}")
 
     response_json = response.json()
-    assert parse_to_utc(response_json["starts_at"]) == datetime(2025, 5, 1, tzinfo=timezone.utc)
-    assert parse_to_utc(response_json["ends_at"]) == datetime(2025, 5, 2, tzinfo=timezone.utc)
+    assert parse_to_utc(response_json["event"]["starts_at"]) == DATETIME_2025_05_01
+    assert parse_to_utc(response_json["event"]["ends_at"]) == DATETIME_2025_05_02
     
     assert_single_item_200(response, expected_item={
-        "id": EVENT_ID_1,
-        "title": None,
-        "schedule_id": SCHEDULE_ID_2,
-        "team_id": None,
-        "event_type_id": EVENT_TYPE_ID_1,
-        "notes": None,
-        "is_active": True,
-        "schedule_month": 5,
-        "schedule_year": 2025,
-        "schedule_notes": "Second schedule",
-        "schedule_is_active": True,
-        "team_name": None,
-        "team_code": None,
-        "team_is_active": None,
-        "event_type_name": "Service",
-        "event_type_code": "service",
-        "event_type_is_active": True
+        "event": {
+            "id": EVENT_ID_1,
+            "title": None,
+            "schedule_id": SCHEDULE_ID_2,
+            "team_id": None,
+            "event_type_id": EVENT_TYPE_ID_1,
+            "notes": None,
+            "is_active": True,
+            "schedule_month": 5,
+            "schedule_year": 2025,
+            "schedule_notes": "Second schedule",
+            "schedule_is_active": True,
+            "team_name": None,
+            "team_code": None,
+            "team_is_active": None,
+            "event_type_name": "Service",
+            "event_type_code": "service",
+            "event_type_is_active": True
+        },
+        "event_assignments": [
+            {
+                "id": EVENT_ASSIGNMENT_ID_1,
+                "role_id": ROLE_ID_1,
+                "role_name": "ProPresenter",
+                "role_order": 10,
+                "role_code": "propresenter",
+                "is_applicable": True,
+                "requirement_level": "REQUIRED",
+                "assigned_user_id": USER_ID_1,
+                "assigned_user_first_name": "Alice",
+                "assigned_user_last_name": "Smith",
+                "is_active": True,
+            }
+        ]
     })
 
 # # =============================

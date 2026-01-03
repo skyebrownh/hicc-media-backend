@@ -502,6 +502,20 @@ class EventAssignmentPublic(EventAssignmentBase):
     proficiency_level_is_active: bool | None
     proficiency_level_code: str | None
 
+class EventAssignmentEmbeddedPublic(EventAssignmentBase):
+    id: UUID
+    role_id: UUID
+    # join fields
+    role_name: str
+    role_order: int
+    role_code: str
+    assigned_user_first_name: str | None
+    assigned_user_last_name: str | None
+
+class EventWithAssignmentsPublic(SQLModel):
+    event: EventPublic
+    event_assignments: list[EventAssignmentEmbeddedPublic]
+
 # =============================
 # USER UNAVAILABLE PERIODS
 # =============================
