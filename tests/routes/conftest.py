@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import pytest
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
 from tests.utils.constants import (
+    DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_02_29, DATETIME_2025_03_01, DATETIME_2025_03_31, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, DATETIME_2025_05_04,
     USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4,
     TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4,
     ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4,
@@ -86,14 +87,14 @@ def test_user_roles_data():
 @pytest.fixture
 def test_user_unavailable_periods_data():
     """Standard fixture providing array of test user_unavailable_period data"""
-    uup_1 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=datetime(2024, 2, 29, tzinfo=timezone.utc), ends_at=datetime(2024, 3, 1, tzinfo=timezone.utc))
-    uup_2 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=datetime(2025, 1, 1, tzinfo=timezone.utc), ends_at=datetime(2025, 1, 2, tzinfo=timezone.utc))
-    uup_3 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=datetime(2025, 3, 31, tzinfo=timezone.utc), ends_at=datetime(2025, 4, 1, tzinfo=timezone.utc))
-    uup_4 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=datetime(2024, 2, 29, tzinfo=timezone.utc), ends_at=datetime(2024, 3, 1, tzinfo=timezone.utc))
-    uup_5 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=datetime(2025, 1, 1, tzinfo=timezone.utc), ends_at=datetime(2025, 1, 2, tzinfo=timezone.utc))
-    uup_6 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=datetime(2025, 3, 31, tzinfo=timezone.utc), ends_at=datetime(2025, 4, 1, tzinfo=timezone.utc))
-    uup_7 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=datetime(2025, 5, 1, tzinfo=timezone.utc), ends_at=datetime(2025, 5, 2, tzinfo=timezone.utc))
-    uup_8 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=datetime(2025, 5, 1, tzinfo=timezone.utc), ends_at=datetime(2025, 5, 2, tzinfo=timezone.utc))
+    uup_1 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=DATETIME_2025_02_29, ends_at=DATETIME_2025_03_01)
+    uup_2 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=DATETIME_2025_01_01, ends_at=DATETIME_2025_01_02)
+    uup_3 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=DATETIME_2025_03_31, ends_at=DATETIME_2025_04_01)
+    uup_4 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=DATETIME_2025_02_29, ends_at=DATETIME_2025_03_01)
+    uup_5 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=DATETIME_2025_01_01, ends_at=DATETIME_2025_01_02)
+    uup_6 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=DATETIME_2025_03_31, ends_at=DATETIME_2025_04_01)
+    uup_7 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
+    uup_8 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
     return [uup_1, uup_2, uup_3, uup_4, uup_5, uup_6, uup_7, uup_8]
 
 @pytest.fixture
@@ -107,9 +108,9 @@ def test_schedules_data():
 @pytest.fixture
 def test_events_data():
     """Standard fixture providing array of test event data"""
-    event_1 = Event(id=EVENT_ID_1, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=datetime(2025, 5, 1, tzinfo=timezone.utc), ends_at=datetime(2025, 5, 2, tzinfo=timezone.utc))
-    event_2 = Event(id=EVENT_ID_2, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=datetime(2025, 5, 2, tzinfo=timezone.utc), ends_at=datetime(2025, 5, 3, tzinfo=timezone.utc))
-    event_3 = Event(id=EVENT_ID_3, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=datetime(2025, 5, 3, tzinfo=timezone.utc), ends_at=datetime(2025, 5, 4, tzinfo=timezone.utc))
+    event_1 = Event(id=EVENT_ID_1, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
+    event_2 = Event(id=EVENT_ID_2, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=DATETIME_2025_05_02, ends_at=DATETIME_2025_05_03)
+    event_3 = Event(id=EVENT_ID_3, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=DATETIME_2025_05_03, ends_at=DATETIME_2025_05_04)
     return [event_1, event_2, event_3]
 
 @pytest.fixture
