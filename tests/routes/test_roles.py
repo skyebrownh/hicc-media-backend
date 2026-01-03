@@ -18,7 +18,6 @@ async def test_get_all_roles_none_exist(async_client):
 async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
     """Test getting all roles after inserting a variety"""
     seed_roles(test_roles_data[:3])
-
     response = await async_client.get("/roles")
     assert_list_200(response, expected_length=3)
     

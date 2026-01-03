@@ -5,6 +5,15 @@ from tests.routes.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, USER_ID_1, USER_ID_2, USER_ID_3
 
 # =============================
+# FIXTURES
+# =============================
+@pytest.fixture
+def seed_for_team_users_tests(seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
+    seed_teams([test_teams_data[0]])
+    seed_users(test_users_data[:2])
+    seed_team_users(test_team_users_data[:2])
+
+# =============================
 # GET USERS FOR TEAM
 # =============================
 @pytest.mark.parametrize("team_id, expected_status", [
@@ -25,12 +34,8 @@ async def test_get_users_for_team_none_exist(async_client, seed_teams, test_team
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
-async def test_get_users_for_team_success(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
+async def test_get_users_for_team_success(async_client, seed_for_team_users_tests):
     """Test GET team users for team success case"""
-    seed_teams([test_teams_data[0]])
-    seed_users(test_users_data[:2])
-    seed_team_users(test_team_users_data[:2])
-
     response = await async_client.get(f"/teams/{TEAM_ID_1}/users")
     assert_list_200(response, expected_length=2)
     response_json = response.json()

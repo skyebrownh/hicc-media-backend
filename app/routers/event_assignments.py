@@ -4,7 +4,6 @@ from app.db.models import EventAssignment, EventAssignmentCreate, EventAssignmen
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import maybe
 
 router = APIRouter()
 
@@ -26,55 +25,21 @@ async def get_event_assignments(event_id: UUID, session: Session = Depends(get_d
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
     event_assignments_public = []
-    team = event.team
-    event_type = event.event_type
     for ea in event.event_assignments:
         assigned_user = ea.assigned_user
-        role = ea.role
         proficiency_level = None
         if assigned_user:
             proficiency_level = next((ur.proficiency_level for ur in assigned_user.user_roles if ur.role_id == ea.role_id), None)
         
         event_assignments_public.append(
-            EventAssignmentPublic(
-                id=ea.id,
-                event_id=event.id,
-                role_id=role.id,
-                event_title=event.title,
-                event_starts_at=event.starts_at,
-                event_ends_at=event.ends_at,
-                event_notes=event.notes,
-                event_is_active=event.is_active,
-                event_schedule_id=event.schedule_id,
-                event_schedule_month=event.schedule.month,
-                event_schedule_year=event.schedule.year,
-                event_schedule_notes=event.schedule.notes,
-                event_schedule_is_active=event.schedule.is_active,
-                event_team_id=maybe(team, "id"),
-                event_team_name=maybe(team, "name"),
-                event_team_code=maybe(team, "code"),
-                event_team_is_active=maybe(team, "is_active"),
-                event_type_id=event_type.id,
-                event_type_name=event_type.name,
-                event_type_code=event_type.code,
-                event_type_is_active=event_type.is_active,
-                role_name=role.name,
-                role_description=role.description,
-                role_order=role.order,
-                role_code=role.code,
-                role_is_active=role.is_active,
-                assigned_user_id=maybe(assigned_user, "id"),
-                assigned_user_first_name=maybe(assigned_user, "first_name"),
-                assigned_user_last_name=maybe(assigned_user, "last_name"),
-                assigned_user_email=maybe(assigned_user, "email"),
-                assigned_user_phone=maybe(assigned_user, "phone"),
-                assigned_user_is_active=maybe(assigned_user, "is_active"),
-                proficiency_level_id=maybe(proficiency_level, "id"),
-                proficiency_level_name=maybe(proficiency_level, "name"),
-                proficiency_level_rank=maybe(proficiency_level, "rank"),
-                proficiency_level_is_assignable=maybe(proficiency_level, "is_assignable"),
-                proficiency_level_is_active=maybe(proficiency_level, "is_active"),
-                proficiency_level_code=maybe(proficiency_level, "code"),
+            EventAssignmentPublic.from_objects(
+                event_assignment=ea,
+                event=event,
+                role=ea.role,
+                event_type=event.event_type,
+                team=event.team,
+                assigned_user=assigned_user,
+                proficiency_level=proficiency_level,
             )
         )
     return event_assignments_public

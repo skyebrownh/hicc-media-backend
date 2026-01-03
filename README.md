@@ -1,4 +1,4 @@
-# HICC Media API
+# HICC Media Backend
 
 FastAPI + Railway Postgres DB + Redis backend for a scheduling application (specifically for a volunteer church media team)
 

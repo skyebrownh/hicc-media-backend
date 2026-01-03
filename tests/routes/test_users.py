@@ -17,7 +17,6 @@ async def test_get_all_users_none_exist(async_client):
 async def test_get_all_users_success(async_client, seed_users, test_users_data):
     """Test getting all users after inserting a variety"""
     seed_users(test_users_data[:3])
-
     response = await async_client.get("/users")
     assert_list_200(response, expected_length=3)
     response_json = response.json()

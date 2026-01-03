@@ -17,7 +17,6 @@ async def test_get_all_event_types_none_exist(async_client):
 async def test_get_all_event_types_success(async_client, seed_event_types, test_event_types_data):
     """Test getting all event types after inserting a variety"""
     seed_event_types(test_event_types_data[:2])
-
     response = await async_client.get("/event_types")
     assert_list_200(response, expected_length=2)
     response_json = response.json()

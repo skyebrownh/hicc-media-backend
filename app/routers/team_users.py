@@ -20,19 +20,10 @@ async def get_team_users_for_team(team_id: UUID, session: Session = Depends(get_
     if not team:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
     return [
-        TeamUserPublic(
-            id=tu.id,
-            team_id=tu.team_id,
-            user_id=tu.user_id,
-            is_active=tu.is_active,
-            team_name=team.name,
-            team_code=team.code,
-            team_is_active=team.is_active,
-            user_first_name=tu.user.first_name,
-            user_last_name=tu.user.last_name,
-            user_email=tu.user.email,
-            user_phone=tu.user.phone,
-            user_is_active=tu.user.is_active,
+        TeamUserPublic.from_objects(
+            team_user=tu,
+            team=team,
+            user=tu.user,
         )
         for tu in team.team_users
     ]
