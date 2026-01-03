@@ -7,7 +7,7 @@ from app.utils.dependencies import verify_api_key, get_db_session
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
 from app.db.database import connect_db, close_db
-from app.routers import (
+from app.api import (
     roles_router,
     proficiency_levels_router,
     event_types_router,

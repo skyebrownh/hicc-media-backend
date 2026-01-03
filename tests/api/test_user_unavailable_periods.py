@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, date
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
-from tests.routes.conftest import conditional_seed
+from tests.api.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_3
 
 # # =============================

@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
-from tests.routes.conftest import conditional_seed
+from tests.api.conftest import conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, EVENT_ID_1, EVENT_ID_2, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3,
     USER_ID_1, USER_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, SCHEDULE_ID_2
