@@ -8,12 +8,12 @@ from app.utils.helpers import get_or_404
 router = APIRouter(prefix="/teams")
 
 @router.get("", response_model=list[Team])
-async def get_teams(session: Session = Depends(get_db_session)):
+async def get_all_teams(session: Session = Depends(get_db_session)):
     """Get all teams"""
     return session.exec(select(Team)).all()
 
 @router.get("/{id}", response_model=Team)
-async def get_team(id: UUID, session: Session = Depends(get_db_session)):
+async def get_single_team(id: UUID, session: Session = Depends(get_db_session)):
     """Get a team by ID"""
     return get_or_404(session, Team, id)
 
