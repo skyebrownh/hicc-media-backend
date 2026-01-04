@@ -8,12 +8,12 @@ from app.utils.helpers import get_or_404
 router = APIRouter(prefix="/proficiency_levels")
 
 @router.get("", response_model=list[ProficiencyLevel])
-async def get_proficiency_levels(session: Session = Depends(get_db_session)):
+async def get_all_proficiency_levels(session: Session = Depends(get_db_session)):
     """Get all proficiency levels"""
     return session.exec(select(ProficiencyLevel)).all()
 
 @router.get("/{id}", response_model=ProficiencyLevel)
-async def get_proficiency_level(id: UUID, session: Session = Depends(get_db_session)):
+async def get_single_proficiency_level(id: UUID, session: Session = Depends(get_db_session)):
     """Get a proficiency level by ID"""
     return get_or_404(session, ProficiencyLevel, id)
 

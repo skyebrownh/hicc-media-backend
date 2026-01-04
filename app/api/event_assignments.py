@@ -1,29 +1,18 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, HTTPException
 from app.db.models import EventAssignment, EventAssignmentCreate, EventAssignmentUpdate, EventAssignmentPublic, Event, User, UserRole
-from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
+from sqlmodel import Session
 from app.utils.dependencies import get_db_session
+from app.services.scheduling import get_event
 
 router = APIRouter()
 
 @router.get("/events/{event_id}/assignments", response_model=list[EventAssignmentPublic])
-async def get_event_assignments(event_id: UUID, session: Session = Depends(get_db_session)):
+async def get_event_assignments_by_event(event_id: UUID, session: Session = Depends(get_db_session)):
     """Get all event assignments for an event"""
-    event = session.exec(
-        select(Event)
-        .where(Event.id == event_id)
-        .options(
-            selectinload(Event.schedule),
-            selectinload(Event.team),
-            selectinload(Event.event_type),
-            selectinload(Event.event_assignments).selectinload(EventAssignment.role),
-            selectinload(Event.event_assignments).selectinload(EventAssignment.assigned_user).selectinload(User.user_roles).selectinload(UserRole.proficiency_level)
-        )
-    ).one_or_none()
+    event = get_event(session, event_id)
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
-
     event_assignments_public = []
     for ea in event.event_assignments:
         assigned_user = ea.assigned_user

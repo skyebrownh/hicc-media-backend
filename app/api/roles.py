@@ -8,12 +8,12 @@ from app.utils.helpers import get_or_404
 router = APIRouter(prefix="/roles")
 
 @router.get("", response_model=list[Role])
-async def get_roles(session: Session = Depends(get_db_session)):
+async def get_all_roles(session: Session = Depends(get_db_session)):
     """Get all roles"""
     return session.exec(select(Role)).all()
 
 @router.get("/{id}", response_model=Role)
-async def get_role(id: UUID, session: Session = Depends(get_db_session)):
+async def get_single_role(id: UUID, session: Session = Depends(get_db_session)):
     """Get a role by ID"""
     return get_or_404(session, Role, id)
 

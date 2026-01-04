@@ -8,12 +8,12 @@ from app.utils.helpers import get_or_404
 router = APIRouter(prefix="/event_types")
 
 @router.get("", response_model=list[EventType])
-async def get_event_types(session: Session = Depends(get_db_session)):
+async def get_all_event_types(session: Session = Depends(get_db_session)):
     """Get all event types"""
     return session.exec(select(EventType)).all()
 
 @router.get("/{id}", response_model=EventType)
-async def get_event_type(id: UUID, session: Session = Depends(get_db_session)):
+async def get_single_event_type(id: UUID, session: Session = Depends(get_db_session)):
     """Get an event type by ID"""
     return get_or_404(session, EventType, id)
 

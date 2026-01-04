@@ -1,23 +1,16 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, HTTPException
 from app.db.models import UserRole, UserRoleCreate, UserRoleUpdate, UserRolePublic, User, Role, ProficiencyLevel
-from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
+from sqlmodel import Session
 from app.utils.dependencies import get_db_session
+from app.services.scheduling import get_user_for_user_roles, get_role_for_user_roles
 
 router = APIRouter()
 
 @router.get("/users/{user_id}/roles", response_model=list[UserRolePublic])
 async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_session)):
     """Get all roles for a user"""
-    user = session.exec(
-        select(User)
-        .where(User.id == user_id)
-        .options(
-            selectinload(User.user_roles).selectinload(UserRole.role),
-            selectinload(User.user_roles).selectinload(UserRole.proficiency_level)
-        )
-    ).one_or_none()
+    user = get_user_for_user_roles(session, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return [
@@ -33,14 +26,7 @@ async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_se
 @router.get("/roles/{role_id}/users", response_model=list[UserRolePublic])
 async def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_session)):
     """Get all users for a role"""
-    role = session.exec(
-        select(Role)
-        .where(Role.id == role_id)
-        .options(
-            selectinload(Role.user_roles).selectinload(UserRole.user),
-            selectinload(Role.user_roles).selectinload(UserRole.proficiency_level)
-        )
-    ).one_or_none()
+    role = get_role_for_user_roles(session, role_id)
     if not role:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     return [

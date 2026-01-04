@@ -1,25 +1,16 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, HTTPException
 from app.db.models import Event, EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic, EventAssignmentEmbeddedPublic, EventAssignment, Schedule
-from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
+from sqlmodel import Session
 from app.utils.dependencies import get_db_session
+from app.services.scheduling import get_event, get_schedule
 
 router = APIRouter()
 
 @router.get("/schedules/{schedule_id}/events", response_model=list[EventWithAssignmentsPublic])
 async def get_events_for_schedule(schedule_id: UUID, session: Session = Depends(get_db_session)):
     """Get all events for a schedule"""
-    schedule = session.exec(
-        select(Schedule)
-        .where(Schedule.id == schedule_id)
-        .options(
-            selectinload(Schedule.events).selectinload(Event.team),
-            selectinload(Schedule.events).selectinload(Event.event_type),
-            selectinload(Schedule.events).selectinload(Event.event_assignments).selectinload(EventAssignment.role),
-            selectinload(Schedule.events).selectinload(Event.event_assignments).selectinload(EventAssignment.assigned_user)
-        )
-    ).one_or_none()
+    schedule = get_schedule(session, schedule_id)
     if not schedule:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
 
@@ -47,17 +38,7 @@ async def get_events_for_schedule(schedule_id: UUID, session: Session = Depends(
 @router.get("/events/{event_id}", response_model=EventWithAssignmentsPublic)
 async def get_single_event(event_id: UUID, session: Session = Depends(get_db_session)):
     """Get a single event"""
-    event = session.exec(
-        select(Event)
-        .where(Event.id == event_id)
-        .options(
-            selectinload(Event.schedule),
-            selectinload(Event.team),
-            selectinload(Event.event_type),
-            selectinload(Event.event_assignments).selectinload(EventAssignment.role),
-            selectinload(Event.event_assignments).selectinload(EventAssignment.assigned_user),
-        )
-    ).one_or_none()
+    event = get_event(session, event_id)
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
