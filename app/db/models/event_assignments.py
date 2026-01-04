@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship, Column, ForeignKey, UniqueConstraint, Enum as SAEnum, TIMESTAMP
 from .enums import RequirementLevel
 from datetime import datetime, timezone
-from app.utils.helpers import maybe
 
 if TYPE_CHECKING:
     from app.db.models import Event, Role, User, EventType, Team, ProficiencyLevel
@@ -127,10 +126,10 @@ class EventAssignmentPublic(EventAssignmentBase):
             event_schedule_year=event.schedule.year,
             event_schedule_notes=event.schedule.notes,
             event_schedule_is_active=event.schedule.is_active,
-            event_team_id=maybe(team, "id"),
-            event_team_name=maybe(team, "name"),
-            event_team_code=maybe(team, "code"),
-            event_team_is_active=maybe(team, "is_active"),
+            event_team_id=getattr(team, "id", None),
+            event_team_name=getattr(team, "name", None),
+            event_team_code=getattr(team, "code", None),
+            event_team_is_active=getattr(team, "is_active", None),
             event_type_id=event_type.id,
             event_type_name=event_type.name,
             event_type_code=event_type.code,
@@ -140,17 +139,17 @@ class EventAssignmentPublic(EventAssignmentBase):
             role_order=role.order,
             role_code=role.code,
             role_is_active=role.is_active,
-            assigned_user_first_name=maybe(assigned_user, "first_name"),
-            assigned_user_last_name=maybe(assigned_user, "last_name"),
-            assigned_user_email=maybe(assigned_user, "email"),
-            assigned_user_phone=maybe(assigned_user, "phone"),
-            assigned_user_is_active=maybe(assigned_user, "is_active"),
-            proficiency_level_id=maybe(proficiency_level, "id"),
-            proficiency_level_name=maybe(proficiency_level, "name"),
-            proficiency_level_rank=maybe(proficiency_level, "rank"),
-            proficiency_level_is_assignable=maybe(proficiency_level, "is_assignable"),
-            proficiency_level_is_active=maybe(proficiency_level, "is_active"),
-            proficiency_level_code=maybe(proficiency_level, "code"),
+            assigned_user_first_name=getattr(assigned_user, "first_name", None),
+            assigned_user_last_name=getattr(assigned_user, "last_name", None),
+            assigned_user_email=getattr(assigned_user, "email", None),
+            assigned_user_phone=getattr(assigned_user, "phone", None),
+            assigned_user_is_active=getattr(assigned_user, "is_active", None),
+            proficiency_level_id=getattr(proficiency_level, "id", None),
+            proficiency_level_name=getattr(proficiency_level, "name", None),
+            proficiency_level_rank=getattr(proficiency_level, "rank", None),
+            proficiency_level_is_assignable=getattr(proficiency_level, "is_assignable", None),
+            proficiency_level_is_active=getattr(proficiency_level, "is_active", None),
+            proficiency_level_code=getattr(proficiency_level, "code", None),
         )
 
 class EventAssignmentEmbeddedPublic(EventAssignmentBase):
@@ -181,6 +180,6 @@ class EventAssignmentEmbeddedPublic(EventAssignmentBase):
             role_name=role.name,
             role_order=role.order,
             role_code=role.code,
-            assigned_user_first_name=maybe(assigned_user, "first_name"),
-            assigned_user_last_name=maybe(assigned_user, "last_name"),
+            assigned_user_first_name=getattr(assigned_user, "first_name", None),
+            assigned_user_last_name=getattr(assigned_user, "last_name", None),
         )

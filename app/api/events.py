@@ -1,9 +1,10 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, HTTPException
-from app.db.models import Event, EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic, EventAssignmentEmbeddedPublic, EventAssignment, Schedule
+from app.db.models import Event, EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic, EventAssignmentEmbeddedPublic
 from sqlmodel import Session
 from app.utils.dependencies import get_db_session
 from app.services.scheduling import get_event, get_schedule
+from app.utils.helpers import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event
 
 router = APIRouter()
 
@@ -13,27 +14,7 @@ async def get_events_for_schedule(schedule_id: UUID, session: Session = Depends(
     schedule = get_schedule(session, schedule_id)
     if not schedule:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
-
-    events_with_assignments_public = []
-    for event in schedule.events:
-        events_with_assignments_public.append(
-            EventWithAssignmentsPublic(
-                event=EventPublic.from_objects(
-                    event=event,
-                    schedule=schedule,
-                    event_type=event.event_type,
-                    team=event.team,
-                ),
-                event_assignments=[
-                    EventAssignmentEmbeddedPublic.from_objects(
-                        event_assignment=ea,
-                        role=ea.role,
-                        assigned_user=ea.assigned_user,
-                    ) for ea in event.event_assignments
-                ],
-            )
-        )
-    return events_with_assignments_public
+    return build_events_with_assignments_from_schedule(schedule)
 
 @router.get("/events/{event_id}", response_model=EventWithAssignmentsPublic)
 async def get_single_event(event_id: UUID, session: Session = Depends(get_db_session)):
@@ -41,22 +22,7 @@ async def get_single_event(event_id: UUID, session: Session = Depends(get_db_ses
     event = get_event(session, event_id)
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
-
-    return EventWithAssignmentsPublic(
-        event=EventPublic.from_objects(
-            event=event,
-            schedule=event.schedule,
-            event_type=event.event_type,
-            team=event.team,
-        ),
-        event_assignments=[
-            EventAssignmentEmbeddedPublic.from_objects(
-                event_assignment=ea,
-                role=ea.role,
-                assigned_user=ea.assigned_user,
-            ) for ea in event.event_assignments
-        ],
-    )
+    return build_events_with_assignments_from_event(event)
     
 # # Get single event
 # @router.get("/{event_id}", response_model=ScheduleDateOut)

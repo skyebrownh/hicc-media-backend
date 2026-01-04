@@ -3,10 +3,9 @@ from pydantic import ConfigDict
 from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship, Column, ForeignKey, CheckConstraint, TIMESTAMP
 from datetime import datetime, timezone
-from app.utils.helpers import maybe
 
 if TYPE_CHECKING:
-    from app.db.models import Schedule, EventType, Team, EventAssignment, EventAssignmentEmbeddedPublic
+    from app.db.models import Schedule, EventType, Team, EventAssignment, EventAssignmentEmbeddedPublic, UserUnavailablePeriodEmbeddedPublic
 
 class EventBase(SQLModel):
     title: str | None = Field(default=None)
@@ -96,9 +95,9 @@ class EventPublic(EventBase):
             schedule_year=schedule.year,
             schedule_notes=schedule.notes,
             schedule_is_active=schedule.is_active,
-            team_name=maybe(team, "name"),
-            team_code=maybe(team, "code"),
-            team_is_active=maybe(team, "is_active"),
+            team_name=getattr(team, "name", None),
+            team_code=getattr(team, "code", None),
+            team_is_active=getattr(team, "is_active", None),
             event_type_name=event_type.name,
             event_type_code=event_type.code,
             event_type_is_active=event_type.is_active,
@@ -107,3 +106,8 @@ class EventPublic(EventBase):
 class EventWithAssignmentsPublic(SQLModel):
     event: EventPublic
     event_assignments: list["EventAssignmentEmbeddedPublic"]
+
+class EventWithAssignmentsAndAvailabilityPublic(SQLModel):
+    event: EventPublic
+    event_assignments: list["EventAssignmentEmbeddedPublic"]
+    availability: list["UserUnavailablePeriodEmbeddedPublic"]

@@ -3,9 +3,10 @@ from pydantic import ConfigDict
 from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship, CheckConstraint, Column, TIMESTAMP
 from datetime import datetime, timezone
+# from app.utils.helpers import build_events_with_assignments_and_availability_from_schedule
 
 if TYPE_CHECKING:
-    from app.db.models import Event, EventWithAssignmentsPublic
+    from app.db.models import Event, EventWithAssignmentsAndAvailabilityPublic
 
 class ScheduleBase(SQLModel):
     is_active: bool = Field(default=True)
@@ -47,4 +48,13 @@ class ScheduleUpdate(SQLModel):
 
 class ScheduleGridPublic(SQLModel):
     schedule: Schedule
-    events: list["EventWithAssignmentsPublic"]
+    events: list["EventWithAssignmentsAndAvailabilityPublic"]
+
+    # @classmethod
+    # def from_objects(cls, schedule: "Schedule"):
+    #     """Create a ScheduleGridPublic from the related objects."""
+    #     events = build_events_with_assignments_and_availability_from_schedule(schedule)
+    #     return cls(
+    #         schedule=schedule,
+    #         events=events
+    #     )

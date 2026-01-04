@@ -1,7 +1,15 @@
-from typing import Any, Type
+from typing import TYPE_CHECKING, Type
 from fastapi import HTTPException, status
 from uuid import UUID
 from sqlmodel import Session, SQLModel
+from app.db.models import (
+    EventWithAssignmentsPublic,
+    EventPublic,
+    EventAssignmentEmbeddedPublic,
+)
+
+if TYPE_CHECKING:
+    from app.db.models import Schedule, Event
 
 # Whitelist of valid table names to prevent SQL injection
 VALID_TABLES = {
@@ -18,12 +26,6 @@ VALID_TABLES = {
     "user_unavailable_periods",
 }
 
-def maybe(value: Any, attr: str):
-    """Return the value of an attribute if it is not None, otherwise return None."""
-    if value is None:
-        return None
-    return getattr(value, attr, None)
-
 def raise_bad_request_empty_payload(payload):
     """Validate that a payload is not empty, raising HTTPException if it is."""
     if not payload:
@@ -35,3 +37,73 @@ def get_or_404(session: Session, model: Type[SQLModel], id: UUID) -> SQLModel:
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{model.__name__} not found")
     return obj
+
+def build_events_with_assignments_from_schedule(schedule: "Schedule") -> list["EventWithAssignmentsPublic"]:
+    """Build a list of EventWithAssignmentsPublic from a Schedule."""
+    events = []
+    for event in schedule.events:
+        events.append(
+            EventWithAssignmentsPublic(
+                event=EventPublic.from_objects(
+                    event=event,
+                    schedule=schedule,
+                    event_type=event.event_type,
+                    team=event.team,
+                ),
+                event_assignments=[
+                    EventAssignmentEmbeddedPublic.from_objects(
+                        event_assignment=ea,
+                        role=ea.role,
+                        assigned_user=ea.assigned_user,
+                    ) for ea in event.event_assignments
+                ],
+            )
+        )
+    return events
+
+# def build_events_with_assignments_and_availability_from_schedule(schedule: "Schedule") -> list["EventWithAssignmentsAndAvailabilityPublic"]:
+#     """Build a list of EventWithAssignmentsAndAvailabilityPublic from a Schedule."""
+#     events = []
+#     for event in schedule.events:
+#         events.append(
+#             EventWithAssignmentsAndAvailabilityPublic(
+#                 event=EventPublic.from_objects(
+#                     event=event,
+#                     schedule=schedule,
+#                     event_type=event.event_type,
+#                     team=event.team,
+#                 ),
+#                 event_assignments=[
+#                     EventAssignmentEmbeddedPublic.from_objects(
+#                         event_assignment=ea,
+#                         role=ea.role,
+#                         assigned_user=ea.assigned_user,
+#                     ) for ea in event.event_assignments
+#                 ],
+#                 availability=[
+#                     UserUnavailablePeriodEmbeddedPublic(
+#                         user_first_name=ua.user.first_name,
+#                         user_last_name=ua.user.last_name,
+#                     ) for ua in event.availability
+#                 ],
+#             )
+#         )
+#     return events
+
+def build_events_with_assignments_from_event(event: "Event") -> "EventWithAssignmentsPublic":
+    """Build a EventWithAssignmentsPublic from an Event."""
+    return EventWithAssignmentsPublic(
+        event=EventPublic.from_objects(
+            event=event,
+            schedule=event.schedule,
+            event_type=event.event_type,
+            team=event.team,
+        ),
+        event_assignments=[
+            EventAssignmentEmbeddedPublic.from_objects(
+                event_assignment=ea,
+                role=ea.role,
+                assigned_user=ea.assigned_user,
+            ) for ea in event.event_assignments
+        ],
+    )
