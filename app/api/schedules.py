@@ -1,6 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, HTTPException
-from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic, EventWithAssignmentsPublic, Event, EventAssignment
+from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic
 from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import get_or_404
@@ -18,12 +18,13 @@ async def get_single_schedule(id: UUID, session: Session = Depends(get_db_sessio
     """Get a schedule by ID"""
     return get_or_404(session, Schedule, id)
 
-# @router.get("/{id}/grid", response_model=list[ScheduleGridPublic])
+# @router.get("/{id}/grid", response_model=ScheduleGridPublic)
 # async def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)):
 #     """Get a schedule grid by ID"""
 #     schedule = get_schedule(session, id)
 #     if not schedule:
 #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
+#     return ScheduleGridPublic.from_objects(schedule=schedule)
 
 # @router.post("", response_model=ScheduleOut, status_code=status.HTTP_201_CREATED)
 # async def post_schedule(schedule: ScheduleCreate, conn: asyncpg.Connection = Depends(get_db_connection)):

@@ -52,3 +52,7 @@ class UserUnavailablePeriodPublic(UserUnavailablePeriodBase):
     user_email: str | None
     user_phone: str
     user_is_active: bool
+
+class UserUnavailablePeriodEmbeddedPublic(SQLModel):
+    user_first_name: str
+    user_last_name: str
