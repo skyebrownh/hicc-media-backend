@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status
+from fastapi import APIRouter, Depends, Body, status, Response
 from sqlmodel import Session, select
 from app.db.models import ProficiencyLevel, ProficiencyLevelCreate, ProficiencyLevelUpdate 
 from app.utils.dependencies import get_db_session
@@ -29,6 +29,12 @@ async def get_single_proficiency_level(id: UUID, session: Session = Depends(get_
 # ):
 #     return await update_proficiency_level(conn, proficiency_level_id=proficiency_level_id, payload=proficiency_level_update)
 
-# @router.delete("/{proficiency_level_id}", response_model=ProficiencyLevelOut)
-# async def delete_proficiency_level(proficiency_level_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await delete_one(conn, table="proficiency_levels", filters={"proficiency_level_id": proficiency_level_id})
+@router.delete("/{id}")
+async def delete_proficiency_level(id: UUID, session: Session = Depends(get_db_session)):
+    """Delete a proficiency level by ID"""
+    proficiency_level = session.get(ProficiencyLevel, id)
+    if not proficiency_level:
+        return Response(status_code=status.HTTP_204_NO_CONTENT) # Proficiency level not found, nothing to delete
+    session.delete(proficiency_level)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT) # Proficiency level deleted successfully

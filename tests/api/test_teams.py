@@ -143,38 +143,29 @@ async def test_get_single_team_success(async_client, seed_teams, test_teams_data
 #     for field, expected_value in unchanged_fields.items():
 #         assert response_json[field] == expected_value
 
-# # =============================
-# # DELETE TEAM
-# # =============================
-# @pytest.mark.parametrize("team_indices, team_path, expected_status", [
-#     # team not found
-#     ([], f"/teams/{BAD_ID_0000}", status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ([0], "/teams/invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, team_path, expected_status):
-#     """Test DELETE team error cases (404 and 422)"""
-#     await conditional_seed(team_indices, test_teams_data, seed_teams)
-    
-#     response = await async_client.delete(team_path)
-#     assert response.status_code == expected_status
+# =============================
+# DELETE TEAM
+# =============================
+@pytest.mark.asyncio
+async def test_delete_team_error_cases(async_client):
+    """Test DELETE team error cases (422)"""
+    response = await async_client.delete("/teams/invalid-uuid-format")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_team_success(async_client, seed_teams, test_teams_data):
-#     """Test successful team deletion with verification"""
-#     await seed_teams([test_teams_data[1]])
+@pytest.mark.asyncio
+async def test_delete_team_success(async_client, seed_teams, test_teams_data):
+    """Test successful team deletion with verification"""
+    seed_teams([test_teams_data[0]])
+    response = await async_client.delete(f"/teams/{TEAM_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     # Test successful deletion
-#     response = await async_client.delete(f"/teams/{TEAM_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["id"] == TEAM_ID_2
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/teams/{TEAM_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-#     # Verify deletion by trying to get it again
-#     verify_response = await async_client.get(f"/teams/{TEAM_ID_2}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid team id that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/teams/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
 # # =============================
 # # DELETE TEAM CASCADE

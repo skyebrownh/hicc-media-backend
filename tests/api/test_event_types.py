@@ -143,31 +143,26 @@ async def test_get_single_event_type_success(async_client, seed_event_types, tes
 #     for field, expected_value in unchanged_fields.items():
 #         assert response_json[field] == expected_value
 
-# # =============================
-# # DELETE EVENT TYPE
-# # =============================
-# @pytest.mark.parametrize("event_type_path, expected_status", [
-#     # event type not found
-#     (f"/event_types/{BAD_ID_0000}", status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ("/event_types/invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_event_type_error_cases(async_client, event_type_path, expected_status):
-#     """Test DELETE event type error cases (404 and 422)"""
-#     response = await async_client.delete(event_type_path)
-#     assert response.status_code == expected_status
+# =============================
+# DELETE EVENT TYPE
+# =============================
+@pytest.mark.asyncio
+async def test_delete_event_type_error_cases(async_client):
+    """Test DELETE event type error cases (422)"""
+    response = await async_client.delete("/event_types/invalid-uuid-format")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_event_type_success(async_client, seed_event_types, test_event_types_data):
-#     """Test successful event type deletion with verification"""
-#     await seed_event_types([test_event_types_data[1]])
+@pytest.mark.asyncio
+async def test_delete_event_type_success(async_client, seed_event_types, test_event_types_data):
+    """Test successful event type deletion with verification"""
+    seed_event_types([test_event_types_data[0]])
+    response = await async_client.delete(f"/event_types/{EVENT_TYPE_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     response = await async_client.delete(f"/event_types/{EVENT_TYPE_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["id"] == EVENT_TYPE_ID_2
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/event_types/{EVENT_TYPE_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-#     verify_response = await async_client.get(f"/event_types/{EVENT_TYPE_ID_2}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid event type id that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/event_types/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT

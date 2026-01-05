@@ -155,39 +155,29 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
 #     for field, expected_value in unchanged_fields.items():
 #         assert response_json[field] == expected_value
 
-# # =============================
-# # DELETE ROLE
-# # =============================
-# @pytest.mark.parametrize("role_indices, role_path, expected_status", [
-#     # role not found
-#     ([], f"/roles/{BAD_ID_0000}", status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ([0], "/roles/invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, role_path, expected_status):
-#     """Test DELETE role error cases (404 and 422)"""
-#     await conditional_seed(role_indices, test_roles_data, seed_roles)
-    
-#     response = await async_client.delete(role_path)
-#     assert response.status_code == expected_status
+# =============================
+# DELETE ROLE
+# =============================
+@pytest.mark.asyncio
+async def test_delete_role_error_cases(async_client):
+    """Test DELETE role error cases (422)"""
+    response = await async_client.delete("/roles/invalid-uuid-format")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
+@pytest.mark.asyncio
+async def test_delete_role_success(async_client, seed_roles, test_roles_data):
+    """Test successful role deletion with verification"""
+    seed_roles([test_roles_data[0]])
+    response = await async_client.delete(f"/roles/{ROLE_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_role_success(async_client, seed_roles, test_roles_data):
-#     """Test successful role deletion with verification"""
-#     await seed_roles([test_roles_data[1]])
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/roles/{ROLE_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-#     # Test successful deletion
-#     response = await async_client.delete(f"/roles/{role_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["id"] == role_ID_2
-
-#     # Verify deletion by trying to get it again
-#     verify_response = await async_client.get(f"/roles/{role_ID_2}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid role id that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/roles/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
 # # =============================
 # # DELETE ROLE CASCADE

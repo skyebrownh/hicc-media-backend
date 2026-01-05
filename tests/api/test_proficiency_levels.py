@@ -152,35 +152,26 @@ async def test_get_single_proficiency_level_success(async_client, seed_proficien
 #     for field, expected_value in unchanged_fields.items():
 #         assert response_json[field] == expected_value
 
-# # =============================
-# # DELETE PROFICIENCY LEVEL
-# # =============================
-# @pytest.mark.parametrize("level_indices, proficiency_level_path, expected_status", [
-#     # proficiency level not found
-#     ([], f"/proficiency_levels/{BAD_ID_0000}", status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ([0], "/proficiency_levels/invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, level_indices, proficiency_level_path, expected_status):
-#     """Test DELETE proficiency level error cases (404 and 422)"""
-#     await conditional_seed(level_indices, test_proficiency_levels_data, seed_proficiency_levels)
-    
-#     response = await async_client.delete(proficiency_level_path)
-#     assert response.status_code == expected_status
+# =============================
+# DELETE PROFICIENCY LEVEL
+# =============================
+@pytest.mark.asyncio
+async def test_delete_proficiency_level_error_cases(async_client):
+    """Test DELETE proficiency level error cases (422)"""
+    response = await async_client.delete("/proficiency_levels/invalid-uuid-format")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
-#     """Test successful proficiency level deletion with verification"""
-#     await seed_proficiency_levels([test_proficiency_levels_data[1]])
+@pytest.mark.asyncio
+async def test_delete_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
+    """Test successful proficiency level deletion with verification"""
+    seed_proficiency_levels([test_proficiency_levels_data[0]])
+    response = await async_client.delete(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     # Test successful deletion
-#     response = await async_client.delete(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["proficiency_level_id"] == PROFICIENCY_LEVEL_ID_2
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-#     # Verify deletion by trying to get it again
-#     verify_response = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_2}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid proficiency level id that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/proficiency_levels/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT

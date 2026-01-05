@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status
+from fastapi import APIRouter, Depends, Body, status, Response
 from sqlmodel import Session, select
 from app.db.models import Role, RoleCreate, RoleUpdate
 from app.utils.dependencies import get_db_session
@@ -29,6 +29,12 @@ async def get_single_role(id: UUID, session: Session = Depends(get_db_session)):
 # ):
 #         return await update_role(conn, role_id=role_id, payload=role_update)
 
-# @router.delete("/{role_id}", response_model=MediaRoleOut)
-# async def delete_role(role_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#         return await delete_one(conn, table="roles", filters={"role_id": role_id})
+@router.delete("/{id}")
+async def delete_role(id: UUID, session: Session = Depends(get_db_session)):
+    """Delete a role by ID"""
+    role = session.get(Role, id)
+    if not role:
+        return Response(status_code=status.HTTP_204_NO_CONTENT) # Role not found, nothing to delete
+    session.delete(role)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT) # Role deleted successfully
