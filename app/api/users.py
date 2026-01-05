@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status
+from fastapi import APIRouter, Depends, Body, status, Response
 from app.db.models import User, UserCreate, UserUpdate
 from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
@@ -29,6 +29,12 @@ async def get_single_user(id: UUID, session: Session = Depends(get_db_session)):
 # ):
 #     return await update_user(conn, user_id=user_id, payload=user_update)
 
-# @router.delete("/{user_id}", response_model=UserOut)
-# async def delete_user(user_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await delete_one(conn, table="users", filters={"user_id": user_id})
+@router.delete("/{id}")
+async def delete_user(id: UUID, session: Session = Depends(get_db_session)):
+    """Delete a user by ID"""
+    user = session.get(User, id)
+    if not user:
+        return Response(status_code=status.HTTP_204_NO_CONTENT) # User not found, nothing to delete
+    session.delete(user)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT) # User deleted successfully

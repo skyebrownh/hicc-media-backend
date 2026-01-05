@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status
+from fastapi import APIRouter, Depends, Body, status, Response
 from app.db.models import EventType, EventTypeCreate, EventTypeUpdate
 from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
@@ -29,6 +29,12 @@ async def get_single_event_type(id: UUID, session: Session = Depends(get_db_sess
 # ):
 #     return await update_event_type(conn, event_type_id=event_type_id, payload=event_type_update)
 
-# @router.delete("/{event_type_id}", response_model=ScheduleDateTypeOut)
-# async def delete_event_type(event_type_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await delete_one(conn, table="event_types", filters={"event_type_id": event_type_id})
+@router.delete("/{id}")
+async def delete_event_type(id: UUID, session: Session = Depends(get_db_session)):
+    """Delete an event type by ID"""
+    event_type = session.get(EventType, id)
+    if not event_type:
+        return Response(status_code=status.HTTP_204_NO_CONTENT) # Event type not found, nothing to delete
+    session.delete(event_type)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT) # Event type deleted successfully

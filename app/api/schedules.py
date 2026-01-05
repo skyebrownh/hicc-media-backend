@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, HTTPException
+from fastapi import APIRouter, Depends, Body, status, HTTPException, Response
 from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic, EventWithAssignmentsAndAvailabilityPublic, EventPublic, EventAssignmentEmbeddedPublic, UserUnavailablePeriodEmbeddedPublic
 from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
@@ -68,9 +68,15 @@ async def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)
 # ):
 #     return await update_schedule(conn, schedule_id=schedule_id, payload=schedule_update)
 
-# @router.delete("/{schedule_id}", response_model=ScheduleOut)
-# async def delete_schedule(schedule_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await delete_one(conn, table="schedules", filters={"schedule_id": schedule_id})
+@router.delete("/{id}")
+async def delete_schedule(id: UUID, session: Session = Depends(get_db_session)):
+    """Delete a schedule by ID"""
+    schedule = session.get(Schedule, id)
+    if not schedule:
+        return Response(status_code=status.HTTP_204_NO_CONTENT) # Schedule not found, nothing to delete
+    session.delete(schedule)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT) # Schedule deleted successfully
     
 # @router.delete("/{schedule_id}/schedule_dates", response_model=list[ScheduleDateOut])
 # async def delete_schedule_dates_for_schedule(schedule_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):

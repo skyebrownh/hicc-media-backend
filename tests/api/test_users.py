@@ -149,38 +149,29 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
 #     for field, expected_value in unchanged_fields.items():
 #         assert response_json[field] == expected_value
 
-# # =============================
-# # DELETE USER
-# # =============================
-# @pytest.mark.parametrize("user_indices, user_path, expected_status", [
-#     # user not found
-#     ([], f"/users/{BAD_ID_0000}", status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ([0], "/users/invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_user_error_cases(async_client, seed_users, test_users_data, user_indices, user_path, expected_status):
-#     """Test DELETE user error cases (404 and 422)"""
-#     await conditional_seed(user_indices, test_users_data, seed_users)
-    
-#     response = await async_client.delete(user_path)
-#     assert response.status_code == expected_status
+# =============================
+# DELETE USER
+# =============================
+@pytest.mark.asyncio
+async def test_delete_user_error_cases(async_client):
+    """Test DELETE user error cases (422)"""
+    response = await async_client.delete("/users/invalid-uuid-format")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_user_success(async_client, seed_users, test_users_data):
-#     """Test successful user deletion with verification"""
-#     await seed_users([test_users_data[1]])
+@pytest.mark.asyncio
+async def test_delete_user_success(async_client, seed_users, test_users_data):
+    """Test successful user deletion with verification"""
+    seed_users([test_users_data[0]])
+    response = await async_client.delete(f"/users/{USER_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     # Test successful deletion
-#     response = await async_client.delete(f"/users/{USER_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["user_id"] == USER_ID_2
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/users/{USER_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-#     # Verify deletion by trying to get it again
-#     verify_response = await async_client.get(f"/users/{USER_ID_2}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid user id that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/users/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
 # # =============================
 # # DELETE USER CASCADE

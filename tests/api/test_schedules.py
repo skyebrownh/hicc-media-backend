@@ -208,34 +208,29 @@ async def test_get_schedule_grid_success(async_client, seed_for_schedules_tests)
 #     for field, expected_value in unchanged_fields.items():
 #         assert response_json[field] == expected_value
 
-# # =============================
-# # DELETE SCHEDULE
-# # =============================
-# @pytest.mark.parametrize("schedule_path, expected_status", [
-#     # schedule not found
-#     (f"/schedules/{BAD_ID_0000}", status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ("/schedules/invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_schedule_error_cases(async_client, schedule_path, expected_status):
-#     """Test DELETE schedule error cases (404 and 422)"""
-#     response = await async_client.delete(schedule_path)
-#     assert response.status_code == expected_status
+# =============================
+# DELETE SCHEDULE
+# =============================
+@pytest.mark.asyncio
+async def test_delete_schedule_error_cases(async_client):
+    """Test DELETE schedule error cases (422)"""
+    response = await async_client.delete("/schedules/invalid-uuid-format")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_schedule_success(async_client, seed_dates, seed_schedules, test_schedules_data, test_dates_data):
-#     """Test successful schedule deletion"""
-#     # Use DATE_2025_05_01 (index 3)
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
+@pytest.mark.asyncio
+async def test_delete_schedule_success(async_client, seed_schedules, test_schedules_data):
+    """Test successful schedule deletion with verification"""
+    seed_schedules([test_schedules_data[0]])
+    response = await async_client.delete(f"/schedules/{SCHEDULE_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     response = await async_client.delete(f"/schedules/{SCHEDULE_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["month_start_date"] == DATE_2025_05_01
-#     assert response_json["schedule_id"] == SCHEDULE_ID_2
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    # Verify valid schedule id that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/schedules/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
 # # =============================
 # # DELETE SCHEDULE DATES FOR SCHEDULE
