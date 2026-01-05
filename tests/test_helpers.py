@@ -36,7 +36,6 @@ def sample_schedule_with_events(
     event_type = test_event_types_data[0]
     schedule = test_schedules_data[1]
     user_1 = test_users_data[0]
-    user_2 = test_users_data[1]
     role_1 = test_roles_data[0]
     role_2 = test_roles_data[1]
     

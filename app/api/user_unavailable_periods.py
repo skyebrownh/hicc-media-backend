@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, HTTPException
-from app.db.models import UserUnavailablePeriod, UserUnavailablePeriodCreate, UserUnavailablePeriodUpdate, UserUnavailablePeriodPublic, Event
+from app.db.models import UserUnavailablePeriod, UserUnavailablePeriodCreate, UserUnavailablePeriodUpdate, UserUnavailablePeriodPublic
 from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
 from sqlalchemy.orm import selectinload
