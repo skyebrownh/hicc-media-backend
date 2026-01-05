@@ -61,35 +61,6 @@ def build_events_with_assignments_from_schedule(schedule: "Schedule") -> list["E
         )
     return events
 
-# def build_events_with_assignments_and_availability_from_schedule(schedule: "Schedule") -> list["EventWithAssignmentsAndAvailabilityPublic"]:
-#     """Build a list of EventWithAssignmentsAndAvailabilityPublic from a Schedule."""
-#     events = []
-#     for event in schedule.events:
-#         events.append(
-#             EventWithAssignmentsAndAvailabilityPublic(
-#                 event=EventPublic.from_objects(
-#                     event=event,
-#                     schedule=schedule,
-#                     event_type=event.event_type,
-#                     team=event.team,
-#                 ),
-#                 event_assignments=[
-#                     EventAssignmentEmbeddedPublic.from_objects(
-#                         event_assignment=ea,
-#                         role=ea.role,
-#                         assigned_user=ea.assigned_user,
-#                     ) for ea in event.event_assignments
-#                 ],
-#                 availability=[
-#                     UserUnavailablePeriodEmbeddedPublic(
-#                         user_first_name=ua.user.first_name,
-#                         user_last_name=ua.user.last_name,
-#                     ) for ua in event.availability
-#                 ],
-#             )
-#         )
-#     return events
-
 def build_events_with_assignments_from_event(event: "Event") -> "EventWithAssignmentsPublic":
     """Build a EventWithAssignmentsPublic from an Event."""
     return EventWithAssignmentsPublic(

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Body, status, HTTPException
 from app.db.models import Event, EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic, EventAssignmentEmbeddedPublic
 from sqlmodel import Session
 from app.utils.dependencies import get_db_session
-from app.services.scheduling import get_event, get_schedule
+from app.services.queries import get_event, get_schedule
 from app.utils.helpers import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event
 
 router = APIRouter()
