@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Body, status, HTTPException
 from app.db.models import UserRole, UserRoleCreate, UserRoleUpdate, UserRolePublic, User, Role, ProficiencyLevel
 from sqlmodel import Session
 from app.utils.dependencies import get_db_session
-from app.services.scheduling import get_user_for_user_roles, get_role_for_user_roles
+from app.services.queries import get_user_for_user_roles, get_role_for_user_roles
 
 router = APIRouter()
 

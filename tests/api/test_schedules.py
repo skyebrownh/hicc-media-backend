@@ -2,7 +2,20 @@ import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
 from tests.api.conftest import conditional_seed, count_records
-from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3
+from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, EVENT_TYPE_ID_1
+
+# =============================
+# FIXTURES
+# =============================
+@pytest.fixture
+def seed_for_schedules_tests(seed_roles, seed_users, seed_schedules, seed_event_types, seed_events, seed_event_assignments, seed_user_unavailable_periods, test_roles_data, test_users_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data, test_user_unavailable_periods_data):
+    seed_roles(test_roles_data[:2])
+    seed_users(test_users_data[:2])
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    seed_events(test_events_data)
+    seed_event_assignments(test_event_assignments_data)
+    seed_user_unavailable_periods(test_user_unavailable_periods_data[-2:])
 
 # =============================
 # GET ALL SCHEDULES
@@ -54,52 +67,49 @@ async def test_get_single_schedule_success(async_client, seed_schedules, test_sc
         "is_active": True
     })
 
-# # =============================
-# # GET ALL SCHEDULE DATES FOR SCHEDULE
-# # =============================
-# @pytest.mark.parametrize("schedule_id, expected_status", [
-#     # Schedule not present
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_all_schedule_dates_for_schedule_error_cases(async_client, schedule_id, expected_status):
-#     """Test GET all schedule dates for schedule error cases (404 and 422)"""
-#     response = await async_client.get(f"/schedules/{schedule_id}/schedule_dates")
-#     assert response.status_code == expected_status
+# =============================
+# GET SCHEDULE GRID
+# =============================
+@pytest.mark.parametrize("id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Schedule not found
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
+@pytest.mark.asyncio
+async def test_get_schedule_grid_error_cases(async_client, id, expected_status):
+    """Test GET schedule grid error cases (404 and 422)"""
+    response = await async_client.get(f"/schedules/{id}/grid")
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_get_all_schedule_dates_for_schedule_none_exist(async_client, seed_dates, seed_schedules, seed_schedule_date_types, test_schedule_date_types_data, test_dates_data, test_schedules_data):
-#     """Test when no schedule dates exist returns empty list"""
-#     # Use DATE_2025_01_01 (index 1) for month_start_date
-#     await seed_dates([test_dates_data[1]])
-#     await seed_schedules([test_schedules_data[0]])
-#     await seed_schedule_date_types(test_schedule_date_types_data)
-
-#     response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
-#     assert_empty_list_200(response)
-
-# @pytest.mark.asyncio
-# async def test_get_all_schedule_dates_for_schedule_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_schedule_date_types_data, test_dates_data, test_schedules_data, test_schedule_dates_data):
-#     """Test getting all schedule dates for a schedule after inserting a variety"""
-#     # Use DATE_2025_05_01 (index 3), DATE_2025_05_02 (index 4), DATE_2025_05_03 (index 5)
-#     await seed_dates([test_dates_data[3], test_dates_data[4], test_dates_data[5]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_schedule_date_types(test_schedule_date_types_data)
-#     await seed_schedule_dates(test_schedule_dates_data)
-    
-#     response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/schedule_dates")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, list)
-#     assert len(response_json) == 3
-#     assert response_json[0]["date"] == DATE_2025_05_01
-#     assert response_json[1]["date"] == DATE_2025_05_02
-#     assert response_json[2]["date"] == DATE_2025_05_03
-#     assert response_json[1]["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
-#     assert response_json[1]["notes"] is None
-#     assert response_json[2]["is_active"] is True
+@pytest.mark.asyncio
+async def test_get_schedule_grid_success(async_client, seed_for_schedules_tests):
+    """Test GET schedule grid success case"""
+    response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/grid")
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert isinstance(response_json, dict)
+    assert response_json["schedule"]["id"] == SCHEDULE_ID_2
+    assert response_json["schedule"]["month"] == 5
+    assert response_json["schedule"]["year"] == 2025
+    assert response_json["schedule"]["notes"] == "Second schedule"
+    assert response_json["schedule"]["is_active"] is True
+    assert len(response_json["events"]) == 3
+    assert response_json["events"][0]["event"]["id"] == EVENT_ID_1
+    assert response_json["events"][0]["event"]["schedule_id"] == SCHEDULE_ID_2
+    assert response_json["events"][0]["event"]["event_type_id"] == EVENT_TYPE_ID_1
+    assert response_json["events"][0]["event"]["team_id"] is None
+    assert response_json["events"][1]["event"]["id"] == EVENT_ID_2
+    assert response_json["events"][1]["event"]["schedule_id"] == SCHEDULE_ID_2
+    assert response_json["events"][2]["event"]["id"] == EVENT_ID_3
+    assert len(response_json["events"][0]["event_assignments"]) == 2
+    assert response_json["events"][0]["event_assignments"][0]["role_id"] == ROLE_ID_1
+    assert response_json["events"][0]["event_assignments"][0]["assigned_user_id"] == USER_ID_1
+    assert response_json["events"][0]["event_assignments"][1]["role_id"] == ROLE_ID_2
+    assert response_json["events"][0]["event_assignments"][1]["assigned_user_id"] is None
+    assert len(response_json["events"][0]["availability"]) == 2
+    assert response_json["events"][0]["availability"][0]["user_first_name"] == "Alice"
+    assert response_json["events"][0]["availability"][0]["user_last_name"] == "Smith"
+    assert response_json["events"][0]["availability"][1]["user_first_name"] == "Bob"
+    assert response_json["events"][0]["availability"][1]["user_last_name"] == "Jones"
 
 # # =============================
 # # INSERT SCHEDULE

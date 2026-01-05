@@ -1,7 +1,7 @@
 from uuid import UUID
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
-from app.db.models import UserRole, User, Role, Schedule, Event, EventAssignment
+from app.db.models import UserRole, User, Role, Schedule, Event, EventAssignment, UserUnavailablePeriod
 
 def get_user_for_user_roles(session: Session, user_id: UUID) -> User:
     return session.exec(
@@ -47,3 +47,19 @@ def get_event(session: Session, event_id: UUID) -> Event:
             selectinload(Event.event_assignments).selectinload(EventAssignment.assigned_user).selectinload(User.user_roles).selectinload(UserRole.proficiency_level)
         )
     ).one_or_none()
+
+def get_unavailable_users_for_event(session: Session, event_id: UUID) -> list[User]:
+    event = session.exec(
+        select(Event)
+        .where(Event.id == event_id)
+    ).one_or_none()
+
+    if not event:
+        return []
+
+    return session.exec(
+        select(UserUnavailablePeriod)
+        .where(UserUnavailablePeriod.starts_at < event.ends_at)
+        .where(UserUnavailablePeriod.ends_at > event.starts_at)
+        .options(selectinload(UserUnavailablePeriod.user))
+    ).all()
