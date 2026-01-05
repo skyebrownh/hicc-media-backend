@@ -14,3 +14,17 @@ from .user_unavailable_periods import UserUnavailablePeriod, UserUnavailablePeri
 EventWithAssignmentsPublic.model_rebuild()
 EventWithAssignmentsAndAvailabilityPublic.model_rebuild()
 ScheduleGridPublic.model_rebuild()
+
+__all__ = [
+    "Role", "RoleCreate", "RoleUpdate",
+    "ProficiencyLevel", "ProficiencyLevelCreate", "ProficiencyLevelUpdate",
+    "EventType", "EventTypeCreate", "EventTypeUpdate",
+    "Team", "TeamCreate", "TeamUpdate",
+    "User", "UserCreate", "UserUpdate",
+    "TeamUser", "TeamUserCreate", "TeamUserUpdate", "TeamUserPublic",
+    "UserRole", "UserRoleCreate", "UserRoleUpdate", "UserRolePublic",
+    "Schedule", "ScheduleCreate", "ScheduleUpdate", "ScheduleGridPublic",
+    "Event", "EventCreate", "EventUpdate", "EventPublic", "EventWithAssignmentsPublic", "EventWithAssignmentsAndAvailabilityPublic",
+    "EventAssignment", "EventAssignmentCreate", "EventAssignmentUpdate", "EventAssignmentPublic", "EventAssignmentEmbeddedPublic",
+    "UserUnavailablePeriod", "UserUnavailablePeriodCreate", "UserUnavailablePeriodUpdate", "UserUnavailablePeriodPublic", "UserUnavailablePeriodEmbeddedPublic",
+]
