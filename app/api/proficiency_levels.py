@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, Response
+from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from app.db.models import ProficiencyLevel, ProficiencyLevelCreate, ProficiencyLevelUpdate 
 from app.utils.dependencies import get_db_session
@@ -17,9 +18,18 @@ async def get_single_proficiency_level(id: UUID, session: Session = Depends(get_
     """Get a proficiency level by ID"""
     return get_or_404(session, ProficiencyLevel, id)
 
-# @router.post("", response_model=ProficiencyLevelOut, status_code=status.HTTP_201_CREATED)
-# async def post_proficiency_level(proficiency_level: ProficiencyLevelCreate, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await insert_proficiency_level(conn, proficiency_level=proficiency_level)
+@router.post("", response_model=ProficiencyLevel, status_code=status.HTTP_201_CREATED)
+async def post_proficiency_level(proficiency_level: ProficiencyLevelCreate, session: Session = Depends(get_db_session)):
+    """Create a new proficiency level"""
+    new_proficiency_level = ProficiencyLevel.model_validate(proficiency_level)
+    try:
+        session.add(new_proficiency_level)
+        session.commit()
+        session.refresh(new_proficiency_level)
+        return new_proficiency_level
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 # @router.patch("/{proficiency_level_id}", response_model=ProficiencyLevelOut)
 # async def patch_proficiency_level(
