@@ -28,7 +28,7 @@ class Role(RoleBase, table=True):
     )
 
     # Relationships
-    user_roles: list["UserRole"] = Relationship(back_populates="role")
+    user_roles: list["UserRole"] = Relationship(back_populates="role", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
 class RoleCreate(RoleBase):
     model_config = ConfigDict(extra="forbid")

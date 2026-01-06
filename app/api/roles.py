@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, Response
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.db.models import Role, RoleCreate, RoleUpdate
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import get_or_404
@@ -32,7 +33,11 @@ async def get_single_role(id: UUID, session: Session = Depends(get_db_session)):
 @router.delete("/{id}")
 async def delete_role(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a role by ID"""
-    role = session.get(Role, id)
+    role = session.exec(
+        select(Role)
+        .where(Role.id == id)
+        .options(selectinload(Role.user_roles)) # Ensure the relationship is loaded for cascade delete
+    ).first()
     if not role:
         return Response(status_code=status.HTTP_204_NO_CONTENT) # Role not found, nothing to delete
     session.delete(role)

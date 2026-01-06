@@ -26,7 +26,7 @@ class Team(TeamBase, table=True):
     )
 
     # Relationships
-    team_users: list["TeamUser"] = Relationship(back_populates="team")
+    team_users: list["TeamUser"] = Relationship(back_populates="team", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
 class TeamCreate(TeamBase):
     model_config = ConfigDict(extra="forbid")

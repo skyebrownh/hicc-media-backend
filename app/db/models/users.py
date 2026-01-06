@@ -28,7 +28,7 @@ class User(UserBase, table=True):
     )
 
     # Relationships
-    user_roles: list["UserRole"] = Relationship(back_populates="user")
+    user_roles: list["UserRole"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     user_unavailable_periods: list["UserUnavailablePeriod"] = Relationship(back_populates="user")
 
 class UserCreate(UserBase):

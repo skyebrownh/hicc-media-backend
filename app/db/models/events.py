@@ -34,7 +34,7 @@ class Event(EventBase, table=True):
     schedule: "Schedule" = Relationship(back_populates="events")
     team: "Team" = Relationship()
     event_type: "EventType" = Relationship()
-    event_assignments: list["EventAssignment"] = Relationship(back_populates="event")
+    event_assignments: list["EventAssignment"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
     __table_args__ = (
         CheckConstraint("starts_at < ends_at", name="event_check_time_range"),

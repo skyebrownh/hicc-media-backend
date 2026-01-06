@@ -1,7 +1,9 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
-from tests.api.conftest import conditional_seed, count_records
+from tests.api.conftest import conditional_seed
+from sqlmodel import select, func
+from app.db.models import Event, EventAssignment
 from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, EVENT_TYPE_ID_1
 
 # =============================
@@ -232,192 +234,55 @@ async def test_delete_schedule_success(async_client, seed_schedules, test_schedu
     verify_response2 = await async_client.delete(f"/schedules/{BAD_ID_0000}")
     assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
-# # =============================
-# # DELETE SCHEDULE DATES FOR SCHEDULE
-# # =============================
-# @pytest.mark.parametrize("schedule_id, expected_status", [
-#     # Schedule not present
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_schedule_dates_for_schedule_error_cases(async_client, schedule_id, expected_status):
-#     """Test DELETE schedule dates for schedule error cases (404 and 422)"""
-#     response = await async_client.delete(f"/schedules/{schedule_id}/schedule_dates")
-#     assert response.status_code == expected_status
+# =============================
+# DELETE SCHEDULE CASCADE
+# =============================
+@pytest.mark.parametrize("event_indices, event_assignment_indices, expected_count_events_before, expected_count_event_assignments_before", [
+    ([], [], 0, 0), # No events to cascade delete
+    ([0], [], 1, 0), # One event, no event_assignments to cascade delete
+    ([0, 1], [], 2, 0), # Multiple events, no event_assignments to cascade delete
+    ([0], [0], 1, 1), # One event, one event_assignment to cascade delete
+    ([0], [0, 1], 1, 2), # One event, multiple event_assignments to cascade delete
+    ([0, 1], [], 2, 0), # Multiple events, no event_assignments to cascade delete
+    ([0, 1], [0, 2], 2, 2), # Multiple events, one event_assignment to cascade delete
+    ([0, 1, 2], [0, 1, 2], 3, 3), # Multiple events, multiple event_assignments to cascade delete
+])
+@pytest.mark.asyncio
+async def test_delete_schedule_cascade(
+    async_client, get_test_db_session, seed_schedules, seed_roles, seed_users, seed_event_types, seed_events, seed_event_assignments,
+    test_schedules_data, test_roles_data, test_users_data, test_event_types_data, test_events_data, test_event_assignments_data,
+    event_indices, event_assignment_indices, expected_count_events_before, expected_count_event_assignments_before
+):
+    """Test that deleting a schedule cascades to delete associated events and event_assignments"""
+    # Seed parent
+    seed_schedules([test_schedules_data[1]])
 
-# @pytest.mark.asyncio
-# async def test_delete_schedule_dates_for_schedule_none_exist(async_client, seed_dates, seed_schedules, test_dates_data, test_schedules_data):
-#     """Test DELETE schedule dates for schedule when none exist returns empty list"""
-#     # Use DATE_2025_01_01 (index 1) for month_start_date
-#     await seed_dates([test_dates_data[1]])
-#     await seed_schedules([test_schedules_data[0]])
+    # Seed child records based on parameters
+    seed_roles(test_roles_data[:2])
+    seed_users([test_users_data[0]])
+    seed_event_types([test_event_types_data[0]])
+    conditional_seed(event_indices, test_events_data, seed_events)
+    conditional_seed(event_assignment_indices, test_event_assignments_data, seed_event_assignments)
 
-#     response = await async_client.delete(f"/schedules/{SCHEDULE_ID_1}/schedule_dates")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, list)
-#     assert len(response_json) == 0
-#     assert response_json == []
+    # Select event_assignment_ids that will be deleted
+    event_assignment_ids = [test_event_assignments_data[i].id for i in event_assignment_indices]
 
-# @pytest.mark.asyncio
-# async def test_delete_schedule_dates_for_schedule_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_schedule_date_types_data, test_dates_data, test_schedules_data, test_schedule_dates_data):
-#     """Test successful deletion of all schedule dates for a schedule when schedule dates exist"""
-#     # Use DATE_2025_05_01 (index 3) for month_start_date
-#     await seed_dates([test_dates_data[3], test_dates_data[4], test_dates_data[5]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_schedule_date_types(test_schedule_date_types_data)
-#     await seed_schedule_dates(test_schedule_dates_data)
+    # Verify child records exist before deletion
+    count_events_before = get_test_db_session.exec(select(func.count()).select_from(Event).where(Event.schedule_id == SCHEDULE_ID_2)).one()
+    assert count_events_before == expected_count_events_before
+    count_event_assignments_before = get_test_db_session.exec(select(func.count()).select_from(EventAssignment).where(EventAssignment.id.in_(event_assignment_ids))).one()
+    assert count_event_assignments_before == expected_count_event_assignments_before
 
-#     response = await async_client.delete(f"/schedules/{SCHEDULE_ID_2}/schedule_dates")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, list)
-#     assert len(response_json) == 3
-#     assert response_json[0]["date"] == DATE_2025_05_01
-#     assert response_json[0]["schedule_date_type_id"] == SCHEDULE_DATE_TYPE_ID_1
-#     assert response_json[1]["date"] == DATE_2025_05_02
-#     assert response_json[2]["date"] == DATE_2025_05_03
+    # Delete parent
+    response = await async_client.delete(f"/schedules/{SCHEDULE_ID_2}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     # Verify deletion by trying to get it again
-#     verify_response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/schedule_dates")
-#     assert_empty_list_200(verify_response)
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-# # =============================
-# # DELETE SCHEDULE CASCADE
-# # =============================
-# @pytest.mark.parametrize("date_indices, schedule_date_type_indices, schedule_date_indices, expected_count_before", [
-#     # No schedule_dates to cascade delete (only month_start_date at index 1)
-#     ([], [], [], 0),
-#     # One schedule_date to cascade delete (month_start_date + one schedule_date at index 3)
-#     ([], [0], [0], 1),
-#     # Multiple schedule_dates to cascade delete (month_start_date + schedule_dates at indices 3, 4, 5)
-#     ([3, 4, 5], [0], [0, 1, 2], 3),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_schedule_cascade_schedule_dates(
-#     async_client, test_db_pool, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates,
-#     test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data,
-#     date_indices, schedule_date_type_indices, schedule_date_indices, expected_count_before
-# ):
-#     """Test that deleting a schedule cascades to delete associated schedule_dates"""
-#     # Seed dates first (schedule needs month_start_date to exist)
-#     # Always seed the schedule's month_start_date (DATE_2025_05_01 at index 3)
-#     schedule_month_start_date = test_dates_data[3]
-#     await seed_dates([schedule_month_start_date])
-    
-#     # Seed parent
-#     await seed_schedules([test_schedules_data[1]])
-
-#     # Seed child records based on parameters
-#     # Add any additional dates needed for schedule_dates
-#     additional_dates = [test_dates_data[i] for i in date_indices if test_dates_data[i] != schedule_month_start_date]
-#     if additional_dates:
-#         await seed_dates(additional_dates)
-#     await conditional_seed(schedule_date_type_indices, test_schedule_date_types_data, seed_schedule_date_types)
-#     await conditional_seed(schedule_date_indices, test_schedule_dates_data, seed_schedule_dates)
-
-#     # Verify schedule_dates exist before deletion
-#     count_before = await count_records(test_db_pool, "schedule_dates", f"schedule_id = '{SCHEDULE_ID_2}'")
-#     assert count_before == expected_count_before
-
-#     # Delete parent
-#     response = await async_client.delete(f"/schedules/{SCHEDULE_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-
-#     # Verify parent is deleted
-#     verify_response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
-
-#     # Verify all child records are cascade deleted
-#     count_after = await count_records(test_db_pool, "schedule_dates", f"schedule_id = '{SCHEDULE_ID_2}'")
-#     assert count_after == 0
-
-# @pytest.mark.parametrize("schedule_date_indices, media_role_indices, schedule_date_role_indices, expected_schedule_date_count, expected_schedule_date_role_count", [
-#     # No schedule_dates, so no schedule_date_roles
-#     ([], [], [], 0, 0),
-#     # One schedule_date with one schedule_date_role
-#     ([0], [0], [0], 1, 1),
-#     # One schedule_date with multiple schedule_date_roles
-#     ([0], [0, 1], [0, 1], 1, 2),
-#     # Multiple schedule_dates with multiple schedule_date_roles
-#     ([0, 1], [0, 1], [0, 1, 2], 2, 3),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_schedule_cascade_multi_level(
-#     async_client, test_db_pool, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates,
-#     seed_media_roles, seed_schedule_date_roles, seed_users, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data,
-#     test_media_roles_data, test_schedule_date_roles_data, test_users_data, test_dates_data,
-#     schedule_date_indices, media_role_indices, schedule_date_role_indices,
-#     expected_schedule_date_count, expected_schedule_date_role_count
-# ):
-#     """Test that deleting a schedule cascades through multiple levels: schedule -> schedule_dates -> schedule_date_roles"""
-#     # Always seed the schedule's month_start_date (DATE_2025_05_01 at index 3)
-#     schedule_month_start_date = test_dates_data[3]
-#     await seed_dates([schedule_month_start_date])
-    
-#     # Seed parent
-#     await seed_schedules([test_schedules_data[1]])
-
-#     # Seed schedule_date_types (required for schedule_dates)
-#     await seed_schedule_date_types(test_schedule_date_types_data)
-
-#     # Seed dates needed for schedule_dates (excluding schedule_month_start_date which is already seeded)
-#     if schedule_date_indices:
-#         schedule_dates_to_seed = [test_schedule_dates_data[i] for i in schedule_date_indices]
-#         dates_needed = {sd["date"] for sd in schedule_dates_to_seed}
-#         dates_needed.discard(schedule_month_start_date)  # Remove if present since already seeded
-#         if dates_needed:
-#             await seed_dates(list(dates_needed))
-
-#     # Seed schedule_dates based on parameters
-#     await conditional_seed(schedule_date_indices, test_schedule_dates_data, seed_schedule_dates)
-
-#     # Seed users if any schedule_date_roles have assigned_user_id
-#     if schedule_date_role_indices:
-#         user_ids_needed = {test_schedule_date_roles_data[i].get("assigned_user_id") for i in schedule_date_role_indices if test_schedule_date_roles_data[i].get("assigned_user_id")}
-#         if user_ids_needed:
-#             await seed_users([test_users_data[0]])
-
-#     # Seed media_roles (required for schedule_date_roles)
-#     await conditional_seed(media_role_indices, test_media_roles_data, seed_media_roles)
-
-#     # Seed schedule_date_roles based on parameters
-#     await conditional_seed(schedule_date_role_indices, test_schedule_date_roles_data, seed_schedule_date_roles)
-
-#     # Get the schedule_date_ids that will be created for verification
-#     schedule_date_ids = []
-#     if schedule_date_indices:
-#         schedule_date_ids = [test_schedule_dates_data[i]["schedule_date_id"] for i in schedule_date_indices]
-
-#     # Verify records exist before deletion
-#     schedule_date_count_before = await count_records(test_db_pool, "schedule_dates", f"schedule_id = '{SCHEDULE_ID_2}'")
-#     if schedule_date_ids:
-#         schedule_date_ids_str = "', '".join(schedule_date_ids)
-#         schedule_date_role_count_before = await count_records(test_db_pool, "schedule_date_roles", f"schedule_date_id IN ('{schedule_date_ids_str}')")
-#     else:
-#         schedule_date_role_count_before = 0
-#     assert schedule_date_count_before == expected_schedule_date_count
-#     assert schedule_date_role_count_before == expected_schedule_date_role_count
-
-#     # Delete parent schedule
-#     response = await async_client.delete(f"/schedules/{SCHEDULE_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-
-#     # Verify parent is deleted
-#     verify_response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
-
-#     # Verify all schedule_dates are cascade deleted (first level)
-#     schedule_date_count_after = await count_records(test_db_pool, "schedule_dates", f"schedule_id = '{SCHEDULE_ID_2}'")
-#     assert schedule_date_count_after == 0
-
-#     # Verify all schedule_date_roles are cascade deleted (second level - through schedule_dates)
-#     # Check using the specific schedule_date_ids we know were created
-#     if schedule_date_ids:
-#         schedule_date_ids_str = "', '".join(schedule_date_ids)
-#         schedule_date_role_count_after = await count_records(test_db_pool, "schedule_date_roles", f"schedule_date_id IN ('{schedule_date_ids_str}')")
-#     else:
-#         schedule_date_role_count_after = 0
-#     assert schedule_date_role_count_after == 0
+    # Verify all child records are cascade deleted
+    count_events_after = get_test_db_session.exec(select(func.count()).select_from(Event).where(Event.schedule_id == SCHEDULE_ID_2)).one()
+    assert count_events_after == 0
+    count_event_assignments_after = get_test_db_session.exec(select(func.count()).select_from(EventAssignment).where(EventAssignment.id.in_(event_assignment_ids))).one()
+    assert count_event_assignments_after == 0

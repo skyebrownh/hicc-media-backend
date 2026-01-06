@@ -1,7 +1,9 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, Response
+from sqlalchemy.orm import selectinload
 from app.db.models import User, UserCreate, UserUpdate
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import get_or_404
 
@@ -32,7 +34,11 @@ async def get_single_user(id: UUID, session: Session = Depends(get_db_session)):
 @router.delete("/{id}")
 async def delete_user(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a user by ID"""
-    user = session.get(User, id)
+    user = session.exec(
+        select(User)
+        .where(User.id == id)
+        .options(selectinload(User.user_roles)) # Ensure the relationship is loaded for cascade delete
+    ).first()
     if not user:
         return Response(status_code=status.HTTP_204_NO_CONTENT) # User not found, nothing to delete
     session.delete(user)

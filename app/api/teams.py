@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, Response
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.db.models import Team, TeamCreate, TeamUpdate
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import get_or_404
@@ -31,7 +32,11 @@ async def get_single_team(id: UUID, session: Session = Depends(get_db_session)):
 @router.delete("/{id}")
 async def delete_team(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a team by ID"""
-    team = session.get(Team, id)
+    team = session.exec(
+        select(Team)
+        .where(Team.id == id)
+        .options(selectinload(Team.team_users)) # Ensure the relationship is loaded for cascade delete
+    ).first()
     if not team:
         return Response(status_code=status.HTTP_204_NO_CONTENT) # Team not found, nothing to delete
     session.delete(team)

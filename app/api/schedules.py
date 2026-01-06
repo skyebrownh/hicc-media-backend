@@ -2,6 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, HTTPException, Response
 from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic, EventWithAssignmentsAndAvailabilityPublic, EventPublic, EventAssignmentEmbeddedPublic, UserUnavailablePeriodEmbeddedPublic
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import get_or_404
 from app.services.queries import get_schedule, get_unavailable_users_for_event
@@ -71,7 +72,11 @@ async def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)
 @router.delete("/{id}")
 async def delete_schedule(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a schedule by ID"""
-    schedule = session.get(Schedule, id)
+    schedule = session.exec(
+        select(Schedule)
+        .where(Schedule.id == id)
+        .options(selectinload(Schedule.events)) # Ensure the relationship is loaded for cascade delete
+    ).first()
     if not schedule:
         return Response(status_code=status.HTTP_204_NO_CONTENT) # Schedule not found, nothing to delete
     session.delete(schedule)

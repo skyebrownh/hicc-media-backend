@@ -5,24 +5,11 @@ from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUse
 # =============================
 # CONDITIONAL SEEDING HELPER
 # =============================
-async def conditional_seed(indices, data, seed_func):
+def conditional_seed(indices, data, seed_func):
     """Conditionally seed data only if indices are provided (non-empty list)"""
     if indices:
         items = [data[i] for i in indices]
-        await seed_func(items)
-
-# =============================
-# DATABASE QUERY HELPER
-# FIXME: Use SQLModel instead of raw SQL
-# =============================
-async def count_records(test_db_pool, table_name: str, where_clause: str = "") -> int:
-    """Helper to count records in a table, optionally with a WHERE clause"""
-    async with test_db_pool.acquire() as conn:
-        query = f"SELECT COUNT(*) FROM {table_name}"
-        if where_clause:
-            query += f" WHERE {where_clause}"
-        count = await conn.fetchval(query)
-        return count
+        seed_func(items)
 
 # =============================
 # SEED HELPER FIXTURES
