@@ -1,10 +1,10 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201
 from tests.api.conftest import conditional_seed
 from sqlmodel import select, func
 from app.db.models import UserRole
-from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4, USER_ID_1, USER_ID_2, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
+from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4
 
 # =============================
 # GET ALL ROLES
@@ -58,44 +58,38 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
         "is_active": True
     })
 
-# # =============================
-# # INSERT ROLE
-# # =============================
-# @pytest.mark.parametrize("role_indices, payload, expected_status", [
-#     # empty payload
-#     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # missing required fields
-#    ([], {"name": "Incomplete Role"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid data types
-#     ([], {"name": "Bad Role", "order": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # duplicate role_code
-#     ([3], {"name": "Duplicate Code", "order": 6, "code": "new_role"}, status.HTTP_409_CONFLICT),
-#     # role_id not allowed in payload
-#     ([4], {"id": role_ID_4, "name": "Duplicate ID Role", "order": 7, "code": "duplicate_id_role"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, payload, expected_status):
-#     """Test INSERT role error cases (422 and 409)"""
-#     await conditional_seed(role_indices, test_roles_data, seed_roles)
-    
-#     response = await async_client.post("/roles", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# INSERT ROLE
+# =============================
+@pytest.mark.parametrize("role_indices, payload, expected_status", [    
+    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([], {"name": "Incomplete Role"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
+    ([], {"name": "Bad Role", "order": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([3], {"name": "Duplicate Code", "order": 6, "code": "new_role"}, status.HTTP_409_CONFLICT), # duplicate role_code
+    ([4], {"id": ROLE_ID_4, "name": "Duplicate ID Role", "order": 7, "code": "duplicate_id_role"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # role_id not allowed in payload
+])
+@pytest.mark.asyncio
+async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, payload, expected_status):
+    """Test INSERT role error cases (422 and 409)"""
+    conditional_seed(role_indices, test_roles_data, seed_roles)
+    response = await async_client.post("/roles", json=payload)
+    assert response.status_code == expected_status
 
-
-# @pytest.mark.asyncio
-# async def test_insert_role_success(async_client):
-#     """Test valid role insertion"""
-#     response = await async_client.post("/roles", json={
-#         "name": "New Role",
-#         "order": 4,
-#         "code": "new_role"
-#     })
-#     assert response.status_code == status.HTTP_201_CREATED
-#     response_json = response.json()
-#     assert response_json["id"] is not None
-#     assert response_json["name"] == "New Role"
-#     assert response_json["code"] == "new_role"
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_insert_role_success(async_client):
+    """Test valid role insertion"""
+    response = await async_client.post("/roles", json={
+        "name": "New Role",
+        "order": 4,
+        "code": "new_role"
+    })
+    assert_single_item_201(response, expected_item={
+        "name": "New Role",
+        "code": "new_role",
+        "order": 4,
+        "description": None,
+        "is_active": True
+    })
 
 # # =============================
 # # UPDATE ROLE
