@@ -66,7 +66,7 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
     ([], {"name": "Incomplete Role"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Role", "order": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([3], {"name": "Duplicate Code", "order": 6, "code": "new_role"}, status.HTTP_409_CONFLICT), # duplicate role_code
-    ([4], {"id": ROLE_ID_4, "name": "ID Not Allowed", "order": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # role_id not allowed in payload
+    ([], {"id": ROLE_ID_4, "name": "ID Not Allowed", "order": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # role_id not allowed in payload
 ])
 @pytest.mark.asyncio
 async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, payload, expected_status):
@@ -78,18 +78,8 @@ async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data
 @pytest.mark.asyncio
 async def test_insert_role_success(async_client):
     """Test valid role insertion"""
-    response = await async_client.post("/roles", json={
-        "name": "New Role",
-        "order": 4,
-        "code": "new_role"
-    })
-    assert_single_item_201(response, expected_item={
-        "name": "New Role",
-        "code": "new_role",
-        "order": 4,
-        "description": None,
-        "is_active": True
-    })
+    response = await async_client.post("/roles", json={"name": "New Role", "order": 4, "code": "new_role"})
+    assert_single_item_201(response, expected_item={"name": "New Role", "code": "new_role", "order": 4, "description": None, "is_active": True})
 
 # # =============================
 # # UPDATE ROLE

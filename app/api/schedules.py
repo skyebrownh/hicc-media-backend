@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, HTTPException, Response
+from sqlalchemy.exc import IntegrityError
 from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic, EventWithAssignmentsAndAvailabilityPublic, EventPublic, EventAssignmentEmbeddedPublic, UserUnavailablePeriodEmbeddedPublic
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
@@ -55,11 +56,22 @@ async def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)
         )
     return ScheduleGridPublic.from_objects(schedule=schedule, events=schedule_grid_events)
 
-# @router.post("", response_model=ScheduleOut, status_code=status.HTTP_201_CREATED)
-# async def post_schedule(schedule: ScheduleCreate, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await insert_schedule(conn, schedule=schedule)
+@router.post("", response_model=Schedule, status_code=status.HTTP_201_CREATED)
+async def post_schedule(schedule: ScheduleCreate, session: Session = Depends(get_db_session)):
+    """Create a new schedule"""
+    new_schedule = Schedule.model_validate(schedule)
+    try:
+        session.add(new_schedule)
+        session.commit()
+        session.refresh(new_schedule)
+        return new_schedule
+    except IntegrityError as e:
+        session.rollback()
+        if "schedule_check_month" in str(e):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Invalid month") from e
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     
-# # TODO: Insert schedule dates for a schedule based on configuration
+# TODO: Generate events for a schedule - using a service
 
 # @router.patch("/{schedule_id}", response_model=ScheduleOut)
 # async def patch_schedule(
@@ -82,9 +94,3 @@ async def delete_schedule(id: UUID, session: Session = Depends(get_db_session)):
     session.delete(schedule)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # Schedule deleted successfully
-    
-# @router.delete("/{schedule_id}/schedule_dates", response_model=list[ScheduleDateOut])
-# async def delete_schedule_dates_for_schedule(schedule_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     # Verify schedule exists first (will raise 404 if not found)
-#     await fetch_one(conn, table="schedules", filters={"schedule_id": schedule_id})
-#     return await delete_all(conn, table="schedule_dates", filters={"schedule_id": schedule_id})

@@ -58,7 +58,7 @@ async def test_get_single_event_type_success(async_client, seed_event_types, tes
     ([], {"name": "Incomplete Type"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Type", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([2], {"name": "Duplicate Code", "code": "new_type"}, status.HTTP_409_CONFLICT), # duplicate event_type_code
-    ([3], {"id": EVENT_TYPE_ID_4, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # event_type_id not allowed in payload
+    ([], {"id": EVENT_TYPE_ID_4, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # event_type_id not allowed in payload
 ])
 @pytest.mark.asyncio
 async def test_insert_event_type_error_cases(async_client, seed_event_types, test_event_types_data, type_indices, payload, expected_status):
@@ -70,17 +70,8 @@ async def test_insert_event_type_error_cases(async_client, seed_event_types, tes
 @pytest.mark.asyncio
 async def test_insert_event_type_success(async_client):
     """Test valid event type insertion"""
-    response = await async_client.post("/event_types", json={
-        "name": "New Type",
-        "code": "new_type"
-    })
-    assert response.status_code == status.HTTP_201_CREATED
-    response_json = response.json()
-    assert_single_item_201(response, expected_item={
-        "name": "New Type",
-        "code": "new_type",
-        "is_active": True
-    })
+    response = await async_client.post("/event_types", json={"name": "New Type", "code": "new_type"})
+    assert_single_item_201(response, expected_item={"name": "New Type", "code": "new_type", "is_active": True})
 
 # # =============================
 # # UPDATE EVENT TYPE

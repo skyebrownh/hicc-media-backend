@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201
 from tests.api.conftest import conditional_seed
 from sqlmodel import select, func
 from app.db.models import TeamUser, UserRole
@@ -55,42 +55,26 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
         "is_active": True
     })
 
-# # =============================
-# # INSERT USER
-# # =============================
-# @pytest.mark.parametrize("user_indices, payload, expected_status", [
-#     # empty payload
-#     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # missing required fields
-#     ([], {"first_name": "Incomplete"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid data types
-#     ([], {"first_name": 123, "last_name": True, "phone": 555, "email": 999}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # user_id not allowed in payload
-#     ([3], {"user_id": USER_ID_4, "first_name": "Duplicate", "last_name": "ID", "phone": "555-6666", "email": "dup@example.com"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_insert_user_error_cases(async_client, seed_users, test_users_data, user_indices, payload, expected_status):
-#     """Test INSERT user error cases (422)"""
-#     await conditional_seed(user_indices, test_users_data, seed_users)
-    
-#     response = await async_client.post("/users", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# INSERT USER
+# =============================
+@pytest.mark.parametrize("payload", [
+    {}, # empty payload
+    { "first_name": "Incomplete"}, # missing required fields
+    { "first_name": 123, "last_name": True, "phone": 555, "email": 999}, # invalid data types
+    { "id": USER_ID_4, "first_name": "ID Not Allowed", "last_name": "ID", "phone": "555-6666", "email": "id_not_allowed@example.com"}, # user_id not allowed in payload
+])
+@pytest.mark.asyncio
+async def test_insert_user_error_cases(async_client, seed_users, test_users_data, payload):
+    """Test INSERT user error cases (422)"""
+    response = await async_client.post("/users", json=payload)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_insert_user_success(async_client):
-#     """Test valid user insertion"""
-#     response = await async_client.post("/users", json={
-#         "first_name": "New",
-#         "last_name": "User",
-#         "phone": "555-4444",
-#         "email": "newuser@example.com"
-#     })
-#     assert response.status_code == status.HTTP_201_CREATED
-#     response_json = response.json()
-#     assert response_json["user_id"] is not None
-#     assert response_json["first_name"] == "New"
-#     assert response_json["last_name"] == "User"
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_insert_user_success(async_client):
+    """Test valid user insertion"""
+    response = await async_client.post("/users", json={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com"})
+    assert_single_item_201(response, expected_item={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com", "is_active": True})
 
 # # =============================
 # # UPDATE USER
