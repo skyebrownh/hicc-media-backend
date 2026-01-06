@@ -3,6 +3,8 @@ import json
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc
 from tests.api.conftest import conditional_seed
+from sqlmodel import select, func
+from app.db.models import EventAssignment
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
     EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, TEAM_ID_1, USER_ID_1, USER_ID_2, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
@@ -147,100 +149,6 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
     })
 
 # # =============================
-# # GET ALL EVENT ASSIGNMENTS BY EVENT
-# # =============================
-# @pytest.mark.parametrize("event_id, expected_status", [
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # Event not found
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_all_event_assignments_by_event_error_cases(async_client, event_id, expected_status):
-#     """Test GET all event assignments for event error cases (404 and 422)"""
-#     response = await async_client.get(f"/events/{event_id}/assignments")
-#     assert response.status_code == expected_status
-
-# @pytest.mark.asyncio
-# async def test_get_all_event_assignments_by_event_none_exist(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
-#     """Test GET all event assignments for event when none exist returns empty list"""
-#     # DATE_2025_05_01 (index 3) for event
-#     await seed_events([test_events_data[0]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_event_types([test_event_types_data[0]])
-#     await seed_event_assignments([test_event_assignments_data[0]])
-
-#     response = await async_client.get(f"/events/{EVENT_ID_1}/assignments")
-#     assert_empty_list_200(response)
-
-# @pytest.mark.asyncio
-# async def test_get_all_event_assignments_by_event_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_media_roles, seed_schedule_date_roles, seed_users, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule
-#     """Test GET all event assignments for event success case"""
-#     # DATE_2025_05_01 (index 3) for schedule_date
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_schedule_date_types([test_schedule_date_types_data[0]])
-#     await seed_schedule_dates([test_schedule_dates_data[0]])
-#     # Seed user for schedule_date_role with assigned_user_id
-#     await seed_users([test_users_data[0]])
-#     await seed_media_roles(test_media_roles_data[:2])
-#     await seed_schedule_date_roles(test_schedule_date_roles_data[:2])
-
-#     response = await async_client.get(f"/events/{EVENT_ID_1}/assignments")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, list)
-#     assert len(response_json) == 2
-#     assert all(role["event_id"] == EVENT_ID_1 for role in response_json)
-
-# # =============================
-# # GET ALL USER DATES BY EVENT
-# # =============================
-# @pytest.mark.parametrize("event_id, expected_status", [
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # Event not found
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_all_user_unavailable_periods_by_event_error_cases(async_client, event_id, expected_status):
-#     """Test GET all user unavailable periods for event error cases (404 and 422)"""
-#     response = await async_client.get(f"/events/{event_id}/user_unavailable_periods")
-#     assert response.status_code == expected_status
-
-# @pytest.mark.asyncio
-# async def test_get_all_user_unavailable_periods_by_event_none_exist(async_client, seed_dates, seed_users, seed_schedules, seed_schedule_date_types, seed_schedule_dates, test_dates_data, test_users_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data):
-#     """Test GET all user unavailable periods for event when none exist returns empty list"""
-#     # DATE_2025_05_01 (index 3) for event
-#     await seed_dates([test_dates_data[3], test_dates_data[4]])
-#     await seed_users(test_users_data[:2])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_schedule_date_types([test_schedule_date_types_data[0]])
-#     await seed_events([test_events_data[0]])
-
-#     response = await async_client.get(f"/events/{EVENT_ID_1}/user_unavailable_periods")
-#     assert_empty_list_200(response)
-
-# @pytest.mark.asyncio
-# async def test_get_all_user_unavailable_periods_by_event_success(async_client, seed_dates, seed_users, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_user_unavailable_periods, test_dates_data, test_users_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_user_unavailable_periods_data):
-#     """Test GET all user dates for schedule date success case"""
-#     # DATE_2025_05_01/02 (indices 3,4) for user unavailable periods
-#     await seed_dates([test_dates_data[3], test_dates_data[4]])
-#     await seed_users(test_users_data[:2])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_user_unavailable_periods(test_user_unavailable_periods_data[-2:])
-
-#     response = await async_client.get(f"/events/{EVENT_ID_1}/user_unavailable_periods")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, list)
-#     assert len(response_json) == 2
-#     assert response_json[0]["date"] == DATE_2025_05_01
-#     assert response_json[0]["user_id"] == USER_ID_1
-#     assert response_json[1]["date"] == DATE_2025_05_01
-#     assert response_json[1]["user_id"] == USER_ID_2
-
-# # =============================
 # # INSERT SCHEDULE DATE
 # # =============================
 # @pytest.mark.parametrize("date_indices, schedule_indices, type_indices, event_indices, payload, expected_status", [
@@ -358,142 +266,72 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
 #     for field, expected_value in expected_fields.items():
 #         assert response_json[field] == expected_value
 
-# # =============================
-# # DELETE EVENT
-# # =============================
-# @pytest.mark.parametrize("event_id, expected_status", [
-#     # event not found
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_event_error_cases(async_client, event_id, expected_status):
-#     """Test DELETE schedule date error cases (404 and 422)"""
-#     response = await async_client.delete(f"/events/{event_id}")
-#     assert response.status_code == expected_status
+# =============================
+# DELETE EVENT
+# =============================
+@pytest.mark.asyncio
+async def test_delete_event_error_cases(async_client):
+    """Test DELETE event error cases (422)"""
+    response = await async_client.delete("/events/invalid-uuid-format")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_event_success(async_client, seed_dates, seed_schedules, seed_event_types, seed_events, test_dates_data, test_schedules_data, test_event_types_data, test_events_data):
-#     """Test successful event deletion with verification"""
-#     # DATE_2025_05_01 (index 3) for event
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_event_types([test_event_types_data[0]])
-#     await seed_events([test_events_data[0]])
+@pytest.mark.asyncio
+async def test_delete_event_success(async_client, seed_events, seed_event_types, seed_schedules, test_events_data, test_event_types_data, test_schedules_data):
+    """Test successful event deletion with verification"""
+    seed_event_types([test_event_types_data[0]])
+    seed_schedules([test_schedules_data[1]])
+    seed_events([test_events_data[0]])
+    response = await async_client.delete(f"/events/{EVENT_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     response = await async_client.delete(f"/events/{EVENT_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["event_id"] == EVENT_ID_1
+    # Verify deletion by trying to get it again
+    verify_response = await async_client.get(f"/events/{EVENT_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-#     verify_response = await async_client.get(f"/events/{EVENT_ID_1}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid event id that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/events/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
-# # =============================
-# # DELETE EVENT CASCADE
-# # =============================
-# @pytest.mark.parametrize("media_role_indices, event_assignment_indices, expected_count_before", [
-#     # No schedule_date_roles to cascade delete
-#     ([], [], 0),
-#     # One schedule_date_role to cascade delete
-#     ([0], [0], 1),
-#     # Multiple schedule_date_roles to cascade delete
-#     ([0, 1], [0, 1], 2),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_event_cascade_event_assignments(
-#     async_client, test_db_pool, seed_dates, seed_schedules, seed_event_types, seed_events,
-#     seed_media_roles, seed_schedule_date_roles, seed_users,
-#     test_dates_data, test_schedules_data, test_event_types_data, test_events_data,
-#     test_media_roles_data, test_event_assignments_data, test_users_data,
-#     media_role_indices, event_assignment_indices, expected_count_before
-# ):
-#     """Test that deleting a event cascades to delete associated event_assignments"""
-#     # Seed parent and dependencies
-#     # DATE_2025_05_01 (index 3) for event
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_event_types([test_event_types_data[0]])
-#     await seed_events([test_events_data[0]])
+# =============================
+# DELETE EVENT CASCADE
+# =============================
+@pytest.mark.parametrize("event_assignment_indices, expected_count_before", [
+    ([], 0), # No event_assignments to cascade delete
+    ([0], 1), # One event_assignment to cascade delete
+    ([0, 1], 2), # Multiple event_assignments to cascade delete
+])
+@pytest.mark.asyncio
+async def test_delete_event_cascade_event_assignments(
+    async_client, get_test_db_session, seed_users, seed_schedules, seed_event_types, seed_events, seed_roles, seed_event_assignments,
+    test_users_data, test_schedules_data, test_event_types_data, test_events_data, test_roles_data, test_event_assignments_data,
+    event_assignment_indices, expected_count_before
+):
+    """Test that deleting a event cascades to delete associated event_assignments"""
+    # Seed parent
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    seed_events(test_events_data[:2])
 
-#     # Seed users if any schedule_date_roles have assigned_user_id
-#     if event_assignment_indices:
-#         user_ids_needed = {test_event_assignments_data[i].get("assigned_user_id") for i in event_assignment_indices if test_event_assignments_data[i].get("assigned_user_id")}
-#         if user_ids_needed:
-#             await seed_users([test_users_data[0]])
+    # Seed child records based on parameters
+    seed_roles(test_roles_data[:2])
+    seed_users([test_users_data[0]])
+    conditional_seed(event_assignment_indices, test_event_assignments_data, seed_event_assignments)
 
-#     # Seed child records based on parameters
-#     await conditional_seed(media_role_indices, test_media_roles_data, seed_media_roles)
-#     await conditional_seed(event_assignment_indices, test_event_assignments_data, seed_event_assignments)
+    # Select event_assignment_ids that will be deleted
+    event_assignment_ids = [test_event_assignments_data[i].id for i in event_assignment_indices]
 
-#     # Verify schedule_date_roles exist before deletion
-#     count_before = await count_records(test_db_pool, "event_assignments", f"event_id = '{EVENT_ID_1}'")
-#     assert count_before == expected_count_before
+    # Verify event_assignments exist before deletion
+    count_before = get_test_db_session.exec(select(func.count()).select_from(EventAssignment).where(EventAssignment.id.in_(event_assignment_ids))).one()
+    assert count_before == expected_count_before
 
-#     # Delete parent
-#     response = await async_client.delete(f"/events/{EVENT_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
+    # Delete parent
+    response = await async_client.delete(f"/events/{EVENT_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     # Verify parent is deleted
-#     verify_response = await async_client.get(f"/events/{EVENT_ID_1}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/events/{EVENT_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-#     # Verify all child records are cascade deleted
-#     count_after = await count_records(test_db_pool, "event_assignments", f"event_id = '{EVENT_ID_1}'")
-#     assert count_after == 0
-
-# # =============================
-# # DELETE EVENT ASSIGNMENTS FOR EVENT
-# # =============================
-# @pytest.mark.parametrize("event_id, expected_status", [
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # Schedule date not found
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_event_assignments_for_event_error_cases(async_client, event_id, expected_status):
-#     """Test DELETE schedule date roles for schedule date error cases (404 and 422)"""
-#     response = await async_client.delete(f"/events/{event_id}/assignments")
-#     assert response.status_code == expected_status
-
-# @pytest.mark.asyncio
-# async def test_delete_event_assignments_for_event_none_exist(async_client, seed_dates, seed_schedules, seed_event_types, seed_events, test_dates_data, test_schedules_data, test_event_types_data, test_events_data):
-#     """Test DELETE event assignments for event when none exist returns empty list"""
-#     # DATE_2025_05_01 (index 3) for event
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_event_types([test_event_types_data[0]])
-#     await seed_events([test_events_data[0]])
-
-#     response = await async_client.delete(f"/events/{EVENT_ID_1}/assignments")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, list)
-#     assert len(response_json) == 0
-
-# @pytest.mark.asyncio
-# async def test_delete_event_assignments_for_event_success(async_client, seed_dates, seed_schedules, seed_event_types, seed_events, seed_media_roles, seed_event_assignments, seed_users, test_dates_data, test_schedules_data, test_event_types_data, test_events_data, test_media_roles_data, test_event_assignments_data, test_users_data):
-#     """Test successful deletion of all event assignments for a event"""
-#     # DATE_2025_05_01 (index 3) for event
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_event_types([test_event_types_data[0]])
-#     await seed_events([test_events_data[0]])
-#     # Seed user for schedule_date_role with assigned_user_id
-#     await seed_users([test_users_data[0]])
-#     await seed_media_roles(test_media_roles_data[:2])
-#     await seed_event_assignments(test_event_assignments_data[:2])
-
-#     response = await async_client.delete(f"/events/{EVENT_ID_1}/assignments")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, list)
-#     assert len(response_json) == 2
-#    assert all(role["event_id"] == EVENT_ID_1 for role in response_json)
-
-#     verify_response = await async_client.get(f"/events/{EVENT_ID_1}/assignments")
-#     assert verify_response.status_code == status.HTTP_200_OK
-#     assert len(verify_response.json()) == 0
+    # Verify all child records are cascade deleted
+    count_after = get_test_db_session.exec(select(func.count()).select_from(EventAssignment).where(EventAssignment.id.in_(event_assignment_ids))).one()
+    assert count_after == 0

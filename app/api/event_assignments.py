@@ -46,8 +46,3 @@ async def get_event_assignments_by_event(event_id: UUID, session: Session = Depe
 #     conn: asyncpg.Connection = Depends(get_db_connection),
 # ):
 #     return await update_event_assignment(conn, event_assignment_id=event_assignment_id, payload=event_assignment_update)
- 
-# # Delete event assignment
-# @router.delete("/{event_assignment_id}", response_model=ScheduleDateRoleOut)
-# async def delete_event_assignment(event_assignment_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await delete_one(conn, table="event_assignments", filters={"event_assignment_id": event_assignment_id})

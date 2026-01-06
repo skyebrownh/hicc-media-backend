@@ -199,39 +199,3 @@ async def test_get_all_event_assignments_for_event_success(async_client, seed_ro
 #     response_json = response.json()
 #     for field, expected_value in expected_fields.items():
 #         assert response_json[field] == expected_value
-
-# # =============================
-# # DELETE EVENT ASSIGNMENT
-# # =============================
-# @pytest.mark.parametrize("event_assignment_id, expected_status", [
-#     # Schedule date role not found
-#     (BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_event_assignment_error_cases(async_client, event_assignment_id, expected_status):
-#     """Test DELETE event assignment error cases (404 and 422)"""
-#     response = await async_client.delete(f"/event_assignments/{event_assignment_id}")
-#     assert response.status_code == expected_status
-
-# @pytest.mark.asyncio
-# async def test_delete_event_assignment_success(async_client, seed_dates, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_media_roles, seed_schedule_date_roles, test_dates_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_media_roles_data, test_schedule_date_roles_data):
-#     """Test successful event assignment deletion with verification"""
-#     # DATE_2025_05_01 (index 3) for schedule_date
-#     await seed_dates([test_dates_data[3], test_dates_data[4]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_schedule_date_types([test_schedule_date_types_data[0]])
-#     await seed_schedule_dates([test_schedule_dates_data[0]])
-#     await seed_media_roles(test_media_roles_data[:2])
-#     await seed_schedule_date_roles([test_schedule_date_roles_data[1]])
-
-#     response = await async_client.delete(f"/event_assignments/{EVENT_ASSIGNMENT_ID_2}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["event_assignment_id"] == EVENT_ASSIGNMENT_ID_2
-
-#     # Verify deletion by trying to get it again
-#     verify_response = await async_client.get(f"/event_assignments/{EVENT_ASSIGNMENT_ID_2}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND

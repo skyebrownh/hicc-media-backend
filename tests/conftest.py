@@ -29,6 +29,8 @@ from tests.utils.constants import (
     EVENT_TYPE_ID_1, EVENT_TYPE_ID_2, EVENT_TYPE_ID_3, EVENT_TYPE_ID_4,
     EVENT_ID_1, EVENT_ID_2, EVENT_ID_3,
     EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, EVENT_ASSIGNMENT_ID_3,
+    USER_UNAVAILABLE_PERIOD_ID_1, USER_UNAVAILABLE_PERIOD_ID_2, USER_UNAVAILABLE_PERIOD_ID_3, USER_UNAVAILABLE_PERIOD_ID_4,
+    USER_UNAVAILABLE_PERIOD_ID_5, USER_UNAVAILABLE_PERIOD_ID_6, USER_UNAVAILABLE_PERIOD_ID_7, USER_UNAVAILABLE_PERIOD_ID_8,
 )
 
 TEST_SCHEMA = "test_schema"
@@ -230,14 +232,14 @@ def test_user_roles_data():
 @pytest.fixture
 def test_user_unavailable_periods_data():
     """Standard fixture providing array of test user_unavailable_period data"""
-    uup_1 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=DATETIME_2025_02_29, ends_at=DATETIME_2025_03_01)
-    uup_2 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=DATETIME_2025_01_01, ends_at=DATETIME_2025_01_02)
-    uup_3 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=DATETIME_2025_03_31, ends_at=DATETIME_2025_04_01)
-    uup_4 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=DATETIME_2025_02_29, ends_at=DATETIME_2025_03_01)
-    uup_5 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=DATETIME_2025_01_01, ends_at=DATETIME_2025_01_02)
-    uup_6 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=DATETIME_2025_03_31, ends_at=DATETIME_2025_04_01)
-    uup_7 = UserUnavailablePeriod(user_id=USER_ID_1, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
-    uup_8 = UserUnavailablePeriod(user_id=USER_ID_2, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
+    uup_1 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_1, user_id=USER_ID_1, starts_at=DATETIME_2025_02_29, ends_at=DATETIME_2025_03_01)
+    uup_2 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_2, user_id=USER_ID_1, starts_at=DATETIME_2025_01_01, ends_at=DATETIME_2025_01_02)
+    uup_3 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_3, user_id=USER_ID_1, starts_at=DATETIME_2025_03_31, ends_at=DATETIME_2025_04_01)
+    uup_4 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_4, user_id=USER_ID_2, starts_at=DATETIME_2025_02_29, ends_at=DATETIME_2025_03_01)
+    uup_5 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_5, user_id=USER_ID_2, starts_at=DATETIME_2025_01_01, ends_at=DATETIME_2025_01_02)
+    uup_6 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_6, user_id=USER_ID_2, starts_at=DATETIME_2025_03_31, ends_at=DATETIME_2025_04_01)
+    uup_7 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_7, user_id=USER_ID_1, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
+    uup_8 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_8, user_id=USER_ID_2, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
     return [uup_1, uup_2, uup_3, uup_4, uup_5, uup_6, uup_7, uup_8]
 
 @pytest.fixture
