@@ -1,7 +1,9 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
-from tests.api.conftest import conditional_seed, count_records
+from tests.api.conftest import conditional_seed
+from sqlmodel import select, func
+from app.db.models import TeamUser
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4
 
 # =============================
@@ -167,44 +169,40 @@ async def test_delete_team_success(async_client, seed_teams, test_teams_data):
     verify_response2 = await async_client.delete(f"/teams/{BAD_ID_0000}")
     assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
-# # =============================
-# # DELETE TEAM CASCADE
-# # =============================
-# @pytest.mark.parametrize("user_indices, team_user_indices, expected_count_before", [
-#     # No team_users to cascade delete
-#     ([], [], 0),
-#     # One team_user to cascade delete
-#     ([0], [0], 1),
-#     # Multiple team_users to cascade delete
-#     ([0, 1], [0, 1], 2),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_team_cascade_team_users(
-#     async_client, test_db_pool, seed_teams, seed_users, seed_team_users,
-#     test_teams_data, test_users_data, test_team_users_data,
-#     user_indices, team_user_indices, expected_count_before
-# ):
-#     """Test that deleting a team cascades to delete associated team_users"""
-#     # Seed parent
-#     await seed_teams([test_teams_data[0]])
+# =============================
+# DELETE TEAM CASCADE
+# =============================
+@pytest.mark.parametrize("user_indices, team_user_indices, expected_count_before", [
+    ([], [], 0), # No team_users to cascade delete
+    ([0], [0], 1), # One team_user to cascade delete
+    ([0, 1], [0, 1], 2), # Multiple team_users to cascade delete
+])
+@pytest.mark.asyncio
+async def test_delete_team_cascade_team_users(
+    async_client, get_test_db_session, seed_teams, seed_users, seed_team_users,
+    test_teams_data, test_users_data, test_team_users_data,
+    user_indices, team_user_indices, expected_count_before
+):
+    """Test that deleting a team cascades to delete associated team_users"""
+    # Seed parent
+    seed_teams([test_teams_data[0]])
 
-#     # Seed child records based on parameters
-#     await conditional_seed(user_indices, test_users_data[:2], seed_users)
-#     team_users_for_team_1 = [test_team_users_data[0], test_team_users_data[2]]
-#     await conditional_seed(team_user_indices, team_users_for_team_1, seed_team_users)
+    # Seed child records based on parameters
+    conditional_seed(user_indices, test_users_data, seed_users)
+    conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
 
-#     # Verify team_users exist before deletion
-#     count_before = await count_records(test_db_pool, "team_users", f"id = '{TEAM_ID_1}'")
-#     assert count_before == expected_count_before
+    # Verify team_users exist before deletion
+    count_before = get_test_db_session.exec(select(func.count()).select_from(TeamUser).where(TeamUser.team_id == TEAM_ID_1)).one()
+    assert count_before == expected_count_before
 
-#     # Delete parent
-#     response = await async_client.delete(f"/teams/{TEAM_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
+    # Delete parent
+    response = await async_client.delete(f"/teams/{TEAM_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     # Verify parent is deleted
-#     verify_response = await async_client.get(f"/teams/{TEAM_ID_1}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify parent is deleted
+    verify_response = await async_client.get(f"/teams/{TEAM_ID_1}")
+    assert verify_response.status_code == status.HTTP_404_NOT_FOUND
 
-#     # Verify all child records are cascade deleted
-#     count_after = await count_records(test_db_pool, "team_users", f"id = '{TEAM_ID_1}'")
-#     assert count_after == 0
+    # Verify all child records are cascade deleted
+    count_after = get_test_db_session.exec(select(func.count()).select_from(TeamUser).where(TeamUser.team_id == TEAM_ID_1)).one()
+    assert count_after == 0

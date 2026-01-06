@@ -27,7 +27,7 @@ class Schedule(ScheduleBase, table=True):
     )
 
     # Relationships
-    events: list["Event"] = Relationship(back_populates="schedule")
+    events: list["Event"] = Relationship(back_populates="schedule", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
     __table_args__ = (
         CheckConstraint("month >= 1 AND month <= 12", name="schedule_check_month"),
