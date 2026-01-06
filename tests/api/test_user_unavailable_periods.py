@@ -3,48 +3,8 @@ from datetime import datetime, date
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.api.conftest import conditional_seed
-from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_3
-
-# # =============================
-# # GET ALL UNAVAILABLE USERS FOR EVENT
-# # =============================
-# @pytest.mark.asyncio
-# async def test_get_all_unavailable_users_for_event_none_exist(async_client, seed_schedules, seed_event_types, seed_events, test_schedules_data, test_event_types_data, test_events_data):
-#     """Test GET all unavailable users for event when none exist returns empty list"""
-#     seed_schedules([test_schedules_data[1]])
-#     seed_event_types([test_event_types_data[0]])
-#     seed_events([test_events_data[2]])
-#     response = await async_client.get(f"/events/{EVENT_ID_3}/unavailable-users")
-#     assert_empty_list_200(response)
-
-# @pytest.mark.asyncio
-# async def test_get_all_unavailable_users_for_event_success(async_client, seed_users, seed_user_unavailable_periods, seed_schedules, seed_event_types, seed_events, test_users_data, test_user_unavailable_periods_data, test_schedules_data, test_event_types_data, test_events_data):
-#     """Test GET all unavailable users for event success case"""
-#     seed_event_types([test_event_types_data[0]])
-#     seed_users([test_users_data[0]])
-#     seed_schedules([test_schedules_data[1]])
-#     seed_events([test_events_data[0]])
-#     seed_user_unavailable_periods(test_user_unavailable_periods_data[-2:])
-#     response = await async_client.get(f"/events/{EVENT_ID_1}/unavailable-users")
-#     assert_list_200(response, expected_length=2)
-#     response_json = response.json()
-
-#     # shape assertions
-#     assert all("id" in uup for uup in response_json)
-#     assert all("user_id" in uup for uup in response_json)
-#     assert all("starts_at" in uup for uup in response_json)
-#     assert all("ends_at" in uup for uup in response_json)
-#     assert all("user_first_name" in uup for uup in response_json)
-#     assert all("user_email" in uup for uup in response_json)
-
-#     # data assertions
-#     assert response_json[0]["id"] is not None
-#     assert response_json[0]["user_id"] == USER_ID_1
-#     assert datetime.fromisoformat(response_json[0]["starts_at"]).date() == date(2024, 2, 29)
-#     assert datetime.fromisoformat(response_json[1]["ends_at"]).date() == date(2025, 1, 2)
-#     assert response_json[1]["user_first_name"] == "Alice"
-#     assert response_json[1]["user_email"] == "alice@example.com"
-#     assert response_json[2]["user_phone"] == "555-1111"
+from app.db.models import UserUnavailablePeriod
+from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_3, USER_UNAVAILABLE_PERIOD_ID_1
 
 # # =============================
 # # INSERT USER UNAVAILABLE PERIOD
@@ -167,39 +127,27 @@ from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, EVENT_ID_1,
 #     assert response_json["user_id"] == USER_ID_1
 #     assert response_json["date"] == DATE_2025_01_01
 
-# # =============================
-# # DELETE USER UNAVAILABLE PERIOD
-# # =============================
-# @pytest.mark.parametrize("user_id, date, expected_status", [
-#     # user date not found
-#     (USER_ID_1, DATE_2025_01_01, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format for user_id
-#     ("invalid-uuid-format", DATE_2024_02_29, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid date format
-#     (USER_ID_1, "invalid-date-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_user_unavailable_period_error_cases(async_client, user_id, date, expected_status):
-#     """Test DELETE user date error cases (404 and 422)"""
-#     response = await async_client.delete(f"/users/{user_id}/dates/{date}")
-#     assert response.status_code == expected_status
+# =============================
+# DELETE USER UNAVAILABLE PERIOD
+# =============================
+@pytest.mark.asyncio
+async def test_delete_user_unavailable_period_error_cases(async_client):
+    """Test DELETE user unavailable period error cases (422)"""
+    response = await async_client.delete("/user_availability/invalid-uuid-format")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_user_unavailable_period_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
-#     """Test successful user date deletion with verification"""
-#     await seed_users([test_users_data[0]])
-#     # Use DATE_2024_02_29 (index 0)
-#     await seed_dates([test_dates_data[0]])
-#     await seed_user_dates([test_user_dates_data[0]])
+@pytest.mark.asyncio
+async def test_delete_user_unavailable_period_success(async_client, get_test_db_session, seed_user_unavailable_periods, seed_users, test_user_unavailable_periods_data, test_users_data):
+    """Test successful user unavailable period deletion with verification"""
+    seed_users([test_users_data[0]])
+    seed_user_unavailable_periods([test_user_unavailable_periods_data[0]])
+    response = await async_client.delete(f"/user_availability/{USER_UNAVAILABLE_PERIOD_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     # Test successful deletion
-#     response = await async_client.delete(f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["user_id"] == USER_ID_1
-#     assert response_json["date"] == DATE_2024_02_29
+    # Verify deletion by trying to query it directly
+    verify_response = get_test_db_session.get(UserUnavailablePeriod, USER_UNAVAILABLE_PERIOD_ID_1)
+    assert verify_response is None
 
-#     # Verify deletion by trying to get it again
-#     verify_response = await async_client.get(f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid user unavailable period id that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/user_availability/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT

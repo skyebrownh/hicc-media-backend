@@ -1,7 +1,7 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, HTTPException
+from fastapi import APIRouter, Depends, Body, status, HTTPException, Response
 from app.db.models import UserRole, UserRoleCreate, UserRoleUpdate, UserRolePublic, User, Role, ProficiencyLevel
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
 from app.services.queries import get_user_for_user_roles, get_role_for_user_roles
 
@@ -61,7 +61,16 @@ async def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_se
 # async def patch_user_role(user_id: UUID, role_id: UUID, user_role_update: UserRoleUpdate | None = Body(default=None), conn: asyncpg.Connection = Depends(get_db_connection)):
 #     return await update_user_role(conn, user_id=user_id, role_id=role_id, payload=user_role_update)
 
-# # Delete a user role
-# @router.delete("/users/{user_id}/roles/{role_id}", response_model=UserRoleOut)
-# async def delete_user_role(user_id: UUID, role_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await delete_one(conn, table="user_roles", filters={"user_id": user_id, "media_role_id": role_id})
+@router.delete("/users/{user_id}/roles/{role_id}")
+async def delete_user_role(user_id: UUID, role_id: UUID, session: Session = Depends(get_db_session)):
+    """Delete a user role by user ID and role ID"""
+    user_role = session.exec(
+        select(UserRole)
+        .where(UserRole.user_id == user_id)
+        .where(UserRole.role_id == role_id)
+    ).first()
+    if not user_role:
+        return Response(status_code=status.HTTP_204_NO_CONTENT) # User role not found, nothing to delete
+    session.delete(user_role)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT) # User role deleted successfully

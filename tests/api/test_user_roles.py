@@ -3,6 +3,8 @@ from uuid import UUID
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.api.conftest import conditional_seed
+from app.db.models import UserRole
+from sqlmodel import select
 from tests.utils.constants import (
     BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3,
     PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
@@ -105,39 +107,6 @@ async def test_get_users_for_role_success(async_client, seed_for_user_roles_test
     assert response_json[0]["user_email"] == "alice@example.com"
     assert response_json[0]["role_is_active"] is True
     assert response_json[0]["proficiency_level_rank"] == 3
-
-# # =============================
-# # GET SINGLE USER ROLE
-# # =============================
-# @pytest.mark.parametrize("user_id, role_id, expected_status", [
-#     # User role not found
-#     (USER_ID_1, MEDIA_ROLE_ID_2, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format for user_id
-#     ("invalid-uuid-format", MEDIA_ROLE_ID_1, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # Invalid UUID format for role_id
-#     (USER_ID_1, "invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_user_role_error_cases(async_client, user_id, role_id, expected_status):
-#     """Test GET single user role error cases (404 and 422)"""
-#     response = await async_client.get(f"/users/{user_id}/roles/{role_id}")
-#     assert response.status_code == expected_status
-
-# @pytest.mark.asyncio
-# async def test_get_user_role_success(async_client, seed_users, seed_media_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_media_roles_data, test_proficiency_levels_data, test_user_roles_data):
-#     """Test GET single user role success case"""
-#     await seed_users([test_users_data[0]])
-#     await seed_media_roles([test_media_roles_data[0]])
-#     await seed_proficiency_levels([test_proficiency_levels_data[0]])
-#     await seed_user_roles([test_user_roles_data[0]])
-
-#     response = await async_client.get(f"/users/{USER_ID_1}/roles/{MEDIA_ROLE_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["user_id"] == USER_ID_1
-#     assert response_json["media_role_id"] == MEDIA_ROLE_ID_1
-#     assert response_json["proficiency_level_id"] == PROFICIENCY_LEVEL_ID_1
 
 # # =============================
 # # INSERT USER ROLE
@@ -321,37 +290,39 @@ async def test_get_users_for_role_success(async_client, seed_for_user_roles_test
 #     assert response_json["media_role_id"] == MEDIA_ROLE_ID_1
 #     assert response_json["proficiency_level_id"] == PROFICIENCY_LEVEL_ID_2
 
-# # =============================
-# # DELETE USER ROLE
-# # =============================
-# @pytest.mark.parametrize("user_id, role_id, expected_status", [
-#     # user role not found
-#     (USER_ID_1, MEDIA_ROLE_ID_2, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format for user_id
-#     ("invalid-uuid-format", MEDIA_ROLE_ID_1, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid UUID format for role_id
-#     (USER_ID_1, "invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_user_role_error_cases(async_client, user_id, role_id, expected_status):
-#     """Test DELETE user role error cases (404 and 422)"""
-#     response = await async_client.delete(f"/users/{user_id}/roles/{role_id}")
-#     assert response.status_code == expected_status
+# =============================
+# DELETE USER ROLE
+# =============================
+@pytest.mark.asyncio
+async def test_delete_user_role_error_cases(async_client, seed_roles, seed_users, test_roles_data, test_users_data):
+    """Test DELETE user role error cases (422)"""
+    seed_roles([test_roles_data[0]])
+    seed_users([test_users_data[0]])
+    response1 = await async_client.delete(f"/users/invalid-uuid-format/roles/{ROLE_ID_1}")
+    assert response1.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    response2 = await async_client.delete(f"/users/{USER_ID_1}/roles/invalid-uuid-format")
+    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_user_role_success(async_client, seed_users, seed_media_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_media_roles_data, test_proficiency_levels_data, test_user_roles_data):
-#     """Test successful user role deletion with verification"""
-#     await seed_users([test_users_data[0]])
-#     await seed_media_roles([test_media_roles_data[0]])
-#     await seed_proficiency_levels([test_proficiency_levels_data[0]])
-#     await seed_user_roles([test_user_roles_data[0]])
+@pytest.mark.asyncio
+async def test_delete_user_role_success(async_client, get_test_db_session, seed_roles, seed_proficiency_levels, seed_users, seed_user_roles, test_roles_data, test_proficiency_levels_data, test_users_data, test_user_roles_data):
+    """Test successful user role deletion with verification"""
+    seed_roles([test_roles_data[0]])
+    seed_proficiency_levels([test_proficiency_levels_data[0]])
+    seed_users([test_users_data[0]])
+    seed_user_roles([test_user_roles_data[0]])
+    response = await async_client.delete(f"/users/{USER_ID_1}/roles/{ROLE_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    
+    # Verify deletion by trying to query it directly
+    verify_response = get_test_db_session.exec(
+        select(UserRole)
+        .where(UserRole.role_id == ROLE_ID_1)
+        .where(UserRole.user_id == USER_ID_1)
+    ).first()
+    assert verify_response is None
 
-#     response = await async_client.delete(f"/users/{USER_ID_1}/roles/{MEDIA_ROLE_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["user_id"] == USER_ID_1
-#     assert response_json["media_role_id"] == MEDIA_ROLE_ID_1
-
-#     verify_response = await async_client.get(f"/users/{USER_ID_1}/roles/{MEDIA_ROLE_ID_1}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid user role that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/users/{USER_ID_1}/roles/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
+    verify_response3 = await async_client.delete(f"/users/{BAD_ID_0000}/roles/{ROLE_ID_1}")
+    assert verify_response3.status_code == status.HTTP_204_NO_CONTENT

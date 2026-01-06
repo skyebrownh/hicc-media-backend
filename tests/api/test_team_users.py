@@ -2,6 +2,8 @@ import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.api.conftest import conditional_seed
+from app.db.models import TeamUser
+from sqlmodel import select
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, USER_ID_1, USER_ID_2, USER_ID_3
 
 # =============================
@@ -52,42 +54,6 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
     assert {tu["user_id"] for tu in response_json} == {USER_ID_1, USER_ID_2}
     assert response_json[0]["team_code"] == "team_1"
     assert response_json[0]["user_first_name"] == "Alice"
-
-# # =============================
-# # GET SINGLE TEAM USER
-# # =============================
-# @pytest.mark.parametrize("team_indices, user_indices, team_user_indices, team_id, user_id, expected_status", [
-#     # Team user not found
-#     ([0], [], [], TEAM_ID_1, BAD_ID_0000, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format for team_id
-#     ([], [], [], "invalid-uuid-format", USER_ID_1, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # Invalid UUID format for user_id
-#     ([], [], [], TEAM_ID_1, "invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_get_single_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_indices, user_indices, team_user_indices, team_id, user_id, expected_status):
-#     """Test GET single team user error cases (404 and 422)"""
-#     await conditional_seed(team_indices, test_teams_data, seed_teams)
-#     await conditional_seed(user_indices, test_users_data, seed_users)
-#     await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
-#     response = await async_client.get(f"/teams/{team_id}/users/{user_id}")
-#     assert response.status_code == expected_status
-
-# @pytest.mark.asyncio
-# async def test_get_single_team_user_success(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
-#     """Test GET single team user success case"""
-#     await seed_teams([test_teams_data[0]])
-#     await seed_users([test_users_data[0]])
-#     await seed_team_users([test_team_users_data[0]])
-
-#     response = await async_client.get(f"/teams/{TEAM_ID_1}/users/{USER_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["team_id"] == TEAM_ID_1
-#     assert response_json["user_id"] == USER_ID_1
-#     assert response_json["is_active"] is True
-#     assert response_json["team_user_id"] is not None
 
 # # =============================
 # # INSERT TEAM USER
@@ -189,40 +155,38 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
 #     for field, expected_value in expected_fields.items():
 #         assert response_json[field] == expected_value
 
-# # =============================
-# # DELETE TEAM USER
-# # =============================
-# @pytest.mark.parametrize("team_indices, user_indices, team_user_indices, team_id, user_id, expected_status", [
-#     # team user not found
-#     ([0], [1], [], TEAM_ID_1, USER_ID_2, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format for team_id
-#     ([], [], [], "invalid-uuid-format", USER_ID_1, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid UUID format for user_id
-#     ([], [], [], TEAM_ID_1, "invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_delete_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_indices, user_indices, team_user_indices, team_id, user_id, expected_status):
-#     """Test DELETE team user error cases (404 and 422)"""
-#     await conditional_seed(team_indices, test_teams_data, seed_teams)
-#     await conditional_seed(user_indices, test_users_data, seed_users)
-#     await conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
-#     response = await async_client.delete(f"/teams/{team_id}/users/{user_id}")
-#     assert response.status_code == expected_status
+# =============================
+# DELETE TEAM USER
+# =============================
+@pytest.mark.asyncio
+async def test_delete_team_user_error_cases(async_client, seed_teams, seed_users, test_teams_data, test_users_data):
+    """Test DELETE team user error cases (422)"""
+    seed_teams([test_teams_data[0]])
+    seed_users([test_users_data[0]])
+    response1 = await async_client.delete(f"/teams/invalid-uuid-format/users/{USER_ID_1}")
+    assert response1.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    response2 = await async_client.delete(f"/teams/{TEAM_ID_1}/users/invalid-uuid-format")
+    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_delete_team_user_success(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
-#     """Test successful team user deletion with verification"""
-#     await seed_teams([test_teams_data[0]])
-#     await seed_users([test_users_data[0]])
-#     await seed_team_users([test_team_users_data[0]])
+@pytest.mark.asyncio
+async def test_delete_team_user_success(async_client, get_test_db_session, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
+    """Test successful team user deletion with verification"""
+    seed_teams([test_teams_data[0]])
+    seed_users([test_users_data[0]])
+    seed_team_users([test_team_users_data[0]])
+    response = await async_client.delete(f"/teams/{TEAM_ID_1}/users/{USER_ID_1}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    
+    # Verify deletion by trying to query it directly
+    verify_response = get_test_db_session.exec(
+        select(TeamUser)
+        .where(TeamUser.team_id == TEAM_ID_1)
+        .where(TeamUser.user_id == USER_ID_1)
+    ).first()
+    assert verify_response is None
 
-#     response = await async_client.delete(f"/teams/{TEAM_ID_1}/users/{USER_ID_1}")
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert isinstance(response_json, dict)
-#     assert response_json["team_id"] == TEAM_ID_1
-#     assert response_json["user_id"] == USER_ID_1
-#     assert response_json["is_active"] is True
-
-#     verify_response = await async_client.get(f"/teams/{TEAM_ID_1}/users/{USER_ID_1}")
-#     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+    # Verify valid team user that does not exist returns 204
+    verify_response2 = await async_client.delete(f"/teams/{TEAM_ID_1}/users/{BAD_ID_0000}")
+    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
+    verify_response3 = await async_client.delete(f"/teams/{BAD_ID_0000}/users/{USER_ID_1}")
+    assert verify_response3.status_code == status.HTTP_204_NO_CONTENT

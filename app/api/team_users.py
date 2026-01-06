@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, HTTPException
+from fastapi import APIRouter, Depends, Body, status, HTTPException, Response
 from app.db.models import TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPublic, Team, User
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
@@ -43,7 +43,16 @@ async def get_team_users_for_team(team_id: UUID, session: Session = Depends(get_
 # ):
 #     return await update_team_user(conn, team_id=team_id, user_id=user_id, payload=team_user_update)
 
-# # Delete a team user
-# @router.delete("/teams/{team_id}/users/{user_id}", response_model=TeamUserOut)
-# async def delete_team_user(team_id: UUID, user_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await delete_one(conn, table="team_users", filters={"team_id": team_id, "user_id": user_id})
+@router.delete("/teams/{team_id}/users/{user_id}")
+async def delete_team_user(team_id: UUID, user_id: UUID, session: Session = Depends(get_db_session)):
+    """Delete a team user by team ID and user ID"""
+    team_user = session.exec(
+        select(TeamUser)
+        .where(TeamUser.team_id == team_id)
+        .where(TeamUser.user_id == user_id)
+    ).first()
+    if not team_user:
+        return Response(status_code=status.HTTP_204_NO_CONTENT) # Team user not found, nothing to delete
+    session.delete(team_user)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT) # Team user deleted successfully
