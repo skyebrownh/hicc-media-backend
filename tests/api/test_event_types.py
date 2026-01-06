@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201
 from tests.api.conftest import conditional_seed
 from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2, EVENT_TYPE_ID_3, EVENT_TYPE_ID_4
 
@@ -50,61 +50,57 @@ async def test_get_single_event_type_success(async_client, seed_event_types, tes
         "is_active": True
     })
 
-# # =============================
-# # INSERT EVENT TYPE
-# # =============================
-# @pytest.mark.parametrize("type_indices, payload, expected_status", [
-#     # empty payload
-#     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # missing required fields
-#     ([], {"name": "Incomplete Type"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid data types
-#     ([], {"name": "Bad Type", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # duplicate event_type_code
-#     ([2], {"name": "Duplicate Code", "code": "new_type"}, status.HTTP_409_CONFLICT),
-#     # id not allowed in payload
-#     ([], {"id": EVENT_TYPE_ID_4, "name": "Duplicate ID Type", "code": "duplicate_id_type"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_insert_event_type_error_cases(async_client, seed_event_types, test_event_types_data, type_indices, payload, expected_status):
-#     """Test INSERT event type error cases (422 and 409)"""
-#     await conditional_seed(type_indices, test_event_types_data, seed_event_types)
-#     response = await async_client.post("/event_types", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# INSERT EVENT TYPE
+# =============================
+@pytest.mark.parametrize("type_indices, payload, expected_status", [    
+    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([], {"name": "Incomplete Type"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
+    ([], {"name": "Bad Type", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([2], {"name": "Duplicate Code", "code": "new_type"}, status.HTTP_409_CONFLICT), # duplicate event_type_code
+    ([3], {"id": EVENT_TYPE_ID_4, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # event_type_id not allowed in payload
+])
+@pytest.mark.asyncio
+async def test_insert_event_type_error_cases(async_client, seed_event_types, test_event_types_data, type_indices, payload, expected_status):
+    """Test INSERT event type error cases (422 and 409)"""
+    conditional_seed(type_indices, test_event_types_data, seed_event_types)
+    response = await async_client.post("/event_types", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_insert_event_type_success(async_client):
-#     """Test valid event type insertion"""
-#     response = await async_client.post("/event_types", json={
-#         "name": "New Type",
-#         "code": "new_type"
-#     })
-#     assert response.status_code == status.HTTP_201_CREATED
-#     response_json = response.json()
-#     assert response_json["id"] is not None
-#     assert response_json["name"] == "New Type"
-#     assert response_json["code"] == "new_type"
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_insert_event_type_success(async_client):
+    """Test valid event type insertion"""
+    response = await async_client.post("/event_types", json={
+        "name": "New Type",
+        "code": "new_type"
+    })
+    assert response.status_code == status.HTTP_201_CREATED
+    response_json = response.json()
+    assert_single_item_201(response, expected_item={
+        "name": "New Type",
+        "code": "new_type",
+        "is_active": True
+    })
 
 # # =============================
 # # UPDATE EVENT TYPE
 # # =============================
-# @pytest.mark.parametrize("event_type_path, payload, expected_status", [
+# @pytest.mark.parametrize("url_path, payload, expected_status", [
 #     # event type not found
-#     (f"/event_types/{BAD_ID_0000}", {"event_type_name": "Updated Type Name", "is_active": False}, status.HTTP_404_NOT_FOUND),
+#     (f"/event_types/{BAD_ID_0000}", {"name": "Updated Type Name", "is_active": False}, status.HTTP_404_NOT_FOUND),
 #     # invalid UUID format
-#     ("/event_types/invalid-uuid-format", {"event_type_name": "Updated Type Name", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+#     ("/event_types/invalid-uuid-format", {"name": "Updated Type Name", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT),
 #     # empty payload
 #     (f"/event_types/{EVENT_TYPE_ID_3}", {}, status.HTTP_400_BAD_REQUEST),
 #     # invalid data types
-#     (f"/event_types/{EVENT_TYPE_ID_3}", {"event_type_name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+#     (f"/event_types/{EVENT_TYPE_ID_3}", {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
 #     # non-updatable field
-#     (f"/event_types/{EVENT_TYPE_ID_3}", {"event_type_name": "Invalid", "event_type_code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+#     (f"/event_types/{EVENT_TYPE_ID_3}", {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
 # ])
 # @pytest.mark.asyncio
-# async def test_update_event_type_error_cases(async_client, event_type_path, payload, expected_status):
+# async def test_update_event_type_error_cases(async_client, url_path, payload, expected_status):
 #     """Test UPDATE event type error cases (400, 404, and 422)"""
-#     response = await async_client.patch(event_type_path, json=payload)
+#     response = await async_client.patch(url_path, json=payload)
 #     assert response.status_code == expected_status
 
 # @pytest.mark.parametrize("event_type_id, payload, expected_fields, unchanged_fields", [
