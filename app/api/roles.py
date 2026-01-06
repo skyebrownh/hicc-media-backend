@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, Response
+from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from app.db.models import Role, RoleCreate, RoleUpdate
@@ -18,9 +19,18 @@ async def get_single_role(id: UUID, session: Session = Depends(get_db_session)):
     """Get a role by ID"""
     return get_or_404(session, Role, id)
 
-# @router.post("", response_model=MediaRoleOut, status_code=status.HTTP_201_CREATED)
-# async def post_role(role: MediaRoleCreate, conn: asyncpg.Connection = Depends(get_db_connection)):
-#         return await insert_role(conn, role=role)
+@router.post("", response_model=Role, status_code=status.HTTP_201_CREATED)
+async def post_role(role: RoleCreate, session: Session = Depends(get_db_session)):
+    """Create a new role"""
+    new_role = Role.model_validate(role)
+    try:
+        session.add(new_role)
+        session.commit()
+        session.refresh(new_role)
+        return new_role
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 # @router.patch("/{role_id}", response_model=MediaRoleOut)
 # async def patch_role(
