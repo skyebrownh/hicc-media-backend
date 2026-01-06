@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, Response
+from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from app.db.models import Team, TeamCreate, TeamUpdate
@@ -18,12 +19,18 @@ async def get_single_team(id: UUID, session: Session = Depends(get_db_session)):
     """Get a team by ID"""
     return get_or_404(session, Team, id)
 
-# async def get_team(team_id: UUID, conn: asyncpg.Connection = Depends(get_db_connection)):
-#         return await fetch_one(conn, table="teams", filters={"team_id": team_id})
-
-# @router.post("", response_model=TeamOut, status_code=status.HTTP_201_CREATED)
-# async def post_team(team: TeamCreate, conn: asyncpg.Connection = Depends(get_db_connection)):
-#         return await insert_team(conn, team=team)
+@router.post("", response_model=Team, status_code=status.HTTP_201_CREATED)
+async def post_team(team: TeamCreate, session: Session = Depends(get_db_session)):
+    """Create a new team"""
+    new_team = Team.model_validate(team)
+    try:
+        session.add(new_team)
+        session.commit()
+        session.refresh(new_team)
+        return new_team
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 # @router.patch("/{team_id}", response_model=TeamOut)
 # async def patch_team(team_id: UUID, team_update: TeamUpdate | None = Body(default=None), conn: asyncpg.Connection = Depends(get_db_connection)):

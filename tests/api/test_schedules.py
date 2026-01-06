@@ -1,10 +1,10 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201
 from tests.api.conftest import conditional_seed
 from sqlmodel import select, func
 from app.db.models import Event, EventAssignment
-from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, EVENT_TYPE_ID_1
+from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3, SCHEDULE_ID_4, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, EVENT_TYPE_ID_1
 
 # =============================
 # FIXTURES
@@ -113,43 +113,26 @@ async def test_get_schedule_grid_success(async_client, seed_for_schedules_tests)
     assert response_json["events"][0]["availability"][1]["user_first_name"] == "Bob"
     assert response_json["events"][0]["availability"][1]["user_last_name"] == "Jones"
 
-# # =============================
-# # INSERT SCHEDULE
-# # =============================
-# @pytest.mark.parametrize("payload, expected_status", [
-#     # empty payload
-#     ({}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # missing required fields
-#     ({"notes": "missing required month_start_date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid data types
-#     ({"month_start_date": 12345, "notes": 999}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # schedule_id not allowed in payload
-#     ({"schedule_id": "f8d3e340-9563-4de1-9146-675a8436242e", "month_start_date": DATE_2025_05_01}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # foreign key constraint violation
-#     ({"month_start_date": BAD_DATE_2000_01_01}, status.HTTP_404_NOT_FOUND),
-# ])
-# @pytest.mark.asyncio
-# async def test_insert_schedule_error_cases(async_client, payload, expected_status):
-#     """Test INSERT schedule error cases (422 and 404)"""
-#     response = await async_client.post("/schedules", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# INSERT SCHEDULE
+# =============================
+@pytest.mark.parametrize("payload", [
+    ({}), # empty payload
+    ({ "month": 13, "year": 2025}), # invalid month - violates check constraint
+    ({ "month": 5, "year": "two thousand twenty four"}), # invalid year
+    ({ "id": SCHEDULE_ID_4, "month": 5, "year": 2025}), # schedule_id not allowed in payload
+])
+@pytest.mark.asyncio
+async def test_insert_schedule_error_cases(async_client, payload):
+    """Test INSERT schedule error cases (422)"""
+    response = await async_client.post("/schedules", json=payload)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# @pytest.mark.asyncio
-# async def test_insert_schedule_success(async_client, seed_dates, test_dates_data):
-#     """Test valid schedule insertion"""
-#     # Use DATE_2025_05_01 (index 3) for month_start_date
-#     await seed_dates([test_dates_data[3]])
-    
-#     response = await async_client.post("/schedules", json={
-#         "month_start_date": DATE_2025_05_01,
-#         "notes": "New schedule"
-#     })
-#     assert response.status_code == status.HTTP_201_CREATED
-#     response_json = response.json()
-#     assert response_json["schedule_id"] is not None
-#     assert response_json["month_start_date"] == DATE_2025_05_01
-#     assert response_json["notes"] == "New schedule"
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_insert_schedule_success(async_client):
+    """Test valid schedule insertion"""
+    response = await async_client.post("/schedules", json={"month": 10, "year": 2025})
+    assert_single_item_201(response, expected_item={"month": 10, "year": 2025, "notes": None, "is_active": True})
 
 # # =============================
 # # UPDATE SCHEDULE

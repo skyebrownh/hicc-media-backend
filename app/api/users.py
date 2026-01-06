@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, Response
+from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from app.db.models import User, UserCreate, UserUpdate
 from sqlmodel import Session, select
@@ -19,9 +20,18 @@ async def get_single_user(id: UUID, session: Session = Depends(get_db_session)):
     """Get a user by ID"""
     return get_or_404(session, User, id)
 
-# @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-# async def post_user(user: UserCreate, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await insert_user(conn, user=user)
+@router.post("", response_model=User, status_code=status.HTTP_201_CREATED)
+async def post_user(user: UserCreate, session: Session = Depends(get_db_session)):
+    """Create a new user"""
+    new_user = User.model_validate(user)
+    try:
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+        return new_user
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 # @router.patch("/{user_id}", response_model=UserOut)
 # async def patch_user(

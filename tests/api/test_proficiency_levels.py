@@ -62,7 +62,7 @@ async def test_get_single_proficiency_level_success(async_client, seed_proficien
     ([], {"name": "Incomplete Proficiency Level"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Proficiency Level", "rank": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([3], {"name": "Duplicate Code", "rank": 6, "code": "new_level"}, status.HTTP_409_CONFLICT), # duplicate proficiency_level_code
-    ([4], {"id": PROFICIENCY_LEVEL_ID_4, "name": "ID Not Allowed", "rank": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # proficiency_level_id not allowed in payload
+    ([], {"id": PROFICIENCY_LEVEL_ID_4, "name": "ID Not Allowed", "rank": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # proficiency_level_id not allowed in payload
 ])
 @pytest.mark.asyncio
 async def test_insert_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, proficiency_level_indices, payload, expected_status):
@@ -74,17 +74,8 @@ async def test_insert_proficiency_level_error_cases(async_client, seed_proficien
 @pytest.mark.asyncio
 async def test_insert_proficiency_level_success(async_client):
     """Test valid proficiency level insertion"""
-    response = await async_client.post("/proficiency_levels", json={
-        "name": "New Level",
-        "code": "new_level"
-    })
-    assert_single_item_201(response, expected_item={
-        "name": "New Level",
-        "code": "new_level",
-        "rank": None,
-        "is_active": True,
-        "is_assignable": False
-    })
+    response = await async_client.post("/proficiency_levels", json={"name": "New Level", "code": "new_level"})
+    assert_single_item_201(response, expected_item={"name": "New Level", "code": "new_level", "rank": None, "is_active": True, "is_assignable": False})
 
 # # =============================
 # # UPDATE PROFICIENCY LEVEL

@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201
 from tests.api.conftest import conditional_seed
 from sqlmodel import select, func
 from app.db.models import TeamUser
@@ -52,39 +52,28 @@ async def test_get_single_team_success(async_client, seed_teams, test_teams_data
         "is_active": True
     })
 
-# # =============================
-# # INSERT TEAM
-# # =============================
-# @pytest.mark.parametrize("team_indices, payload, expected_status", [
-#     # empty payload
-#     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # missing required fields
-#     ([], {"name": "Incomplete Team"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid data types
-#     ([], {"name": "Bad Team", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # duplicate team_code
-#     ([3], {"name": "Duplicate Team Code", "code": "new_team"}, status.HTTP_409_CONFLICT),
-#     # team_id not allowed in payload
-#     ([3], {"id": TEAM_ID_4, "name": "Duplicate ID Team", "code": "duplicate_id_team"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_insert_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, payload, expected_status):
-#     """Test INSERT team error cases (422 and 409)"""
-#     await conditional_seed(team_indices, test_teams_data, seed_teams)
-    
-#     response = await async_client.post("/teams", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# INSERT TEAM
+# =============================
+@pytest.mark.parametrize("team_indices, payload, expected_status", [
+    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([], {"name": "Incomplete Team"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
+    ([], {"name": "Bad Team", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([3], {"name": "Duplicate Team Code", "code": "new_team"}, status.HTTP_409_CONFLICT), # duplicate team_code
+    ([], {"id": TEAM_ID_4, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # team_id not allowed in payload
+])
+@pytest.mark.asyncio
+async def test_insert_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, payload, expected_status):
+    """Test INSERT team error cases (422 and 409)"""
+    conditional_seed(team_indices, test_teams_data, seed_teams)
+    response = await async_client.post("/teams", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_insert_team_success(async_client):
-#     """Test valid team insertion"""
-#     response = await async_client.post("/teams", json={"name": "New Team", "code": "new_team"})
-#     assert response.status_code == status.HTTP_201_CREATED
-#     response_json = response.json()
-#     assert response_json["id"] is not None
-#     assert response_json["name"] == "New Team"
-#     assert response_json["code"] == "new_team"
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_insert_team_success(async_client):
+    """Test valid team insertion"""
+    response = await async_client.post("/teams", json={"name": "New Team", "code": "new_team"})
+    assert_single_item_201(response, expected_item={"name": "New Team", "code": "new_team", "is_active": True})
 
 # # =============================
 # # UPDATE TEAM
