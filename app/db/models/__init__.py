@@ -4,7 +4,7 @@ from .event_types import EventType, EventTypeCreate, EventTypeUpdate
 from .teams import Team, TeamCreate, TeamUpdate
 from .users import User, UserCreate, UserUpdate
 from .team_users import TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPublic
-from .user_roles import UserRole, UserRoleCreate, UserRoleUpdate, UserRolePublic
+from .user_roles import UserRole, UserRoleUpdate, UserRolePublic
 from .schedules import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic
 from .events import Event, EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic, EventWithAssignmentsAndAvailabilityPublic
 from .event_assignments import EventAssignment, EventAssignmentCreate, EventAssignmentUpdate, EventAssignmentPublic, EventAssignmentEmbeddedPublic
@@ -22,7 +22,7 @@ __all__ = [
     "Team", "TeamCreate", "TeamUpdate",
     "User", "UserCreate", "UserUpdate",
     "TeamUser", "TeamUserCreate", "TeamUserUpdate", "TeamUserPublic",
-    "UserRole", "UserRoleCreate", "UserRoleUpdate", "UserRolePublic",
+    "UserRole", "UserRoleUpdate", "UserRolePublic",
     "Schedule", "ScheduleCreate", "ScheduleUpdate", "ScheduleGridPublic",
     "Event", "EventCreate", "EventUpdate", "EventPublic", "EventWithAssignmentsPublic", "EventWithAssignmentsAndAvailabilityPublic",
     "EventAssignment", "EventAssignmentCreate", "EventAssignmentUpdate", "EventAssignmentPublic", "EventAssignmentEmbeddedPublic",

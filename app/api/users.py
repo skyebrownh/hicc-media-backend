@@ -2,9 +2,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
-from app.db.models import User, UserCreate, UserUpdate
+from app.db.models import User, UserCreate, UserUpdate, Role, UserRole, ProficiencyLevel
 from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import get_or_404
 
@@ -26,6 +25,14 @@ async def post_user(user: UserCreate, session: Session = Depends(get_db_session)
     new_user = User.model_validate(user)
     try:
         session.add(new_user)
+        session.flush()  # Flush to get the ID before creating UserRole records
+
+        # Create user_roles for this new user for every role
+        untrained_proficiency_level = session.exec(select(ProficiencyLevel).where(ProficiencyLevel.name == "Untrained")).first()
+        proficiency_level_id = untrained_proficiency_level.id if untrained_proficiency_level else None
+        for role in session.exec(select(Role)).all():
+            session.add(UserRole(user_id=new_user.id, role_id=role.id, proficiency_level_id=proficiency_level_id))
+
         session.commit()
         session.refresh(new_user)
         return new_user

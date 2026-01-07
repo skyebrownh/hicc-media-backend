@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
-from app.db.models import Role, RoleCreate, RoleUpdate
+from app.db.models import Role, RoleCreate, RoleUpdate, User, UserRole, ProficiencyLevel
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import get_or_404
 
@@ -25,6 +25,14 @@ async def post_role(role: RoleCreate, session: Session = Depends(get_db_session)
     new_role = Role.model_validate(role)
     try:
         session.add(new_role)
+        session.flush()  # Flush to get the ID before creating UserRole records
+
+        # Create user_roles for this new role for every user
+        untrained_proficiency_level = session.exec(select(ProficiencyLevel).where(ProficiencyLevel.name == "Untrained")).first()
+        proficiency_level_id = untrained_proficiency_level.id if untrained_proficiency_level else None
+        for user in session.exec(select(User)).all():
+            session.add(UserRole(user_id=user.id, role_id=new_role.id, proficiency_level_id=proficiency_level_id))
+
         session.commit()
         session.refresh(new_role)
         return new_role
