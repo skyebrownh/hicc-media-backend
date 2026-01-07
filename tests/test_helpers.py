@@ -2,17 +2,18 @@ import pytest
 from fastapi import HTTPException, status
 from app.utils.helpers import (
     get_or_raise_exception,
+    raise_exception_if_not_found,
     build_events_with_assignments_from_schedule,
     build_events_with_assignments_from_event,
 )
-from app.db.models import ProficiencyLevel
+from app.db.models import ProficiencyLevel, Role
 from tests.utils.constants import (
     BAD_ID_0000, 
     PROFICIENCY_LEVEL_ID_1,
+    ROLE_ID_1,
     SCHEDULE_ID_2,
     EVENT_ID_1,
     USER_ID_1,
-    ROLE_ID_1,
     EVENT_TYPE_ID_1,
     EVENT_ASSIGNMENT_ID_1,
 )
@@ -109,16 +110,47 @@ def sample_schedule_with_availability(
 # =============================
 # TESTS
 # =============================
-def test_get_or_404(get_test_db_session):
-    """Test get or 404"""
+def test_get_or_raise_exception(get_test_db_session):
+    """Test get_or_raise_exception function"""
+    # Test: raises 404 when object not found with default status code
     with pytest.raises(HTTPException) as exc_info:
         get_or_raise_exception(get_test_db_session, ProficiencyLevel, BAD_ID_0000)
     assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
+    assert exc_info.value.detail == "ProficiencyLevel not found"
 
+    # Test: raises custom status code when object not found
+    with pytest.raises(HTTPException) as exc_info:
+        get_or_raise_exception(get_test_db_session, Role, BAD_ID_0000, http_status_code=status.HTTP_400_BAD_REQUEST)
+    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+    assert exc_info.value.detail == "Role not found"
+
+    # Test: returns object when found
     proficiency_level = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_1, name="Beginner", code="beginner")
     get_test_db_session.add(proficiency_level)
     get_test_db_session.commit()
-    assert get_or_raise_exception(get_test_db_session, ProficiencyLevel, PROFICIENCY_LEVEL_ID_1) == proficiency_level
+    result = get_or_raise_exception(get_test_db_session, ProficiencyLevel, PROFICIENCY_LEVEL_ID_1)
+    assert result == proficiency_level
+    assert str(result.id) == str(PROFICIENCY_LEVEL_ID_1)
+    assert result.name == "Beginner"
+
+def test_raise_exception_if_not_found():
+    """Test raise_exception_if_not_found function"""
+    # Test: raises 404 when object is None with default status code
+    with pytest.raises(HTTPException) as exc_info:
+        raise_exception_if_not_found(None, ProficiencyLevel)
+    assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
+    assert exc_info.value.detail == "ProficiencyLevel not found"
+
+    # Test: raises custom status code when object is None
+    with pytest.raises(HTTPException) as exc_info:
+        raise_exception_if_not_found(None, Role, http_status_code=status.HTTP_400_BAD_REQUEST)
+    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+    assert exc_info.value.detail == "Role not found"
+
+    # Test: does nothing when object exists
+    proficiency_level = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_1, name="Beginner", code="beginner")
+    raise_exception_if_not_found(proficiency_level, ProficiencyLevel)
+    assert str(proficiency_level.id) == str(PROFICIENCY_LEVEL_ID_1)
 
 def test_build_events_with_assignments_from_schedule(sample_schedule_with_events):
     """Test build_events_with_assignments_from_schedule function"""
@@ -162,48 +194,3 @@ def test_build_events_with_assignments_from_event(sample_event_with_assignments)
     assert first_assignment.role_name == "ProPresenter"
     assert str(first_assignment.assigned_user_id) == USER_ID_1
     assert first_assignment.assigned_user_first_name == "Alice"
-
-# def test_build_events_with_assignments_and_availability_from_schedule(
-#     sample_schedule_with_availability,
-# ):
-#     """Test build_events_with_assignments_and_availability_from_schedule function"""
-#     # Build events with assignments and availability from in-memory schedule
-#     # Note: This test may fail if event.availability relationship doesn't exist
-#     # which would indicate a bug in the helper function
-#     try:
-#         result = build_events_with_assignments_and_availability_from_schedule(
-#             sample_schedule_with_availability
-#         )
-        
-#         # Assertions
-#         assert isinstance(result, list)
-#         assert len(result) == 3  # Three events in test data
-        
-#         # Check first event structure
-#         first_event = result[0]
-#         assert first_event.event.id == EVENT_ID_1
-#         assert first_event.event.schedule_id == SCHEDULE_ID_2
-#         assert len(first_event.event_assignments) == 2
-#         # Availability should be a list
-#         assert isinstance(first_event.availability, list)
-#         assert len(first_event.availability) == 2  # Two unavailable periods
-        
-#         # Check availability structure
-#         first_availability = first_event.availability[0]
-#         assert hasattr(first_availability, 'user_first_name')
-#         assert hasattr(first_availability, 'user_last_name')
-#         assert first_availability.user_first_name in ["Alice", "Bob"]
-#         assert first_availability.user_last_name in ["Smith", "Jones"]
-        
-#         # Other events should have empty availability
-#         assert len(result[1].availability) == 0
-#         assert len(result[2].availability) == 0
-#     except AttributeError as e:
-#         if "'Event' object has no attribute 'availability'" in str(e):
-#             pytest.fail(
-#                 "event.availability relationship does not exist in Event model. "
-#                 "The helper function build_events_with_assignments_and_availability_from_schedule "
-#                 "references a relationship that needs to be defined."
-#             )
-#         else:
-#             raise
