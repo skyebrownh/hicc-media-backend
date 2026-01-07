@@ -4,7 +4,7 @@ from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_s
 from tests.api.conftest import conditional_seed
 from sqlmodel import select, func
 from app.db.models import UserRole
-from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4
+from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4, PROFICIENCY_LEVEL_ID_3, USER_ID_1, USER_ID_2
 
 # =============================
 # GET ALL ROLES
@@ -76,10 +76,21 @@ async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
-async def test_insert_role_success(async_client):
+async def test_insert_role_success(async_client, get_test_db_session, seed_users, seed_proficiency_levels, test_users_data, test_proficiency_levels_data):
     """Test valid role insertion"""
+    seed_proficiency_levels([test_proficiency_levels_data[2]]) # Untrained proficiency level
+    seed_users(test_users_data[:2])
     response = await async_client.post("/roles", json={"name": "New Role", "order": 4, "code": "new_role"})
     assert_single_item_201(response, expected_item={"name": "New Role", "code": "new_role", "order": 4, "description": None, "is_active": True})
+
+    # Verify user_roles were created for this new role
+    role_id = response.json()["id"]
+    user_roles = get_test_db_session.exec(select(UserRole).where(UserRole.role_id == role_id)).all()
+    assert len(user_roles) == 2
+    assert str(user_roles[0].user_id) == USER_ID_1
+    assert str(user_roles[0].proficiency_level_id) == PROFICIENCY_LEVEL_ID_3
+    assert str(user_roles[1].user_id) == USER_ID_2
+    assert str(user_roles[1].role_id) == role_id
 
 # # =============================
 # # UPDATE ROLE

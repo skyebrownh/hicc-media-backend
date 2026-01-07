@@ -4,7 +4,7 @@ from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_s
 from tests.api.conftest import conditional_seed
 from sqlmodel import select, func
 from app.db.models import TeamUser, UserRole
-from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4
+from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4, PROFICIENCY_LEVEL_ID_3
 
 # =============================
 # GET ALL USERS
@@ -71,10 +71,21 @@ async def test_insert_user_error_cases(async_client, seed_users, test_users_data
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
-async def test_insert_user_success(async_client):
+async def test_insert_user_success(async_client, get_test_db_session, seed_roles, seed_proficiency_levels, test_roles_data, test_proficiency_levels_data):
     """Test valid user insertion"""
+    seed_proficiency_levels([test_proficiency_levels_data[2]]) # Untrained proficiency level
+    seed_roles(test_roles_data[:2])
     response = await async_client.post("/users", json={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com"})
     assert_single_item_201(response, expected_item={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com", "is_active": True})
+
+    # Verify user_roles were created for this new user
+    user_id = response.json()["id"]
+    user_roles = get_test_db_session.exec(select(UserRole).where(UserRole.user_id == user_id)).all()
+    assert len(user_roles) == 2
+    assert str(user_roles[0].role_id) == ROLE_ID_1
+    assert str(user_roles[0].proficiency_level_id) == PROFICIENCY_LEVEL_ID_3
+    assert str(user_roles[1].role_id) == ROLE_ID_2
+    assert str(user_roles[1].user_id) == user_id
 
 # # =============================
 # # UPDATE USER
