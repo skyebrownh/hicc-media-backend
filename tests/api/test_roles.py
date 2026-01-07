@@ -15,7 +15,6 @@ async def test_get_all_roles_none_exist(async_client):
     response = await async_client.get("/roles")
     assert_empty_list_200(response)
 
-
 @pytest.mark.asyncio
 async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
     """Test getting all roles after inserting a variety"""
@@ -36,11 +35,11 @@ async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
 # =============================
 @pytest.mark.parametrize("id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Role not present
-    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_single_role_error_cases(async_client, id, expected_status):
-    """Test GET single role error cases (404 and 422)"""
+    """Test GET single role error cases (400, 404)"""
     response = await async_client.get(f"/roles/{id}")
     assert response.status_code == expected_status
 
@@ -62,7 +61,7 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
 # INSERT ROLE
 # =============================
 @pytest.mark.parametrize("role_indices, payload, expected_status", [    
-    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([], {}, status.HTTP_400_BAD_REQUEST), # empty payload
     ([], {"name": "Incomplete Role"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Role", "order": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([3], {"name": "Duplicate Code", "order": 6, "code": "new_role"}, status.HTTP_409_CONFLICT), # duplicate role_code
@@ -70,7 +69,7 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
 ])
 @pytest.mark.asyncio
 async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, payload, expected_status):
-    """Test INSERT role error cases (422 and 409)"""
+    """Test INSERT role error cases (400, 422, and 409)"""
     conditional_seed(role_indices, test_roles_data, seed_roles)
     response = await async_client.post("/roles", json=payload)
     assert response.status_code == expected_status
@@ -157,9 +156,9 @@ async def test_insert_role_success(async_client, get_test_db_session, seed_users
 # =============================
 @pytest.mark.asyncio
 async def test_delete_role_error_cases(async_client):
-    """Test DELETE role error cases (422)"""
+    """Test DELETE role error cases (400)"""
     response = await async_client.delete("/roles/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 @pytest.mark.asyncio
 async def test_delete_role_success(async_client, seed_roles, test_roles_data):

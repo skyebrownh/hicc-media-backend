@@ -1,8 +1,9 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, HTTPException, Response
+from fastapi import APIRouter, Depends, status, Response
 from app.db.models import UserUnavailablePeriod, UserUnavailablePeriodCreate, UserUnavailablePeriodUpdate, UserUnavailablePeriodPublic
 from sqlmodel import Session
 from app.utils.dependencies import get_db_session
+from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter()
 
@@ -30,8 +31,7 @@ router = APIRouter()
 async def delete_user_unavailable_period(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a user unavailable period by ID"""
     user_unavailable_period = session.get(UserUnavailablePeriod, id)
-    if not user_unavailable_period:
-        return Response(status_code=status.HTTP_204_NO_CONTENT) # User unavailable period not found, nothing to delete
+    raise_exception_if_not_found(user_unavailable_period, UserUnavailablePeriod, status.HTTP_204_NO_CONTENT) # User unavailable period not found, nothing to delete
     session.delete(user_unavailable_period)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # User unavailable period deleted successfully

@@ -82,11 +82,11 @@ async def test_get_all_events_for_schedule_success(async_client, seed_for_events
 # =============================
 @pytest.mark.parametrize("event_id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Event not found
-    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_single_event_error_cases(async_client, event_id, expected_status):
-    """Test GET single schedule date error cases (404 and 422)"""
+    """Test GET single schedule date error cases (400, 404)"""
     response = await async_client.get(f"/events/{event_id}")
     assert response.status_code == expected_status
 
@@ -271,9 +271,9 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
 # =============================
 @pytest.mark.asyncio
 async def test_delete_event_error_cases(async_client):
-    """Test DELETE event error cases (422)"""
+    """Test DELETE event error cases (400)"""
     response = await async_client.delete("/events/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 @pytest.mark.asyncio
 async def test_delete_event_success(async_client, seed_events, seed_event_types, seed_schedules, test_events_data, test_event_types_data, test_schedules_data):

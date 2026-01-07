@@ -2,10 +2,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
 from app.db.models import Role, RoleCreate, RoleUpdate, User, UserRole, ProficiencyLevel
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_404
+from app.utils.helpers import get_or_raise_exception, raise_exception_if_not_found
+from app.services.queries import get_role
 
 router = APIRouter(prefix="/roles")
 
@@ -17,7 +17,7 @@ async def get_all_roles(session: Session = Depends(get_db_session)):
 @router.get("/{id}", response_model=Role)
 async def get_single_role(id: UUID, session: Session = Depends(get_db_session)):
     """Get a role by ID"""
-    return get_or_404(session, Role, id)
+    return get_or_raise_exception(session, Role, id)
 
 @router.post("", response_model=Role, status_code=status.HTTP_201_CREATED)
 async def post_role(role: RoleCreate, session: Session = Depends(get_db_session)):
@@ -51,13 +51,8 @@ async def post_role(role: RoleCreate, session: Session = Depends(get_db_session)
 @router.delete("/{id}")
 async def delete_role(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a role by ID"""
-    role = session.exec(
-        select(Role)
-        .where(Role.id == id)
-        .options(selectinload(Role.user_roles)) # Ensure the relationship is loaded for cascade delete
-    ).first()
-    if not role:
-        return Response(status_code=status.HTTP_204_NO_CONTENT) # Role not found, nothing to delete
+    role = get_role(session, id)
+    raise_exception_if_not_found(role, Role, status.HTTP_204_NO_CONTENT) # Role not found, nothing to delete
     session.delete(role)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # Role deleted successfully

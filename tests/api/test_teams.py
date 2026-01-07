@@ -32,11 +32,11 @@ async def test_get_all_teams_success(async_client, seed_teams, test_teams_data):
 # =============================
 @pytest.mark.parametrize("id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Team not present
-    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_single_team_error_cases(async_client, id, expected_status):
-    """Test GET single team error cases (404 and 422)"""
+    """Test GET single team error cases (400, 404)"""
     response = await async_client.get(f"/teams/{id}")
     assert response.status_code == expected_status
 
@@ -56,7 +56,7 @@ async def test_get_single_team_success(async_client, seed_teams, test_teams_data
 # INSERT TEAM
 # =============================
 @pytest.mark.parametrize("team_indices, payload, expected_status", [
-    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([], {}, status.HTTP_400_BAD_REQUEST), # empty payload
     ([], {"name": "Incomplete Team"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Team", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([3], {"name": "Duplicate Team Code", "code": "new_team"}, status.HTTP_409_CONFLICT), # duplicate team_code
@@ -64,7 +64,7 @@ async def test_get_single_team_success(async_client, seed_teams, test_teams_data
 ])
 @pytest.mark.asyncio
 async def test_insert_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, payload, expected_status):
-    """Test INSERT team error cases (422 and 409)"""
+    """Test INSERT team error cases (400, 422, and 409)"""
     conditional_seed(team_indices, test_teams_data, seed_teams)
     response = await async_client.post("/teams", json=payload)
     assert response.status_code == expected_status
@@ -139,9 +139,9 @@ async def test_insert_team_success(async_client):
 # =============================
 @pytest.mark.asyncio
 async def test_delete_team_error_cases(async_client):
-    """Test DELETE team error cases (422)"""
+    """Test DELETE team error cases (400)"""
     response = await async_client.delete("/teams/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 @pytest.mark.asyncio
 async def test_delete_team_success(async_client, seed_teams, test_teams_data):

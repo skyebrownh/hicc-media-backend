@@ -1,11 +1,11 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
+from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
 from app.db.models import Team, TeamCreate, TeamUpdate
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_404
+from app.utils.helpers import get_or_raise_exception, raise_exception_if_not_found
+from app.services.queries import get_team
 
 router = APIRouter(prefix="/teams")
 
@@ -17,7 +17,7 @@ async def get_all_teams(session: Session = Depends(get_db_session)):
 @router.get("/{id}", response_model=Team)
 async def get_single_team(id: UUID, session: Session = Depends(get_db_session)):
     """Get a team by ID"""
-    return get_or_404(session, Team, id)
+    return get_or_raise_exception(session, Team, id)
 
 @router.post("", response_model=Team, status_code=status.HTTP_201_CREATED)
 async def post_team(team: TeamCreate, session: Session = Depends(get_db_session)):
@@ -39,13 +39,8 @@ async def post_team(team: TeamCreate, session: Session = Depends(get_db_session)
 @router.delete("/{id}")
 async def delete_team(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a team by ID"""
-    team = session.exec(
-        select(Team)
-        .where(Team.id == id)
-        .options(selectinload(Team.team_users)) # Ensure the relationship is loaded for cascade delete
-    ).first()
-    if not team:
-        return Response(status_code=status.HTTP_204_NO_CONTENT) # Team not found, nothing to delete
+    team = get_team(session, id)
+    raise_exception_if_not_found(team, Team, status.HTTP_204_NO_CONTENT) # Team not found, nothing to delete
     session.delete(team)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # Team deleted successfully

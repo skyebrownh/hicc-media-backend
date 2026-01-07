@@ -132,9 +132,9 @@ from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, EVENT_ID_1,
 # =============================
 @pytest.mark.asyncio
 async def test_delete_user_unavailable_period_error_cases(async_client):
-    """Test DELETE user unavailable period error cases (422)"""
+    """Test DELETE user unavailable period error cases (400)"""
     response = await async_client.delete("/user_availability/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 @pytest.mark.asyncio
 async def test_delete_user_unavailable_period_success(async_client, get_test_db_session, seed_user_unavailable_periods, seed_users, test_user_unavailable_periods_data, test_users_data):

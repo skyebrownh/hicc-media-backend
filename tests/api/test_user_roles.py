@@ -25,11 +25,11 @@ def seed_for_user_roles_tests(seed_users, seed_roles, seed_proficiency_levels, s
 # =============================
 @pytest.mark.parametrize("user_id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # User not found
-    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_roles_for_user_error_cases(async_client, user_id, expected_status):
-    """Test GET roles for user error cases (404, 422)"""
+    """Test GET roles for user error cases (400, 404)"""
     response = await async_client.get(f"/users/{user_id}/roles")
     assert response.status_code == expected_status
 
@@ -69,11 +69,11 @@ async def test_get_roles_for_user_success(async_client, seed_for_user_roles_test
 # =============================
 @pytest.mark.parametrize("role_id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Role not found
-    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_users_for_role_error_cases(async_client, role_id, expected_status):
-    """Test GET users for role error cases (404, 422)"""
+    """Test GET users for role error cases (400, 404)"""
     response = await async_client.get(f"/roles/{role_id}/users")
     assert response.status_code == expected_status
 

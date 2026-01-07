@@ -1,9 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, HTTPException
-from app.db.models import EventAssignment, EventAssignmentCreate, EventAssignmentUpdate, EventAssignmentPublic
+from fastapi import APIRouter, Depends, status
+from app.db.models import EventAssignment, EventAssignmentCreate, EventAssignmentUpdate, EventAssignmentPublic, Event
 from sqlmodel import Session
 from app.utils.dependencies import get_db_session
 from app.services.queries import get_event
+from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter()
 
@@ -11,8 +12,7 @@ router = APIRouter()
 async def get_event_assignments_by_event(event_id: UUID, session: Session = Depends(get_db_session)):
     """Get all event assignments for an event"""
     event = get_event(session, event_id)
-    if not event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    raise_exception_if_not_found(event, Event, status.HTTP_404_NOT_FOUND)
     event_assignments_public = []
     for ea in event.event_assignments:
         assigned_user = ea.assigned_user

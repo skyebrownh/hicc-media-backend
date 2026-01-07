@@ -1,12 +1,11 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, HTTPException, Response
+from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy.exc import IntegrityError
 from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic, EventWithAssignmentsAndAvailabilityPublic, EventPublic, EventAssignmentEmbeddedPublic, UserUnavailablePeriodEmbeddedPublic
 from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_404
-from app.services.queries import get_schedule, get_unavailable_users_for_event
+from app.utils.helpers import get_or_raise_exception, raise_exception_if_not_found
+from app.services.queries import get_schedule, get_unavailable_users_for_event, get_schedule_for_cascade_delete
 
 router = APIRouter(prefix="/schedules")
 
@@ -18,14 +17,13 @@ async def get_all_schedules(session: Session = Depends(get_db_session)):
 @router.get("/{id}", response_model=Schedule)
 async def get_single_schedule(id: UUID, session: Session = Depends(get_db_session)):
     """Get a schedule by ID"""
-    return get_or_404(session, Schedule, id)
+    return get_or_raise_exception(session, Schedule, id)
 
 @router.get("/{id}/grid", response_model=ScheduleGridPublic)
 async def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)):
     """Get a schedule grid by ID"""
     schedule = get_schedule(session, id)
-    if not schedule:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
+    raise_exception_if_not_found(schedule, Schedule, status.HTTP_404_NOT_FOUND)
 
     schedule_grid_events = []
     for event in schedule.events:
@@ -84,13 +82,8 @@ async def post_schedule(schedule: ScheduleCreate, session: Session = Depends(get
 @router.delete("/{id}")
 async def delete_schedule(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a schedule by ID"""
-    schedule = session.exec(
-        select(Schedule)
-        .where(Schedule.id == id)
-        .options(selectinload(Schedule.events)) # Ensure the relationship is loaded for cascade delete
-    ).first()
-    if not schedule:
-        return Response(status_code=status.HTTP_204_NO_CONTENT) # Schedule not found, nothing to delete
+    schedule = get_schedule_for_cascade_delete(session, id)
+    raise_exception_if_not_found(schedule, Schedule, status.HTTP_204_NO_CONTENT) # Schedule not found, nothing to delete
     session.delete(schedule)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # Schedule deleted successfully
