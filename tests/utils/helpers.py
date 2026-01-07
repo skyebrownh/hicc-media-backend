@@ -2,6 +2,12 @@ import json
 from fastapi import status, Response
 from datetime import datetime, timezone
 
+def conditional_seed(indices, data, seed_func):
+    """Conditionally seed data only if indices are provided (non-empty list)"""
+    if indices:
+        items = [data[i] for i in indices]
+        seed_func(items)
+
 def assert_empty_list_200(response: Response) -> None:
     """Assert that a response is an empty list and returns a 200 OK status code."""
     assert response.status_code == status.HTTP_200_OK
@@ -177,10 +183,8 @@ def find_dict_difference(dict1: dict, dict2: dict) -> dict:
     
     return diff
 
-# Parse datetimes from response and convert to UTC for comparison
-# The database may return datetimes in different timezones, so we normalize to UTC
 def parse_to_utc(dt_str: str) -> datetime:
-    """Parse ISO datetime string and convert to UTC."""
+    """Parse ISO datetime string and convert to UTC. The database may return datetimes in different timezones, so we normalize to UTC."""
     dt_str_normalized = dt_str.replace("Z", "+00:00")
     dt = datetime.fromisoformat(dt_str_normalized)
     if dt.tzinfo is None:

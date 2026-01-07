@@ -1,8 +1,7 @@
 import pytest
 import json
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc
-from tests.api.conftest import conditional_seed
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc, conditional_seed
 from sqlmodel import select, func
 from app.db.models import EventAssignment
 from tests.utils.constants import (

@@ -1,15 +1,24 @@
 import pytest
+import pytest_asyncio
+from app.utils.helpers import VALID_TABLES
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
-# Test data fixtures are now in tests/conftest.py and available to all tests
+from sqlmodel import text
 
-# =============================
-# CONDITIONAL SEEDING HELPER
-# =============================
-def conditional_seed(indices, data, seed_func):
-    """Conditionally seed data only if indices are provided (non-empty list)"""
-    if indices:
-        items = [data[i] for i in indices]
-        seed_func(items)
+@pytest_asyncio.fixture(autouse=True, scope="function")
+async def truncate_tables(test_db_engine):
+    """
+    Truncate tables before each test to keep state isolated without recreating schema.
+    Assumes search_path=test_schema so unqualified table names resolve correctly.
+    """
+    truncate_sql = f"""
+    TRUNCATE TABLE
+        {', '.join(VALID_TABLES)}
+    RESTART IDENTITY CASCADE;
+    """
+
+    with test_db_engine.begin() as conn:
+        conn.execute(text(truncate_sql))
+    yield
 
 # =============================
 # SEED HELPER FIXTURES

@@ -1,10 +1,6 @@
 import pytest
-from uuid import UUID
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
-from tests.api.conftest import conditional_seed
-from app.db.models import UserRole
-from sqlmodel import select
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3,
     PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
