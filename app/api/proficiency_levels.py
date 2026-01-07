@@ -1,10 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
+from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from app.db.models import ProficiencyLevel, ProficiencyLevelCreate, ProficiencyLevelUpdate 
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_404
+from app.utils.helpers import get_or_raise_exception
 
 router = APIRouter(prefix="/proficiency_levels")
 
@@ -16,7 +16,7 @@ async def get_all_proficiency_levels(session: Session = Depends(get_db_session))
 @router.get("/{id}", response_model=ProficiencyLevel)
 async def get_single_proficiency_level(id: UUID, session: Session = Depends(get_db_session)):
     """Get a proficiency level by ID"""
-    return get_or_404(session, ProficiencyLevel, id)
+    return get_or_raise_exception(session, ProficiencyLevel, id)
 
 @router.post("", response_model=ProficiencyLevel, status_code=status.HTTP_201_CREATED)
 async def post_proficiency_level(proficiency_level: ProficiencyLevelCreate, session: Session = Depends(get_db_session)):
@@ -42,9 +42,7 @@ async def post_proficiency_level(proficiency_level: ProficiencyLevelCreate, sess
 @router.delete("/{id}")
 async def delete_proficiency_level(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a proficiency level by ID"""
-    proficiency_level = session.get(ProficiencyLevel, id)
-    if not proficiency_level:
-        return Response(status_code=status.HTTP_204_NO_CONTENT) # Proficiency level not found, nothing to delete
+    proficiency_level = get_or_raise_exception(session, ProficiencyLevel, id, status.HTTP_204_NO_CONTENT) # Proficiency level not found, nothing to delete
     session.delete(proficiency_level)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # Proficiency level deleted successfully

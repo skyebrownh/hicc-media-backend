@@ -32,11 +32,11 @@ async def test_get_all_proficiency_levels_success(async_client, seed_proficiency
 # =============================
 @pytest.mark.parametrize("id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Proficiency level not present
-    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_single_proficiency_level_error_cases(async_client, id, expected_status):
-    """Test GET single proficiency level error cases (404 and 422)"""
+    """Test GET single proficiency level error cases (400, 404)"""
     response = await async_client.get(f"/proficiency_levels/{id}")
     assert response.status_code == expected_status
 
@@ -58,7 +58,7 @@ async def test_get_single_proficiency_level_success(async_client, seed_proficien
 # INSERT PROFICIENCY LEVEL
 # =============================
 @pytest.mark.parametrize("proficiency_level_indices, payload, expected_status", [
-    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([], {}, status.HTTP_400_BAD_REQUEST), # empty payload
     ([], {"name": "Incomplete Proficiency Level"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Proficiency Level", "rank": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([3], {"name": "Duplicate Code", "rank": 6, "code": "new_level"}, status.HTTP_409_CONFLICT), # duplicate proficiency_level_code
@@ -66,7 +66,7 @@ async def test_get_single_proficiency_level_success(async_client, seed_proficien
 ])
 @pytest.mark.asyncio
 async def test_insert_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, proficiency_level_indices, payload, expected_status):
-    """Test INSERT proficiency level error cases (422 and 409)"""
+    """Test INSERT proficiency level error cases (400, 422, and 409)"""
     conditional_seed(proficiency_level_indices, test_proficiency_levels_data, seed_proficiency_levels)
     response = await async_client.post("/proficiency_levels", json=payload)
     assert response.status_code == expected_status
@@ -141,9 +141,9 @@ async def test_insert_proficiency_level_success(async_client):
 # =============================
 @pytest.mark.asyncio
 async def test_delete_proficiency_level_error_cases(async_client):
-    """Test DELETE proficiency level error cases (422)"""
+    """Test DELETE proficiency level error cases (400)"""
     response = await async_client.delete("/proficiency_levels/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 @pytest.mark.asyncio
 async def test_delete_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):

@@ -1,10 +1,8 @@
 import pytest
 from fastapi import HTTPException, status
 from app.utils.helpers import (
-    raise_bad_request_empty_payload, 
-    get_or_404,
+    get_or_raise_exception,
     build_events_with_assignments_from_schedule,
-    # build_events_with_assignments_and_availability_from_schedule,
     build_events_with_assignments_from_event,
 )
 from app.db.models import ProficiencyLevel
@@ -111,26 +109,16 @@ def sample_schedule_with_availability(
 # =============================
 # TESTS
 # =============================
-def test_raise_bad_request_empty_payload():
-    """Test raise bad request empty payload"""
-    with pytest.raises(HTTPException) as exc_info:
-        raise_bad_request_empty_payload(None)
-    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-
-    with pytest.raises(HTTPException) as exc_info:
-        raise_bad_request_empty_payload({})
-    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-
 def test_get_or_404(get_test_db_session):
     """Test get or 404"""
     with pytest.raises(HTTPException) as exc_info:
-        get_or_404(get_test_db_session, ProficiencyLevel, BAD_ID_0000)
+        get_or_raise_exception(get_test_db_session, ProficiencyLevel, BAD_ID_0000)
     assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
     proficiency_level = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_1, name="Beginner", code="beginner")
     get_test_db_session.add(proficiency_level)
     get_test_db_session.commit()
-    assert get_or_404(get_test_db_session, ProficiencyLevel, PROFICIENCY_LEVEL_ID_1) == proficiency_level
+    assert get_or_raise_exception(get_test_db_session, ProficiencyLevel, PROFICIENCY_LEVEL_ID_1) == proficiency_level
 
 def test_build_events_with_assignments_from_schedule(sample_schedule_with_events):
     """Test build_events_with_assignments_from_schedule function"""

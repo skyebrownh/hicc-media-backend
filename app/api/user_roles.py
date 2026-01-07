@@ -1,9 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, HTTPException, Response
-from app.db.models import UserRole, UserRoleUpdate, UserRolePublic, User, Role, ProficiencyLevel
-from sqlmodel import Session, select
+from fastapi import APIRouter, Depends, status
+from app.db.models import UserRoleUpdate, UserRolePublic, User, Role
+from sqlmodel import Session
 from app.utils.dependencies import get_db_session
 from app.services.queries import get_user_for_user_roles, get_role_for_user_roles
+from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter()
 
@@ -11,8 +12,7 @@ router = APIRouter()
 async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_session)):
     """Get all roles for a user"""
     user = get_user_for_user_roles(session, user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    raise_exception_if_not_found(user, User, status.HTTP_404_NOT_FOUND)
     return [
         UserRolePublic.from_objects(
             user_role=ur,
@@ -27,8 +27,7 @@ async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_se
 async def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_session)):
     """Get all users for a role"""
     role = get_role_for_user_roles(session, role_id)
-    if not role:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    raise_exception_if_not_found(role, Role, status.HTTP_404_NOT_FOUND)
     return [
         UserRolePublic.from_objects(
             user_role=ur,

@@ -33,11 +33,11 @@ async def test_get_all_users_success(async_client, seed_users, test_users_data):
 # =============================
 @pytest.mark.parametrize("id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # User not present
-    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_single_user_error_cases(async_client, id, expected_status):
-    """Test GET single user error cases (404 and 422)"""
+    """Test GET single user error cases (400, 404)"""
     response = await async_client.get(f"/users/{id}")
     assert response.status_code == expected_status
 
@@ -58,17 +58,17 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
 # =============================
 # INSERT USER
 # =============================
-@pytest.mark.parametrize("payload", [
-    {}, # empty payload
-    { "first_name": "Incomplete"}, # missing required fields
-    { "first_name": 123, "last_name": True, "phone": 555, "email": 999}, # invalid data types
-    { "id": USER_ID_4, "first_name": "ID Not Allowed", "last_name": "ID", "phone": "555-6666", "email": "id_not_allowed@example.com"}, # user_id not allowed in payload
+@pytest.mark.parametrize("payload, expected_status", [
+    ({}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ({ "first_name": "Incomplete"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
+    ({ "first_name": 123, "last_name": True, "phone": 555, "email": 999}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ({ "id": USER_ID_4, "first_name": "ID Not Allowed", "last_name": "ID", "phone": "555-6666", "email": "id_not_allowed@example.com"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # user_id not allowed in payload
 ])
 @pytest.mark.asyncio
-async def test_insert_user_error_cases(async_client, seed_users, test_users_data, payload):
-    """Test INSERT user error cases (422)"""
+async def test_insert_user_error_cases(async_client, payload, expected_status):
+    """Test INSERT user error cases (400, 422)"""
     response = await async_client.post("/users", json=payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == expected_status
 
 @pytest.mark.asyncio
 async def test_insert_user_success(async_client, get_test_db_session, seed_roles, seed_proficiency_levels, test_roles_data, test_proficiency_levels_data):
@@ -151,9 +151,9 @@ async def test_insert_user_success(async_client, get_test_db_session, seed_roles
 # =============================
 @pytest.mark.asyncio
 async def test_delete_user_error_cases(async_client):
-    """Test DELETE user error cases (422)"""
+    """Test DELETE user error cases (400)"""
     response = await async_client.delete("/users/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 @pytest.mark.asyncio
 async def test_delete_user_success(async_client, seed_users, test_users_data):

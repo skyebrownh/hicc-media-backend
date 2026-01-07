@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 import asyncpg
@@ -39,9 +39,21 @@ def register_exception_handlers(app: FastAPI):
         
         Returns validation errors to help clients fix their request format.
         """
+        # Get the raw body if possible
+        body = await request.body()
+        
+        # Check if the body is empty or just whitespace
+        if not body or body.decode().strip() == "{}":
+            logger.warning(f"Empty payload is not allowed. Body: {body}")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": "Empty payload is not allowed."},
+            )
+        
+        # Otherwise, return the standard 422 for other validation errors
         logger.warning(f"RequestValidationError: {exc.errors()}")
         return JSONResponse(
-            status_code=422,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": exc.errors(), "body": exc.body},
         )
 

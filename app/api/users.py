@@ -1,11 +1,11 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
+from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import selectinload
 from app.db.models import User, UserCreate, UserUpdate, Role, UserRole, ProficiencyLevel
 from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_404
+from app.utils.helpers import get_or_raise_exception, raise_exception_if_not_found
+from app.services.queries import get_user
 
 router = APIRouter(prefix="/users")
 
@@ -17,7 +17,7 @@ async def get_all_users(session: Session = Depends(get_db_session)):
 @router.get("/{id}", response_model=User)
 async def get_single_user(id: UUID, session: Session = Depends(get_db_session)):
     """Get a user by ID"""
-    return get_or_404(session, User, id)
+    return get_or_raise_exception(session, User, id)
 
 @router.post("", response_model=User, status_code=status.HTTP_201_CREATED)
 async def post_user(user: UserCreate, session: Session = Depends(get_db_session)):
@@ -51,13 +51,8 @@ async def post_user(user: UserCreate, session: Session = Depends(get_db_session)
 @router.delete("/{id}")
 async def delete_user(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a user by ID"""
-    user = session.exec(
-        select(User)
-        .where(User.id == id)
-        .options(selectinload(User.user_roles)) # Ensure the relationship is loaded for cascade delete
-    ).first()
-    if not user:
-        return Response(status_code=status.HTTP_204_NO_CONTENT) # User not found, nothing to delete
+    user = get_user(session, id)
+    raise_exception_if_not_found(user, User, status.HTTP_204_NO_CONTENT) # User not found, nothing to delete
     session.delete(user)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # User deleted successfully
