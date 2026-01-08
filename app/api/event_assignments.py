@@ -33,10 +33,7 @@ async def get_event_assignments_by_event(event_id: UUID, session: Session = Depe
         )
     return event_assignments_public
 
-# # Insert new event assignment
-# @router.post("", response_model=ScheduleDateRoleOut, status_code=status.HTTP_201_CREATED)
-# async def post_event_assignment(event_assignment: ScheduleDateRoleCreate, conn: asyncpg.Connection = Depends(get_db_connection)):
-#     return await insert_event_assignment(conn, event_assignment=event_assignment)
+# Event Assignments are inserted when a new event is created and cascade deleted when the event is deleted
 
 # # Update event assignment
 # @router.patch("/{event_assignment_id}", response_model=ScheduleDateRoleOut)
