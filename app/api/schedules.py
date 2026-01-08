@@ -69,7 +69,12 @@ async def post_schedule(schedule: ScheduleCreate, session: Session = Depends(get
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Invalid month") from e
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     
-# TODO: Generate events for a schedule - using a service
+# @router.post("/schedules/{schedule_id}/events/generate", response_model=list[EventPublic], status_code=status.HTTP_201_CREATED)
+# async def generate_events(schedule_id: UUID, session: Session = Depends(get_db_session)):
+#     """Generate events for a schedule based on query parameters (or defaults if not provided)"""
+#     schedule = get_schedule_only(session, schedule_id)
+#     raise_exception_if_not_found(schedule, Schedule, status.HTTP_404_NOT_FOUND)
+#     # TODO: Generate events for a schedule - using a service
 
 # @router.patch("/{schedule_id}", response_model=ScheduleOut)
 # async def patch_schedule(
