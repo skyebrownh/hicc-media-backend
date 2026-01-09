@@ -77,61 +77,36 @@ async def test_insert_team_success(async_client):
 # # =============================
 # # UPDATE TEAM
 # # =============================
-# @pytest.mark.parametrize("team_indices, team_path, payload, expected_status", [
-#     # team not found
-#     ([], f"/teams/{BAD_ID_0000}", {"name": "Updated Team Name", "is_active": False}, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ([0], "/teams/invalid-uuid-format", {"name": "Updated Team Name", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # empty payload
-#     ([2], f"/teams/{TEAM_ID_3}", {}, status.HTTP_400_BAD_REQUEST),
-#     # invalid data types
-#     ([2], f"/teams/{TEAM_ID_3}", {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # non-updatable field
-#     ([2], f"/teams/{TEAM_ID_3}", {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, team_path, payload, expected_status):
-#     """Test UPDATE team error cases (400, 404, and 422)"""
-#     await conditional_seed(team_indices, test_teams_data, seed_teams)
-    
-#     response = await async_client.patch(team_path, json=payload)
-#     assert response.status_code == expected_status
+@pytest.mark.parametrize("team_indices, team_id, payload, expected_status", [
+    ([], BAD_ID_0000, {"name": "Updated Team Name", "is_active": False}, status.HTTP_404_NOT_FOUND), # team not found
+    ([], "invalid-uuid-format", {"name": "Updated Team Name", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    ([0], TEAM_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([0], TEAM_ID_1, {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([0], TEAM_ID_1, {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+])
+@pytest.mark.asyncio
+async def test_update_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, team_id, payload, expected_status):
+    """Test UPDATE team error cases (400, 404, and 422)"""
+    conditional_seed(team_indices, test_teams_data, seed_teams)
+    response = await async_client.patch(f"/teams/{team_id}", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.parametrize("team_id, payload, expected_fields, unchanged_fields", [
-#     # full update
-#     (
-#         TEAM_ID_3,
-#         {"name": "Updated Team Name", "is_active": False},
-#         {"name": "Updated Team Name", "is_active": False},
-#         {"code": "team_3"}
-#     ),
-#     # partial update (is_active only)
-#     (
-#         TEAM_ID_2,
-#         {"is_active": False},
-#         {"is_active": False},
-#         {"name": "Team 2", "code": "team_2"}
-#     ),
-#     # partial update (team_name only)
-#     (
-#         TEAM_ID_1,
-#         {"name": "Partially Updated Team"},
-#         {"name": "Partially Updated Team"},
-#         {"code": "team_1", "is_active": True}
-#     ),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_team_success(async_client, seed_teams, test_teams_data, team_id, payload, expected_fields, unchanged_fields):
-#     """Test valid team updates"""
-#     await seed_teams(test_teams_data[:3])
-    
-#     response = await async_client.patch(f"/teams/{team_id}", json=payload)
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     for field, expected_value in expected_fields.items():
-#         assert response_json[field] == expected_value
-#     for field, expected_value in unchanged_fields.items():
-#         assert response_json[field] == expected_value
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    ({"name": "Updated Team Name", "is_active": False}, {"code": "team_1"}), # full update
+    ({"is_active": False}, {"name": "Service", "code": "service"}), # partial update (is_active only)
+    ({"name": "Partially Updated Team"}, {"code": "team_1", "is_active": True}), # partial update (team_name only)
+])
+@pytest.mark.asyncio
+async def test_update_team_success(async_client, seed_teams, test_teams_data, payload, unchanged_fields):
+    """Test valid team updates"""
+    seed_teams([test_teams_data[0]])
+    response = await async_client.patch(f"/teams/{TEAM_ID_1}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        assert response_json[field] == getattr(test_teams_data[0], field)
 
 # =============================
 # DELETE TEAM

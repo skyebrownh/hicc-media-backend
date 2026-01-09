@@ -76,13 +76,26 @@ async def post_schedule(schedule: ScheduleCreate, session: Session = Depends(get
 #     raise_exception_if_not_found(schedule, Schedule, status.HTTP_404_NOT_FOUND)
 #     # TODO: Generate events for a schedule - using a service
 
-# @router.patch("/{schedule_id}", response_model=ScheduleOut)
-# async def patch_schedule(
-#     schedule_id: UUID,
-#     schedule_update: ScheduleUpdate | None = Body(default=None),
-#     conn: asyncpg.Connection = Depends(get_db_connection),
-# ):
-#     return await update_schedule(conn, schedule_id=schedule_id, payload=schedule_update)
+@router.patch("/{id}", response_model=Schedule)
+async def update_schedule(id: UUID, payload: ScheduleUpdate, session: Session = Depends(get_db_session)):
+    """Update a schedule by ID"""
+    # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
+    payload_dict = payload.model_dump(exclude_unset=True)
+    if not payload_dict:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
+    
+    schedule = get_or_raise_exception(session, Schedule, id)
+    # Only update fields that were actually provided in the payload
+    for key, value in payload_dict.items():
+        setattr(schedule, key, value)
+    try:
+        # no need to add the schedule again, it's already in the session from get_or_raise_exception
+        session.commit()
+        session.refresh(schedule)
+        return schedule
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/{id}")
 async def delete_schedule(id: UUID, session: Session = Depends(get_db_session)):

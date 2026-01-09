@@ -40,13 +40,26 @@ async def post_user(user: UserCreate, session: Session = Depends(get_db_session)
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
-# @router.patch("/{user_id}", response_model=UserOut)
-# async def patch_user(
-#     user_id: UUID,
-#     user_update: UserUpdate | None = Body(default=None),
-#     conn: asyncpg.Connection = Depends(get_db_connection),
-# ):
-#     return await update_user(conn, user_id=user_id, payload=user_update)
+@router.patch("/{id}", response_model=User)
+async def update_user(id: UUID, payload: UserUpdate, session: Session = Depends(get_db_session)):
+    """Update a user by ID"""
+    # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
+    payload_dict = payload.model_dump(exclude_unset=True)
+    if not payload_dict:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
+    
+    user = get_or_raise_exception(session, User, id)
+    # Only update fields that were actually provided in the payload
+    for key, value in payload_dict.items():
+        setattr(user, key, value)
+    try:
+        # no need to add the user again, it's already in the session from get_or_raise_exception
+        session.commit()
+        session.refresh(user)
+        return user
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/{id}")
 async def delete_user(id: UUID, session: Session = Depends(get_db_session)):

@@ -44,7 +44,7 @@ async def update_event_type(id: UUID, payload: EventTypeUpdate, session: Session
     for key, value in payload_dict.items():
         setattr(event_type, key, value)
     try:
-        # no need to add the role again, it's already in the session from get_or_raise_exception
+        # no need to add the event type again, it's already in the session from get_or_raise_exception
         session.commit()
         session.refresh(event_type)
         return event_type

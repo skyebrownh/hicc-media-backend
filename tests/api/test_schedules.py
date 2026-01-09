@@ -133,64 +133,39 @@ async def test_insert_schedule_success(async_client):
     response = await async_client.post("/schedules", json={"month": 10, "year": 2025})
     assert_single_item_201(response, expected_item={"month": 10, "year": 2025, "notes": None, "is_active": True})
 
-# # =============================
-# # UPDATE SCHEDULE
-# # =============================
-# @pytest.mark.parametrize("schedule_path, payload, expected_status", [
-#     # schedule not found
-#     (f"/schedules/{BAD_ID_0000}", {"notes": "Updated schedule", "is_active": False}, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ("/schedules/invalid-uuid-format", {"notes": "Updated schedule", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # empty payload
-#     (f"/schedules/{SCHEDULE_ID_3}", {}, status.HTTP_400_BAD_REQUEST),
-#     # invalid data types
-#     (f"/schedules/{SCHEDULE_ID_3}", {"month_start_date": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # non-updatable field
-#     (f"/schedules/{SCHEDULE_ID_3}", {"schedule_id": SCHEDULE_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_schedule_error_cases(async_client, schedule_path, payload, expected_status):
-#     """Test UPDATE schedule error cases (400, 404, and 422)"""
-#     response = await async_client.patch(schedule_path, json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# UPDATE SCHEDULE
+# =============================
+@pytest.mark.parametrize("schedule_indices, schedule_id, payload, expected_status", [
+    ([], BAD_ID_0000, {"notes": "Updated Notes", "is_active": False}, status.HTTP_404_NOT_FOUND), # schedule not found
+    ([], "invalid-uuid-format", {"notes": "Updated Notes", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    ([0], SCHEDULE_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([0], SCHEDULE_ID_1, {"notes": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([0], SCHEDULE_ID_1, {"notes": "Invalid", "id": SCHEDULE_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+])
+@pytest.mark.asyncio
+async def test_update_schedule_error_cases(async_client, seed_schedules, test_schedules_data, schedule_indices, schedule_id, payload, expected_status):
+    """Test UPDATE schedule error cases (400, 404, and 422)"""
+    conditional_seed(schedule_indices, test_schedules_data, seed_schedules)
+    response = await async_client.patch(f"/schedules/{schedule_id}", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.parametrize("schedule_id, payload, expected_fields, unchanged_fields", [
-#     # full update
-#     (
-#         SCHEDULE_ID_3,
-#         {"notes": "Updated schedule", "is_active": False},
-#         {"notes": "Updated schedule", "is_active": False},
-#         {"month_start_date": DATE_2025_05_01}
-#     ),
-#     # partial update (is_active only)
-#     (
-#         SCHEDULE_ID_2,
-#         {"is_active": False},
-#         {"is_active": False},
-#         {"month_start_date": DATE_2025_05_01}
-#     ),
-#     # partial update (notes only)
-#     (
-#         SCHEDULE_ID_1,
-#         {"notes": "Partially Updated"},
-#         {"notes": "Partially Updated"},
-#         {"month_start_date": DATE_2025_01_01, "is_active": True}
-#     ),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_schedule_success(async_client, seed_dates, seed_schedules, test_schedules_data, test_dates_data, schedule_id, payload, expected_fields, unchanged_fields):
-#     """Test valid schedule updates"""
-#     # Use DATE_2025_01_01 (index 1), DATE_2025_05_01 (index 3)
-#     await seed_dates([test_dates_data[1], test_dates_data[3]])
-#     await seed_schedules(test_schedules_data)
-    
-#     response = await async_client.patch(f"/schedules/{schedule_id}", json=payload)
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     for field, expected_value in expected_fields.items():
-#         assert response_json[field] == expected_value
-#     for field, expected_value in unchanged_fields.items():
-#         assert response_json[field] == expected_value
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    ({"notes": "Updated Notes", "is_active": False}, {}), # full update
+    ({"is_active": False}, {"notes": "First schedule"}), # partial update (is_active only)
+    ({"notes": "Partially Updated Schedule"}, {"is_active": True}), # partial update (schedule_notes only)
+])
+@pytest.mark.asyncio
+async def test_update_schedule_success(async_client, seed_schedules, test_schedules_data, payload, unchanged_fields):
+    """Test valid schedule updates"""
+    seed_schedules([test_schedules_data[0]])
+    response = await async_client.patch(f"/schedules/{SCHEDULE_ID_1}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        assert response_json[field] == getattr(test_schedules_data[0], field)
 
 # =============================
 # DELETE SCHEDULE
