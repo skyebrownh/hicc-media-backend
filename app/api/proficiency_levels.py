@@ -44,7 +44,7 @@ async def update_proficiency_level(id: UUID, payload: ProficiencyLevelUpdate, se
     for key, value in payload_dict.items():
         setattr(proficiency_level, key, value)
     try:
-        # no need to add the role again, it's already in the session from get_or_raise_exception
+        # no need to add the proficiency level again, it's already in the session from get_or_raise_exception
         session.commit()
         session.refresh(proficiency_level)
         return proficiency_level

@@ -32,9 +32,26 @@ async def post_team(team: TeamCreate, session: Session = Depends(get_db_session)
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
-# @router.patch("/{team_id}", response_model=TeamOut)
-# async def patch_team(team_id: UUID, team_update: TeamUpdate | None = Body(default=None), conn: asyncpg.Connection = Depends(get_db_connection)):
-#         return await update_team(conn, team_id=team_id, payload=team_update)
+@router.patch("/{id}", response_model=Team)
+async def update_team(id: UUID, payload: TeamUpdate, session: Session = Depends(get_db_session)):
+    """Update a team by ID"""
+    # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
+    payload_dict = payload.model_dump(exclude_unset=True)
+    if not payload_dict:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
+    
+    team = get_or_raise_exception(session, Team, id)
+    # Only update fields that were actually provided in the payload
+    for key, value in payload_dict.items():
+        setattr(team, key, value)
+    try:
+        # no need to add the team again, it's already in the session from get_or_raise_exception
+        session.commit()
+        session.refresh(team)
+        return team
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/{id}")
 async def delete_team(id: UUID, session: Session = Depends(get_db_session)):
