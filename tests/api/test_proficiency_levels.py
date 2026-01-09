@@ -3,6 +3,13 @@ from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3, PROFICIENCY_LEVEL_ID_4
 
+VALID_UPDATE_PAYLOAD = {
+    "name": "Updated Level Name", 
+    "rank": 100, 
+    "is_active": False, 
+    "is_assignable": True
+}
+
 # =============================
 # GET ALL PROFICIENCY LEVELS
 # =============================
@@ -76,64 +83,39 @@ async def test_insert_proficiency_level_success(async_client):
     response = await async_client.post("/proficiency_levels", json={"name": "New Level", "code": "new_level"})
     assert_single_item_201(response, expected_item={"name": "New Level", "code": "new_level", "rank": None, "is_active": True, "is_assignable": False})
 
-# # =============================
-# # UPDATE PROFICIENCY LEVEL
-# # =============================
-# @pytest.mark.parametrize("level_indices, url_path, payload, expected_status", [
-#     # proficiency level not found
-#     ([], f"/proficiency_levels/{BAD_ID_0000}", {"name": "Updated Level Name", "rank": 100, "is_active": False, "is_assignable": True}, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ([0], "/proficiency_levels/invalid-uuid-format", {"name": "Updated Level Name", "rank": 100, "is_active": False, "is_assignable": True}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # empty payload
-#     ([2], f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_3}", {}, status.HTTP_400_BAD_REQUEST),
-#     # invalid data types
-#     ([2], f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_3}", {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # non-updatable field
-#     ([2], f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_3}", {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, level_indices, url_path, payload, expected_status):
-#     """Test UPDATE proficiency level error cases (400, 404, and 422)"""
-#     await conditional_seed(level_indices, test_proficiency_levels_data, seed_proficiency_levels)
-    
-#     response = await async_client.patch(url_path, json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# UPDATE PROFICIENCY LEVEL
+# =============================
+@pytest.mark.parametrize("proficiency_level_indices, proficiency_level_id, payload, expected_status", [
+    ([], BAD_ID_0000, VALID_UPDATE_PAYLOAD, status.HTTP_404_NOT_FOUND), # proficiency level not found
+    ([], "invalid-uuid-format", VALID_UPDATE_PAYLOAD, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    ([0], PROFICIENCY_LEVEL_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([0], PROFICIENCY_LEVEL_ID_1, {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([0], PROFICIENCY_LEVEL_ID_1, {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+])
+@pytest.mark.asyncio
+async def test_update_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, proficiency_level_indices, proficiency_level_id, payload, expected_status):
+    """Test UPDATE proficiency level error cases (400, 404, and 422)"""
+    conditional_seed(proficiency_level_indices, test_proficiency_levels_data, seed_proficiency_levels)
+    response = await async_client.patch(f"/proficiency_levels/{proficiency_level_id}", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.parametrize("proficiency_level_id, payload, expected_fields, unchanged_fields", [
-#     # full update
-#     (
-#         PROFICIENCY_LEVEL_ID_3,
-#         {"name": "Updated Level Name", "rank": 100, "is_active": False, "is_assignable": True},
-#         {"name": "Updated Level Name", "rank": 100, "is_active": False, "is_assignable": True},
-#         {"code": "untrained"}
-#     ),
-#     # partial update (is_active only)
-#     (
-#         PROFICIENCY_LEVEL_ID_2,
-#         {"is_active": False},
-#         {"is_active": False},
-#         {"name": "Proficient", "code": "proficient"}
-#     ),
-#     # partial update (proficiency_level_name only)
-#     (
-#         PROFICIENCY_LEVEL_ID_1,
-#         {"name": "Partially Updated Level"},
-#         {"name": "Partially Updated Level"},
-#         {"code": "novice", "is_active": True}
-#     ),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data, proficiency_level_id, payload, expected_fields, unchanged_fields):
-#     """Test valid proficiency level updates"""
-#     await seed_proficiency_levels(test_proficiency_levels_data[:3])
-    
-#     response = await async_client.patch(f"/proficiency_levels/{proficiency_level_id}", json=payload)
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     for field, expected_value in expected_fields.items():
-#         assert response_json[field] == expected_value
-#     for field, expected_value in unchanged_fields.items():
-#         assert response_json[field] == expected_value
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    (VALID_UPDATE_PAYLOAD, {"code": "novice"}), # full update
+    ({"is_active": False}, {"name": "Novice", "code": "novice"}), # partial update (is_active only)
+    ({"name": "Partially Updated Level"}, {"code": "novice", "is_active": True}), # partial update (level_name only)
+])
+@pytest.mark.asyncio
+async def test_update_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data, payload, unchanged_fields):
+    """Test valid proficiency level updates"""
+    seed_proficiency_levels([test_proficiency_levels_data[0]])
+    response = await async_client.patch(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_1}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        assert response_json[field] == getattr(test_proficiency_levels_data[0], field)
 
 # =============================
 # DELETE PROFICIENCY LEVEL

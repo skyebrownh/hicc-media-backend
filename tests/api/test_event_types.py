@@ -72,62 +72,39 @@ async def test_insert_event_type_success(async_client):
     response = await async_client.post("/event_types", json={"name": "New Type", "code": "new_type"})
     assert_single_item_201(response, expected_item={"name": "New Type", "code": "new_type", "is_active": True})
 
-# # =============================
-# # UPDATE EVENT TYPE
-# # =============================
-# @pytest.mark.parametrize("url_path, payload, expected_status", [
-#     # event type not found
-#     (f"/event_types/{BAD_ID_0000}", {"name": "Updated Type Name", "is_active": False}, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ("/event_types/invalid-uuid-format", {"name": "Updated Type Name", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # empty payload
-#     (f"/event_types/{EVENT_TYPE_ID_3}", {}, status.HTTP_400_BAD_REQUEST),
-#     # invalid data types
-#     (f"/event_types/{EVENT_TYPE_ID_3}", {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # non-updatable field
-#     (f"/event_types/{EVENT_TYPE_ID_3}", {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_event_type_error_cases(async_client, url_path, payload, expected_status):
-#     """Test UPDATE event type error cases (400, 404, and 422)"""
-#     response = await async_client.patch(url_path, json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# UPDATE EVENT TYPE
+# =============================
+@pytest.mark.parametrize("event_type_indices, event_type_id, payload, expected_status", [
+    ([], BAD_ID_0000, {"name": "Updated Event Type Name", "is_active": False}, status.HTTP_404_NOT_FOUND), # event type not found
+    ([], "invalid-uuid-format", {"name": "Updated Event Type Name", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    ([0], EVENT_TYPE_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([0], EVENT_TYPE_ID_1, {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([0], EVENT_TYPE_ID_1, {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+])
+@pytest.mark.asyncio
+async def test_update_event_type_error_cases(async_client, seed_event_types, test_event_types_data, event_type_indices, event_type_id, payload, expected_status):
+    """Test UPDATE event type error cases (400, 404, and 422)"""
+    conditional_seed(event_type_indices, test_event_types_data, seed_event_types)
+    response = await async_client.patch(f"/event_types/{event_type_id}", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.parametrize("event_type_id, payload, expected_fields, unchanged_fields", [
-#     # full update
-#     (
-#         EVENT_TYPE_ID_2,
-#         {"name": "Updated Type Name", "is_active": False},
-#         {"name": "Updated Type Name", "is_active": False},
-#         {"code": "rehearsal"}
-#     ),
-#     # partial update (is_active only)
-#     (
-#         EVENT_TYPE_ID_2,
-#         {"is_active": False},
-#         {"is_active": False},
-#         {"name": "Rehearsal", "code": "rehearsal"}
-#     ),
-#     # partial update (name only)
-#     (
-#         EVENT_TYPE_ID_1,
-#         {"name": "Partially Updated Type"},
-#         {"name": "Partially Updated Type"},
-#         {"code": "service", "is_active": True}
-#     ),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_event_type_success(async_client, seed_event_types, test_event_types_data, event_type_id, payload, expected_fields, unchanged_fields):
-#     """Test valid event type updates"""
-#     await seed_event_types(test_event_types_data[:2])
-    
-#     response = await async_client.patch(f"/event_types/{event_type_id}", json=payload)
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     for field, expected_value in expected_fields.items():
-#         assert response_json[field] == expected_value
-#     for field, expected_value in unchanged_fields.items():
-#         assert response_json[field] == expected_value
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    ({"name": "Updated Event Type Name", "is_active": False}, {"code": "service"}), # full update
+    ({"is_active": False}, {"name": "Service", "code": "service"}), # partial update (is_active only)
+    ({"name": "Partially Updated Event Type"}, {"code": "service", "is_active": True}), # partial update (event_type_name only)
+])
+@pytest.mark.asyncio
+async def test_update_event_type_success(async_client, seed_event_types, test_event_types_data, payload, unchanged_fields):
+    """Test valid event type updates"""
+    seed_event_types([test_event_types_data[0]])
+    response = await async_client.patch(f"/event_types/{EVENT_TYPE_ID_1}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        assert response_json[field] == getattr(test_event_types_data[0], field)
 
 # =============================
 # DELETE EVENT TYPE

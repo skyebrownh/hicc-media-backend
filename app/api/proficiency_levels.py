@@ -31,13 +31,26 @@ async def post_proficiency_level(proficiency_level: ProficiencyLevelCreate, sess
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
-# @router.patch("/{proficiency_level_id}", response_model=ProficiencyLevelOut)
-# async def patch_proficiency_level(
-#     proficiency_level_id: UUID,
-#     proficiency_level_update: ProficiencyLevelUpdate | None = Body(default=None),
-#     conn: asyncpg.Connection = Depends(get_db_connection),
-# ):
-#     return await update_proficiency_level(conn, proficiency_level_id=proficiency_level_id, payload=proficiency_level_update)
+@router.patch("/{id}", response_model=ProficiencyLevel)
+async def update_proficiency_level(id: UUID, payload: ProficiencyLevelUpdate, session: Session = Depends(get_db_session)):
+    """Update a proficiency level by ID"""
+    # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
+    payload_dict = payload.model_dump(exclude_unset=True)
+    if not payload_dict:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
+    
+    proficiency_level = get_or_raise_exception(session, ProficiencyLevel, id)
+    # Only update fields that were actually provided in the payload
+    for key, value in payload_dict.items():
+        setattr(proficiency_level, key, value)
+    try:
+        # no need to add the role again, it's already in the session from get_or_raise_exception
+        session.commit()
+        session.refresh(proficiency_level)
+        return proficiency_level
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/{id}")
 async def delete_proficiency_level(id: UUID, session: Session = Depends(get_db_session)):

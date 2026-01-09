@@ -31,13 +31,26 @@ async def post_event_type(event_type: EventTypeCreate, session: Session = Depend
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
-# @router.patch("/{event_type_id}", response_model=ScheduleDateTypeOut)
-# async def patch_event_type(
-#     event_type_id: UUID,
-#     event_type_update: ScheduleDateTypeUpdate | None = Body(default=None),
-#     conn: asyncpg.Connection = Depends(get_db_connection),
-# ):
-#     return await update_event_type(conn, event_type_id=event_type_id, payload=event_type_update)
+@router.patch("/{id}", response_model=EventType)
+async def update_event_type(id: UUID, payload: EventTypeUpdate, session: Session = Depends(get_db_session)):
+    """Update an event type by ID"""
+    # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
+    payload_dict = payload.model_dump(exclude_unset=True)
+    if not payload_dict:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
+    
+    event_type = get_or_raise_exception(session, EventType, id)
+    # Only update fields that were actually provided in the payload
+    for key, value in payload_dict.items():
+        setattr(event_type, key, value)
+    try:
+        # no need to add the role again, it's already in the session from get_or_raise_exception
+        session.commit()
+        session.refresh(event_type)
+        return event_type
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/{id}")
 async def delete_event_type(id: UUID, session: Session = Depends(get_db_session)):
