@@ -78,6 +78,12 @@ def get_schedule_for_cascade_delete(session: Session, schedule_id: UUID) -> Sche
         )
     ).one_or_none()
 
+def get_schedule_only(session: Session, schedule_id: UUID) -> Schedule | None:
+    return session.exec(
+        select(Schedule)
+        .where(Schedule.id == schedule_id)
+    ).one_or_none()
+
 def get_event(session: Session, event_id: UUID) -> Event | None:
     return session.exec(
         select(Event)

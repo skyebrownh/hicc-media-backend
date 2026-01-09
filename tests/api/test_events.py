@@ -10,6 +10,13 @@ from tests.utils.constants import (
     DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, DATETIME_2025_05_04
 )
 
+VALID_INSERT_PAYLOAD = {
+    "title": "New Event",
+    "starts_at": DATETIME_2025_05_01.isoformat(),
+    "ends_at": DATETIME_2025_05_02.isoformat(),
+    "event_type_id": EVENT_TYPE_ID_1
+}
+
 # =============================
 # FIXTURES
 # =============================
@@ -147,77 +154,73 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
         ]
     })
 
-# # =============================
-# # INSERT SCHEDULE DATE
-# # =============================
-# @pytest.mark.parametrize("date_indices, schedule_indices, type_indices, event_indices, payload, expected_status", [
-#     # empty payload
-#     ([], [], [], [], {}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # missing required fields (date and event_type_id)
-#     ([], [], [], [], {"schedule_id": SCHEDULE_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # missing required fields (schedule_id and event_type_id)
-#     ([], [], [], [], {"date": DATE_2025_05_02}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid UUID format
-#     ([], [], [], [], {"schedule_id": "invalid-uuid", "date": DATE_2025_05_02, "event_type_id": EVENT_TYPE_ID_1}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # duplicate event
-#     ([3], [1], [0], [0], {"schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_01, "event_type_id": EVENT_TYPE_ID_1}, status.HTTP_409_CONFLICT),
-#     # extra fields not allowed
-#     ([], [], [], [], {"schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_02, "event_type_id": EVENT_TYPE_ID_1, "event_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # foreign key violation (schedule doesn't exist)
-#     ([4], [], [0], [], {"schedule_id": BAD_ID_0000, "date": DATE_2025_05_02, "event_type_id": EVENT_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
-#     # foreign key violation (date doesn't exist)
-#     ([3], [1], [0], [], {"schedule_id": SCHEDULE_ID_2, "date": BAD_DATE_2000_01_01, "event_type_id": EVENT_TYPE_ID_1}, status.HTTP_404_NOT_FOUND),
-#     # foreign key violation (schedule_date_type doesn't exist)
-#     ([3], [1], [], [], {"schedule_id": SCHEDULE_ID_2, "date": DATE_2025_05_02, "event_type_id": BAD_ID_0000}, status.HTTP_404_NOT_FOUND),
-# ])
-# @pytest.mark.asyncio
-# async def test_insert_schedule_date_error_cases(
-#     async_client, seed_dates, seed_schedules, seed_event_types, seed_events,
-#     test_dates_data, test_schedules_data, test_event_types_data, test_events_data,
-#     date_indices, schedule_indices, type_indices, event_indices, payload, expected_status
-# ):
-#     """Test INSERT event error cases (422, 409, and 404)"""
-#     # Collect all dates needed
-#     all_dates_needed = set()
-#     # Dates from date_indices
-#     if date_indices:
-#         all_dates_needed.update([test_dates_data[i] for i in date_indices])
-#     # Dates needed for schedules' month_start_date
-#     if schedule_indices:
-#         all_dates_needed.update([test_schedules_data[i]["month_start_date"] for i in schedule_indices])
-#     # Dates needed for events
-#     if event_indices:
-#         all_dates_needed.update([test_events_data[i]["date"] for i in event_indices])
-#     # Seed all dates at once
-#     if all_dates_needed:
-#         await seed_dates(list(all_dates_needed))
-    
-#     await conditional_seed(schedule_indices, test_schedules_data, seed_schedules)
-#     await conditional_seed(type_indices, test_event_types_data, seed_event_types)
-#     await conditional_seed(event_indices, test_events_data, seed_events)
-#     response = await async_client.post("/events", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# INSERT EVENT FOR SCHEDULE
+# =============================
+@pytest.mark.parametrize("schedule_indices, schedule_id, payload, expected_status", [
+    ([], BAD_ID_0000, VALID_INSERT_PAYLOAD, status.HTTP_404_NOT_FOUND), # schedule not found
+    ([], SCHEDULE_ID_2, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([], SCHEDULE_ID_2, {"title": "New Event"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
+    ([], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": "invalid-datetime"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
+    ([], SCHEDULE_ID_2, {"id": EVENT_ID_1, **VALID_INSERT_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    ([1], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": DATETIME_2025_05_03.isoformat()}, status.HTTP_422_UNPROCESSABLE_CONTENT), # starts_at is before ends_at
+    ([1], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "event_type_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # foreign key violation (event_type doesn't exist)
+])
+@pytest.mark.asyncio
+async def test_insert_event_for_schedule_error_cases(
+    async_client, seed_schedules, seed_event_types, test_schedules_data, test_event_types_data, 
+    schedule_indices, schedule_id, payload, expected_status
+):
+    """Test INSERT event for schedule error cases (400, 404, 422, and 409)"""
+    seed_event_types([test_event_types_data[0]])
+    conditional_seed(schedule_indices, test_schedules_data, seed_schedules)
+    response = await async_client.post(f"/schedules/{schedule_id}/events", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_insert_event_success(async_client, seed_dates, seed_schedules, seed_event_types, test_dates_data, test_schedules_data, test_event_types_data):
-#     """Test valid event insertion"""
-#     # DATE_2025_05_01 (index 3) for event
-#     await seed_dates([test_dates_data[3]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_event_types([test_event_types_data[0]])
-    
-#     response = await async_client.post("/events", json={
-#         "schedule_id": SCHEDULE_ID_2,
-#         "date": DATE_2025_05_01,
-#         "event_type_id": EVENT_TYPE_ID_1
-#     })
-#     assert response.status_code == status.HTTP_201_CREATED
-#     response_json = response.json()
-#     assert response_json["event_id"] is not None
-#     assert response_json["schedule_id"] == SCHEDULE_ID_2
-#     assert response_json["date"] == DATE_2025_05_01
-#     assert response_json["event_type_id"] == EVENT_TYPE_ID_1
-#     assert response_json["is_active"] is True
+@pytest.mark.asyncio
+async def test_insert_event_for_schedule_success(async_client, seed_schedules, seed_event_types, seed_roles, test_schedules_data, test_event_types_data, test_roles_data):
+    """Test valid event for schedule insertion"""
+    seed_roles([test_roles_data[0]])
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    response = await async_client.post(f"/schedules/{SCHEDULE_ID_2}/events", json=VALID_INSERT_PAYLOAD)
+    assert response.status_code == status.HTTP_201_CREATED
+    response_json = response.json()
+
+    # shape assertions
+    assert "event" in response_json
+    assert "event_assignments" in response_json
+
+    event = response_json["event"]
+    assert "id" in event
+    assert "schedule_id" in event
+    assert "event_type_id" in event
+    assert "starts_at" in event
+    assert "ends_at" in event
+    assert "team_id" in event
+
+    for ea in response_json["event_assignments"]:
+        assert "id" in ea
+        assert "role_id" in ea
+        assert "role_name" in ea
+        assert "is_applicable" in ea
+        assert "requirement_level" in ea
+        assert "assigned_user_id" in ea
+        assert "assigned_user_first_name" in ea
+
+    # data assertions
+    assert response_json["event"]["id"] is not None
+    assert response_json["event"]["schedule_id"] == SCHEDULE_ID_2
+    assert response_json["event"]["event_type_id"] == EVENT_TYPE_ID_1
+    assert response_json["event_assignments"][0]["id"] is not None
+    assert parse_to_utc(response_json["event"]["starts_at"]) == DATETIME_2025_05_01
+    assert parse_to_utc(response_json["event"]["ends_at"]) == DATETIME_2025_05_02
+    assert response_json["event_assignments"][0]["role_id"] == ROLE_ID_1
+    assert response_json["event_assignments"][0]["role_name"] == "ProPresenter"
+    assert response_json["event_assignments"][0]["is_applicable"] is True
+    assert response_json["event_assignments"][0]["requirement_level"] == "REQUIRED"
+    assert response_json["event_assignments"][0]["assigned_user_id"] is None
+    assert response_json["event_assignments"][0]["assigned_user_first_name"] is None
 
 # # =============================
 # # UPDATE EVENT
