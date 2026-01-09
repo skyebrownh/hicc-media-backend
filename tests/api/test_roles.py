@@ -5,6 +5,13 @@ from sqlmodel import select, func
 from app.db.models import UserRole
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4, PROFICIENCY_LEVEL_ID_3, USER_ID_1, USER_ID_2
 
+VALID_UPDATE_PAYLOAD = {
+    "name": "Updated Role Name",
+    "description": "Updated description",
+    "order": 100,
+    "is_active": False
+}
+
 # =============================
 # GET ALL ROLES
 # =============================
@@ -90,65 +97,39 @@ async def test_insert_role_success(async_client, get_test_db_session, seed_users
     assert str(user_roles[1].user_id) == USER_ID_2
     assert str(user_roles[1].role_id) == role_id
 
-# # =============================
-# # UPDATE ROLE
-# # =============================
-# @pytest.mark.parametrize("role_indices, role_path, payload, expected_status", [
-#     # role not found
-#     ([], f"/roles/{BAD_ID_0000}", {"name": "Updated Role Name", "description": "Updated description", "order": 100, "is_active": False}, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ([0], "/roles/invalid-uuid-format", {"name": "Updated Role Name", "description": "Updated description", "order": 100, "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # empty payload
-#     ([2], f"/roles/{role_ID_3}", {}, status.HTTP_400_BAD_REQUEST),
-#     # invalid data types
-#     ([2], f"/roles/{role_ID_3}", {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # non-updatable field
-#     ([2], f"/roles/{role_ID_3}", {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, role_path, payload, expected_status):
-#     """Test UPDATE role error cases (400, 404, and 422)"""
-#     await conditional_seed(role_indices, test_roles_data, seed_roles)
-    
-#     response = await async_client.patch(role_path, json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# UPDATE ROLE
+# =============================
+@pytest.mark.parametrize("role_indices, role_id, payload, expected_status", [
+    ([], BAD_ID_0000, VALID_UPDATE_PAYLOAD, status.HTTP_404_NOT_FOUND), # role not found
+    ([], "invalid-uuid-format", VALID_UPDATE_PAYLOAD, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    ([0], ROLE_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([0], ROLE_ID_1, {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([0], ROLE_ID_1, {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+])
+@pytest.mark.asyncio
+async def test_update_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, role_id, payload, expected_status):
+    """Test UPDATE role error cases (400, 404, and 422)"""
+    conditional_seed(role_indices, test_roles_data, seed_roles)
+    response = await async_client.patch(f"/roles/{role_id}", json=payload)
+    assert response.status_code == expected_status
 
-
-# @pytest.mark.parametrize("role_id, payload, expected_fields, unchanged_fields", [
-#     # full update
-#     (
-#         role_ID_3,
-#         {"name": "Updated Role Name", "description": "Updated description", "order": 100, "is_active": False},
-#         {"name": "Updated Role Name", "description": "Updated description", "is_active": False},
-#         {"code": "lighting"}
-#     ),
-#     # partial update (is_active only)
-#     (
-#         role_ID_2,
-#         {"is_active": False},
-#         {"is_active": False},
-#         {"name": "Sound", "code": "sound"}
-#     ),
-#     # partial update (role_name only)
-#     (
-#         role_ID_1,
-#         {"name": "Partially Updated Role"},
-#         {"name": "Partially Updated Role"},
-#         {"code": "propresenter", "is_active": True}
-#     ),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_role_success(async_client, seed_roles, test_roles_data, role_id, payload, expected_fields, unchanged_fields):
-#     """Test valid role updates"""
-#     await seed_roles(test_roles_data[:3])
-    
-#     response = await async_client.patch(f"/roles/{role_id}", json=payload)
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     for field, expected_value in expected_fields.items():
-#         assert response_json[field] == expected_value
-#     for field, expected_value in unchanged_fields.items():
-#         assert response_json[field] == expected_value
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    (VALID_UPDATE_PAYLOAD, {"code": "propresenter"}), # full update
+    ({"is_active": False}, {"name": "ProPresenter", "code": "propresenter"}), # partial update (is_active only)
+    ({"name": "Partially Updated Role"}, {"code": "propresenter", "is_active": True}), # partial update (role_name only)
+])
+@pytest.mark.asyncio
+async def test_update_role_success(async_client, seed_roles, test_roles_data, payload, unchanged_fields):
+    """Test valid role updates"""
+    seed_roles([test_roles_data[0]])
+    response = await async_client.patch(f"/roles/{ROLE_ID_1}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        assert response_json[field] == getattr(test_roles_data[0], field)
 
 # =============================
 # DELETE ROLE

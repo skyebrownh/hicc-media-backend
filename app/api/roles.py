@@ -40,13 +40,26 @@ async def post_role(role: RoleCreate, session: Session = Depends(get_db_session)
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
-# @router.patch("/{role_id}", response_model=MediaRoleOut)
-# async def patch_role(
-#     role_id: UUID,
-#     role_update: MediaRoleUpdate | None = Body(default=None),
-#     conn: asyncpg.Connection = Depends(get_db_connection),
-# ):
-#         return await update_role(conn, role_id=role_id, payload=role_update)
+@router.patch("/{id}", response_model=Role)
+async def update_role(id: UUID, payload: RoleUpdate, session: Session = Depends(get_db_session)):
+    """Update a role by ID"""
+    # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
+    payload_dict = payload.model_dump(exclude_unset=True)
+    if not payload_dict:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
+    
+    role = get_or_raise_exception(session, Role, id)
+    # Only update fields that were actually provided in the payload
+    for key, value in payload_dict.items():
+        setattr(role, key, value)
+    try:
+        # no need to add the role again, it's already in the session from get_or_raise_exception
+        session.commit()
+        session.refresh(role)
+        return role
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/{id}")
 async def delete_role(id: UUID, session: Session = Depends(get_db_session)):
