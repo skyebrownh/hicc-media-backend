@@ -57,6 +57,13 @@ def get_role_for_user_roles(session: Session, role_id: UUID) -> Role | None:
         )
     ).one_or_none()
 
+def get_user_role(session: Session, user_id: UUID, role_id: UUID) -> UserRole | None:
+    return session.exec(
+        select(UserRole)
+        .where(UserRole.user_id == user_id)
+        .where(UserRole.role_id == role_id)
+    ).one_or_none()
+
 def get_schedule(session: Session, schedule_id: UUID) -> Schedule | None:
     return session.exec(
         select(Schedule)

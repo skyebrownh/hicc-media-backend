@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Body, status, Response, HTTPException
+from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from app.db.models import Role, RoleCreate, RoleUpdate, User, UserRole, ProficiencyLevel
