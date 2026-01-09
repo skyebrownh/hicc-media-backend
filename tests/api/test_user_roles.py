@@ -104,46 +104,42 @@ async def test_get_users_for_role_success(async_client, seed_for_user_roles_test
     assert response_json[0]["role_is_active"] is True
     assert response_json[0]["proficiency_level_rank"] == 3
 
-# # =============================
-# # UPDATE USER ROLE
-# # =============================
-# @pytest.mark.parametrize("user_indices, role_indices, proficiency_indices, user_role_indices, user_id, role_id, payload, expected_status", [
-#     # user role not found
-#     ([], [], [], [], USER_ID_1, MEDIA_ROLE_ID_2, {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format for user_id
-#     ([], [], [], [], "invalid-uuid-format", MEDIA_ROLE_ID_1, {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid UUID format for role_id
-#     ([], [], [], [], USER_ID_1, "invalid-uuid-format", {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # empty payload
-#     ([], [], [], [], USER_ID_1, MEDIA_ROLE_ID_1, {}, status.HTTP_400_BAD_REQUEST),
-#     # invalid UUID format in payload
-#     ([], [], [], [], USER_ID_1, MEDIA_ROLE_ID_1, {"proficiency_level_id": "invalid-uuid"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # foreign key violation (proficiency doesn't exist)
-#     ([0], [0], [], [], USER_ID_1, MEDIA_ROLE_ID_1, {"proficiency_level_id": BAD_ID_0000}, status.HTTP_404_NOT_FOUND),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_user_role_error_cases(async_client, seed_users, seed_media_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_media_roles_data, test_proficiency_levels_data, test_user_roles_data, user_indices, role_indices, proficiency_indices, user_role_indices, user_id, role_id, payload, expected_status):
-#     """Test UPDATE user role error cases (400, 404, and 422)"""
-#     await conditional_seed(user_indices, test_users_data, seed_users)
-#     await conditional_seed(role_indices, test_media_roles_data, seed_media_roles)
-#     await conditional_seed(proficiency_indices, test_proficiency_levels_data, seed_proficiency_levels)
-#     await conditional_seed(user_role_indices, test_user_roles_data, seed_user_roles)
-#     response = await async_client.patch(f"/users/{user_id}/roles/{role_id}", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# UPDATE USER ROLE
+# =============================
+@pytest.mark.parametrize("user_role_indices, user_id, role_id, payload, expected_status", [
+    ([], BAD_ID_0000, ROLE_ID_1, {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, status.HTTP_404_NOT_FOUND), # user role not found (user not found)
+    ([], USER_ID_1, BAD_ID_0000, {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, status.HTTP_404_NOT_FOUND), # user role not found (role not found)
+    ([], USER_ID_1, "invalid-uuid-format", {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    ([0], USER_ID_1, ROLE_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([0], USER_ID_1, ROLE_ID_1, {"proficiency_level_id": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ([0], USER_ID_1, ROLE_ID_1, {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+])
+@pytest.mark.asyncio
+async def test_update_user_role_error_cases(async_client, seed_proficiency_levels, seed_users, seed_roles, seed_user_roles, test_proficiency_levels_data, test_users_data, test_roles_data, test_user_roles_data, user_role_indices, user_id, role_id, payload, expected_status):
+    """Test UPDATE user role error cases (400, 404, and 422)"""
+    seed_proficiency_levels(test_proficiency_levels_data[:2])
+    seed_users([test_users_data[0]])
+    seed_roles([test_roles_data[0]])
+    conditional_seed(user_role_indices, test_user_roles_data, seed_user_roles)
+    response = await async_client.patch(f"/users/{user_id}/roles/{role_id}", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_update_user_role_success(async_client, seed_users, seed_media_roles, seed_proficiency_levels, seed_user_roles, test_users_data, test_media_roles_data, test_proficiency_levels_data, test_user_roles_data):
-#     """Test valid user role update"""
-#     await seed_users([test_users_data[0], test_users_data[1]])
-#     await seed_media_roles([test_media_roles_data[0], test_media_roles_data[1]])
-#     await seed_proficiency_levels(test_proficiency_levels_data[:3])
-#     await seed_user_roles([test_user_roles_data[0]])
-
-#     response = await async_client.patch(f"/users/{USER_ID_1}/roles/{MEDIA_ROLE_ID_1}", json={
-#         "proficiency_level_id": PROFICIENCY_LEVEL_ID_2
-#     })
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert response_json["user_id"] == USER_ID_1
-#     assert response_json["media_role_id"] == MEDIA_ROLE_ID_1
-#     assert response_json["proficiency_level_id"] == PROFICIENCY_LEVEL_ID_2
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    ({"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, {}), # full update
+    # ({"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, {}), # partial update (proficiency_level_id only)
+])
+@pytest.mark.asyncio
+async def test_update_user_role_success(async_client, seed_proficiency_levels, seed_users, seed_roles, seed_user_roles, test_proficiency_levels_data, test_users_data, test_roles_data, test_user_roles_data, payload, unchanged_fields):
+    """Test valid user role updates"""
+    seed_proficiency_levels(test_proficiency_levels_data[:2])
+    seed_users([test_users_data[0]])
+    seed_roles([test_roles_data[0]])
+    seed_user_roles([test_user_roles_data[0]])
+    response = await async_client.patch(f"/users/{USER_ID_1}/roles/{ROLE_ID_1}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        assert response_json[field] == getattr(test_user_roles_data[0], field)
