@@ -16,6 +16,15 @@ VALID_INSERT_PAYLOAD = {
     "ends_at": DATETIME_2025_05_02.isoformat(),
     "event_type_id": EVENT_TYPE_ID_1
 }
+VALID_UPDATE_PAYLOAD = {
+    "title": "Updated Event",
+    "starts_at": DATETIME_2025_05_03.isoformat(),
+    "ends_at": DATETIME_2025_05_04.isoformat(),
+    "team_id": TEAM_ID_1,
+    "event_type_id": EVENT_TYPE_ID_2,
+    "notes": "Updated notes",
+    "is_active": False
+}
 
 # =============================
 # FIXTURES
@@ -222,51 +231,47 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
     assert response_json["event_assignments"][0]["assigned_user_id"] is None
     assert response_json["event_assignments"][0]["assigned_user_first_name"] is None
 
-# # =============================
-# # UPDATE EVENT
-# # =============================
-# @pytest.mark.parametrize("event_id, payload, expected_status", [
-#     # schedule date not found
-#     (BAD_ID_0000, {"notes": "Updated notes"}, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format
-#     ("invalid-uuid-format", {"notes": "Updated notes"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # empty payload
-#     (EVENT_ID_1, {}, status.HTTP_400_BAD_REQUEST),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_event_error_cases(async_client, event_id, payload, expected_status):
-#     """Test UPDATE event error cases (400, 404, and 422)"""
-#     response = await async_client.patch(f"/events/{event_id}", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# UPDATE EVENT
+# =============================
+@pytest.mark.parametrize("event_id, payload, expected_status", [
+    (BAD_ID_0000, {"notes": "Updated notes"}, status.HTTP_404_NOT_FOUND), # event not found
+    ("invalid-uuid-format", {"notes": "Updated notes"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (EVENT_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    (EVENT_ID_1, {"title": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    (EVENT_ID_1, {"title": "Invalid", "id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+])
+@pytest.mark.asyncio
+async def test_update_event_error_cases(async_client, event_id, payload, expected_status):
+    """Test UPDATE event error cases (400, 404, and 422)"""
+    response = await async_client.patch(f"/events/{event_id}", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.parametrize("payload, expected_fields", [
-#     # update notes
-#     ({"notes": "Updated notes"}, {"notes": "Updated notes"}),
-#     # update team_id
-#     ({"team_id": TEAM_ID_1}, {"team_id": TEAM_ID_1}),
-#     # update is_active
-#     ({"is_active": False}, {"is_active": False}),
-#     # update date and event_type_id
-#     (
-#         {"date": DATE_2025_05_02, "event_type_id": EVENT_TYPE_ID_2},
-#         {"date": DATE_2025_05_02, "event_type_id": EVENT_TYPE_ID_2}
-#     ),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_event_success(async_client, seed_dates, seed_schedules, seed_event_types, seed_teams, seed_events, test_dates_data, test_schedules_data, test_event_types_data, test_teams_data, test_events_data, payload, expected_fields):
-#     """Test valid event updates"""
-#     # DATE_2025_05_01/02/03 (indices 3,4,5) for events
-#     await seed_dates([test_dates_data[3], test_dates_data[4], test_dates_data[5]])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_event_types(test_event_types_data[:2])
-#     await seed_teams([test_teams_data[0]])
-#     await seed_events([test_events_data[0]])
-    
-#     response = await async_client.patch(f"/events/{EVENT_ID_1}", json=payload)
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     for field, expected_value in expected_fields.items():
-#         assert response_json[field] == expected_value
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    (VALID_UPDATE_PAYLOAD, {}), # full update
+    ({"is_active": False}, {"title": None, "starts_at": DATETIME_2025_05_01.isoformat(), "ends_at": DATETIME_2025_05_02.isoformat(), "event_type_id": EVENT_TYPE_ID_1, "notes": None, "team_id": None}), # partial update (is_active only)
+    ({"title": "Partially Updated Event"}, {"starts_at": DATETIME_2025_05_01.isoformat(), "ends_at": DATETIME_2025_05_02.isoformat(), "event_type_id": EVENT_TYPE_ID_1, "notes": None, "is_active": True, "team_id": None}), # partial update (title only)
+])
+@pytest.mark.asyncio
+async def test_update_event_success(async_client, seed_schedules, seed_event_types, seed_teams, seed_events, test_schedules_data, test_event_types_data, test_teams_data, test_events_data, payload, unchanged_fields):
+    """Test valid event updates"""
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types(test_event_types_data[:2])
+    seed_teams([test_teams_data[0]])
+    seed_events([test_events_data[0]])
+    response = await async_client.patch(f"/events/{EVENT_ID_1}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        if field in ("starts_at", "ends_at"):
+            assert parse_to_utc(response_json[field]).isoformat() == value
+        else:
+            assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        if field in ("starts_at", "ends_at"):
+            assert parse_to_utc(response_json[field]).isoformat() == value
+        else:
+            assert response_json[field] == value
 
 # =============================
 # DELETE EVENT

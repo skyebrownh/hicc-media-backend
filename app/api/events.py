@@ -5,7 +5,7 @@ from app.db.models import Event, EventCreate, EventUpdate, EventPublic, EventWit
 from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
 from app.services.queries import get_event, get_schedule_only, get_event_for_cascade_delete
-from app.utils.helpers import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event, raise_exception_if_not_found
+from app.utils.helpers import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event, raise_exception_if_not_found, get_or_raise_exception
 
 router = APIRouter()
 
@@ -46,14 +46,31 @@ async def post_event(schedule_id: UUID, event: EventCreate, session: Session = D
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Start time must be before end time") from e
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
-# # Update event
-# @router.patch("/{event_id}", response_model=ScheduleDateOut)
-# async def patch_event(
-#     event_id: UUID,
-#     event_update: ScheduleDateUpdate | None = Body(default=None),
-#     conn: asyncpg.Connection = Depends(get_db_connection),
-# ):
-#     return await update_event(conn, event_id=event_id, payload=event_update)
+@router.patch("/events/{id}", response_model=EventPublic)
+async def update_event(id: UUID, payload: EventUpdate, session: Session = Depends(get_db_session)):
+    """Update an event by ID"""
+    # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
+    payload_dict = payload.model_dump(exclude_unset=True)
+    if not payload_dict:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
+    
+    event = get_or_raise_exception(session, Event, id)
+    # Only update fields that were actually provided in the payload
+    for key, value in payload_dict.items():
+        setattr(event, key, value)
+    try:
+        # no need to add the event again, it's already in the session from get_or_raise_exception
+        session.commit()
+        session.refresh(event)
+        return EventPublic.from_objects(
+            event=event,
+            schedule=event.schedule,
+            event_type=event.event_type,
+            team=event.team,
+        )
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/events/{id}")
 async def delete_event(id: UUID, session: Session = Depends(get_db_session)):

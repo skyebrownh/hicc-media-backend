@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 BAD_ID_0000 = "00000000-0000-0000-0000-000000000000"
 
 # Datetime constants
+DATETIME_2024_02_29 = datetime(2024, 2, 29, tzinfo=timezone.utc)
 DATETIME_2025_01_01 = datetime(2025, 1, 1, tzinfo=timezone.utc)
 DATETIME_2025_01_02 = datetime(2025, 1, 2, tzinfo=timezone.utc)
-DATETIME_2025_02_29 = datetime(2024, 2, 29, tzinfo=timezone.utc)
 DATETIME_2025_03_01 = datetime(2025, 3, 1, tzinfo=timezone.utc)
 DATETIME_2025_03_31 = datetime(2025, 3, 31, tzinfo=timezone.utc)
 DATETIME_2025_04_01 = datetime(2025, 4, 1, tzinfo=timezone.utc)

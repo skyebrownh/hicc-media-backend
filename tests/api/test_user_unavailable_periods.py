@@ -1,9 +1,9 @@
 import pytest
-from datetime import datetime, date
+import json
 from fastapi import status
 from tests.utils.helpers import assert_single_item_201, assert_list_201, conditional_seed, parse_to_utc
 from app.db.models import UserUnavailablePeriod
-from tests.utils.constants import BAD_ID_0000, DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_05_01, DATETIME_2025_05_02, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_3, USER_UNAVAILABLE_PERIOD_ID_1
+from tests.utils.constants import BAD_ID_0000, DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, USER_ID_1, USER_UNAVAILABLE_PERIOD_ID_1, USER_UNAVAILABLE_PERIOD_ID_2, USER_UNAVAILABLE_PERIOD_ID_7
 
 STARTS_AT = DATETIME_2025_01_01.isoformat()
 ENDS_AT = DATETIME_2025_01_02.isoformat()
@@ -91,42 +91,47 @@ async def test_insert_user_unavailable_periods_bulk_success(async_client, seed_u
     assert parse_to_utc(response_json[1]["starts_at"]) == DATETIME_2025_05_01
     assert parse_to_utc(response_json[1]["ends_at"]) == DATETIME_2025_05_02
 
-# # =============================
-# # UPDATE USER UNAVAILABLE PERIOD
-# # =============================
-# @pytest.mark.parametrize("user_id, date_path, payload, expected_status", [
-#     # user date not found
-#     (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2025_01_01}", {"date": DATE_2025_01_01}, status.HTTP_404_NOT_FOUND),
-#     # invalid UUID format for user_id
-#     ("invalid-uuid-format", f"/users/invalid-uuid-format/dates/{DATE_2024_02_29}", {"date": DATE_2025_01_01}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # invalid date format in path
-#     (USER_ID_1, f"/users/{USER_ID_1}/dates/invalid-date-format", {"date": DATE_2025_01_01}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # empty payload
-#     (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}", {}, status.HTTP_400_BAD_REQUEST),
-#     # invalid date format in payload
-#     (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}", {"date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # foreign key violation (date doesn't exist)
-#     (USER_ID_1, f"/users/{USER_ID_1}/dates/{DATE_2025_01_01}", {"date": BAD_DATE_2000_01_01}, status.HTTP_404_NOT_FOUND),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_user_unavailable_period_error_cases(async_client, user_id, date_path, payload, expected_status):
-#     """Test UPDATE user date error cases (400, 404, and 422)"""
-#     response = await async_client.patch(date_path, json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# UPDATE USER UNAVAILABLE PERIOD
+# =============================
+@pytest.mark.parametrize("uup_id, payload, expected_status", [
+    (BAD_ID_0000, {"starts_at": STARTS_AT, "ends_at": ENDS_AT}, status.HTTP_404_NOT_FOUND), # user unavailable period not found
+    ("invalid-uuid-format", {"starts_at": STARTS_AT, "ends_at": ENDS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (USER_UNAVAILABLE_PERIOD_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    (USER_UNAVAILABLE_PERIOD_ID_1, {"starts_at": "invalid-datetime"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    (USER_UNAVAILABLE_PERIOD_ID_1, {"starts_at": STARTS_AT, "id": USER_UNAVAILABLE_PERIOD_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+])
+@pytest.mark.asyncio
+async def test_update_user_unavailable_period_error_cases(async_client, seed_users, seed_user_unavailable_periods, test_users_data, test_user_unavailable_periods_data, uup_id, payload, expected_status):
+    """Test UPDATE user unavailable period error cases (400, 404, and 422)"""
+    seed_users([test_users_data[0]])
+    seed_user_unavailable_periods([test_user_unavailable_periods_data[0]])
+    response = await async_client.patch(f"/user_availability/{uup_id}", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.asyncio
-# async def test_update_user_unavailable_period_success(async_client, seed_dates, seed_users, seed_user_dates, test_users_data, test_dates_data, test_user_dates_data):
-#     """Test valid user date update"""
-#     await seed_users([test_users_data[0]])    
-#     # Use first 2 dates (DATE_2024_02_29, DATE_2025_01_01)
-#     await seed_dates(test_dates_data[:2])
-#     await seed_user_dates([test_user_dates_data[0]])
-
-#     response = await async_client.patch(f"/users/{USER_ID_1}/dates/{DATE_2024_02_29}", json={"date": DATE_2025_01_01})
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     assert response_json["user_id"] == USER_ID_1
-#     assert response_json["date"] == DATE_2025_01_01
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    (VALID_PAYLOAD_2, {}), # full update
+    ({"starts_at": DATETIME_2025_04_01.isoformat()}, {"ends_at": ENDS_AT_2}), # partial update (starts_at only)
+    ({"ends_at": DATETIME_2025_05_03.isoformat()}, {"starts_at": STARTS_AT_2}), # partial update (ends_at only)
+])
+@pytest.mark.asyncio
+async def test_update_user_unavailable_period_success(async_client, seed_users, seed_user_unavailable_periods, test_users_data, test_user_unavailable_periods_data, payload, unchanged_fields):
+    """Test valid user unavailable period updates"""
+    seed_users([test_users_data[0]])
+    seed_user_unavailable_periods([test_user_unavailable_periods_data[6]])
+    response = await async_client.patch(f"/user_availability/{USER_UNAVAILABLE_PERIOD_ID_7}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        if field in ("starts_at", "ends_at"):
+            assert parse_to_utc(response_json[field]).isoformat() == value
+        else:
+            assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        if field in ("starts_at", "ends_at"):
+            assert parse_to_utc(response_json[field]).isoformat() == value
+        else:
+            assert response_json[field] == value
 
 # =============================
 # DELETE USER UNAVAILABLE PERIOD
