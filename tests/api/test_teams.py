@@ -3,7 +3,7 @@ from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from sqlmodel import select, func
 from app.db.models import TeamUser
-from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4
+from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_4
 
 # =============================
 # GET ALL TEAMS

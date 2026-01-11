@@ -1,10 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, conditional_seed
-from tests.utils.constants import (
-    BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3,
-    PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
-)
+from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, ROLE_ID_1, ROLE_ID_2, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
 
 # =============================
 # FIXTURES
@@ -112,6 +109,7 @@ async def test_get_users_for_role_success(async_client, seed_for_user_roles_test
     ([], USER_ID_1, BAD_ID_0000, {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, status.HTTP_404_NOT_FOUND), # user role not found (role not found)
     ([], USER_ID_1, "invalid-uuid-format", {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     ([0], USER_ID_1, ROLE_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([0], USER_ID_1, ROLE_ID_1, {"proficiency_level_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # FK violation
     ([0], USER_ID_1, ROLE_ID_1, {"proficiency_level_id": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([0], USER_ID_1, ROLE_ID_1, {"proficiency_level_id": PROFICIENCY_LEVEL_ID_2, "id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
