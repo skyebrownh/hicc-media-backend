@@ -113,6 +113,17 @@ def get_event_for_cascade_delete(session: Session, event_id: UUID) -> Event | No
         )
     ).one_or_none()
 
+def get_event_assignment(session: Session, event_assignment_id: UUID) -> EventAssignment | None:
+    return session.exec(
+        select(EventAssignment)
+        .where(EventAssignment.id == event_assignment_id)
+        .options(
+            selectinload(EventAssignment.event),
+            selectinload(EventAssignment.role),
+            selectinload(EventAssignment.assigned_user).selectinload(User.user_roles).selectinload(UserRole.proficiency_level)
+        )
+    ).one_or_none()
+
 def get_unavailable_users_for_event(session: Session, event_id: UUID) -> list[User]:
     event = session.exec(
         select(Event)

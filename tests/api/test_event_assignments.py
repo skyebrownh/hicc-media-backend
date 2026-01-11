@@ -6,6 +6,12 @@ from tests.utils.constants import (
     USER_ID_1, USER_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, SCHEDULE_ID_2
 )
 
+VALID_UPDATE_PAYLOAD = {
+    "requirement_level": "OPTIONAL",
+    "assigned_user_id": USER_ID_2,
+    "is_active": False
+}
+
 # =============================
 # GET ALL EVENT ASSIGNMENTS FOR EVENT
 # =============================
@@ -63,51 +69,46 @@ async def test_get_all_event_assignments_for_event_success(async_client, seed_ro
     assert response_json[1]["event_type_code"] == "service"
     assert response_json[1]["role_code"] == "sound"
 
-# # =============================
-# # UPDATE EVENT ASSIGNMENT
-# # =============================
-# @pytest.mark.parametrize("event_assignment_id, payload, expected_status", [
-#     # Event assignment not found
-#     (BAD_ID_0000, {"assigned_user_id": USER_ID_2}, status.HTTP_404_NOT_FOUND),
-#     # Invalid UUID format
-#     ("invalid-uuid-format", {"assigned_user_id": USER_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT),
-#     # Empty payload
-#     (EVENT_ASSIGNMENT_ID_1, {}, status.HTTP_400_BAD_REQUEST),
-#     # Foreign key violation (user doesn't exist)
-#     (EVENT_ASSIGNMENT_ID_1, {"assigned_user_id": BAD_ID_0000}, status.HTTP_404_NOT_FOUND),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_event_assignment_error_cases(async_client, seed_users, test_users_data, event_assignment_id, payload, expected_status):
-#     """Test UPDATE event assignment error cases (400, 404, and 422)"""
-#     await seed_users([test_users_data[1]])
-    
-#     response = await async_client.patch(f"/event_assignments/{event_assignment_id}", json=payload)
-#     assert response.status_code == expected_status
+# =============================
+# UPDATE EVENT ASSIGNMENT
+# =============================
+@pytest.mark.parametrize("assignment_id, payload, expected_status", [
+    (BAD_ID_0000, VALID_UPDATE_PAYLOAD, status.HTTP_404_NOT_FOUND), # assignment not found
+    ("invalid-uuid-format", VALID_UPDATE_PAYLOAD, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (EVENT_ASSIGNMENT_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    (EVENT_ASSIGNMENT_ID_1, {"requirement_level": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    (EVENT_ASSIGNMENT_ID_1, {"requirement_level": "OPTIONAL", "id": EVENT_ASSIGNMENT_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+])
+@pytest.mark.asyncio
+async def test_update_event_assignment_error_cases(async_client, seed_roles, seed_users, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_roles_data, test_users_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data, assignment_id, payload, expected_status):
+    """Test UPDATE event assignment error cases (400, 404, and 422)"""
+    seed_roles([test_roles_data[0]])
+    seed_users([test_users_data[0]])
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    seed_events([test_events_data[0]])
+    seed_event_assignments([test_event_assignments_data[0]])
+    response = await async_client.patch(f"/assignments/{assignment_id}", json=payload)
+    assert response.status_code == expected_status
 
-# @pytest.mark.parametrize("payload, expected_fields", [
-#     # Update assigned_user_id
-#     ({"assigned_user_id": USER_ID_2}, {"assigned_user_id": USER_ID_2}),
-#     # Update is_required
-#     ({"is_required": False}, {"is_required": False}),
-#     # Update is_preferred
-#     ({"is_preferred": True}, {"is_preferred": True}),
-#     # Update is_active
-#     ({"is_active": False}, {"is_active": False}),
-# ])
-# @pytest.mark.asyncio
-# async def test_update_event_assignment_success(async_client, seed_dates, seed_users, seed_schedules, seed_schedule_date_types, seed_schedule_dates, seed_media_roles, seed_schedule_date_roles, test_dates_data, test_users_data, test_schedules_data, test_schedule_date_types_data, test_schedule_dates_data, test_media_roles_data, test_schedule_date_roles_data, payload, expected_fields):
-#     """Test UPDATE event assignment success cases"""
-#     # DATE_2025_05_01 (index 3) for schedule_date
-#     await seed_dates([test_dates_data[3]])
-#     await seed_users(test_users_data[:2])
-#     await seed_schedules([test_schedules_data[1]])
-#     await seed_schedule_date_types([test_schedule_date_types_data[0]])
-#     await seed_schedule_dates([test_schedule_dates_data[0]])
-#     await seed_media_roles([test_media_roles_data[0]])
-#     await seed_schedule_date_roles([test_schedule_date_roles_data[0]])
-    
-#     response = await async_client.patch(f"/event_assignments/{EVENT_ASSIGNMENT_ID_1}", json=payload)
-#     assert response.status_code == status.HTTP_200_OK
-#     response_json = response.json()
-#     for field, expected_value in expected_fields.items():
-#         assert response_json[field] == expected_value
+@pytest.mark.parametrize("payload, unchanged_fields", [
+    (VALID_UPDATE_PAYLOAD, {}), # full update
+    ({"is_active": False}, {"requirement_level": "REQUIRED", "assigned_user_id": USER_ID_1}), # partial update (is_active only)
+    ({"requirement_level": "OPTIONAL"}, {"assigned_user_id": USER_ID_1, "is_active": True}), # partial update (requirement_level only)
+])
+@pytest.mark.asyncio
+async def test_update_event_assignment_success(async_client, seed_roles, seed_users, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_roles_data, test_users_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data, payload, unchanged_fields):
+    """Test valid event assignment updates"""
+    seed_roles([test_roles_data[0]])
+    seed_users(test_users_data[:2])
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    seed_events([test_events_data[0]])
+    seed_event_assignments([test_event_assignments_data[0]])
+    response = await async_client.patch(f"/assignments/{EVENT_ASSIGNMENT_ID_1}", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    for field, value in payload.items():
+        assert response_json[field] == value
+    for field, value in unchanged_fields.items():
+        assert response_json[field] == value

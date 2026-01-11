@@ -1,7 +1,7 @@
 import pytest
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
 from tests.utils.constants import (
-    DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_02_29, DATETIME_2025_03_01, DATETIME_2025_03_31, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, DATETIME_2025_05_04,
+    DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2024_02_29, DATETIME_2025_03_01, DATETIME_2025_03_31, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, DATETIME_2025_05_04,
     USER_ID_1, USER_ID_2, USER_ID_3, USER_ID_4,
     TEAM_ID_1, TEAM_ID_2, TEAM_ID_3, TEAM_ID_4,
     ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, ROLE_ID_4,
@@ -88,10 +88,10 @@ def test_user_roles_data():
 @pytest.fixture
 def test_user_unavailable_periods_data():
     """Standard fixture providing array of test user_unavailable_period data"""
-    uup_1 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_1, user_id=USER_ID_1, starts_at=DATETIME_2025_02_29, ends_at=DATETIME_2025_03_01)
+    uup_1 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_1, user_id=USER_ID_1, starts_at=DATETIME_2024_02_29, ends_at=DATETIME_2025_03_01)
     uup_2 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_2, user_id=USER_ID_1, starts_at=DATETIME_2025_01_01, ends_at=DATETIME_2025_01_02)
     uup_3 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_3, user_id=USER_ID_1, starts_at=DATETIME_2025_03_31, ends_at=DATETIME_2025_04_01)
-    uup_4 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_4, user_id=USER_ID_2, starts_at=DATETIME_2025_02_29, ends_at=DATETIME_2025_03_01)
+    uup_4 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_4, user_id=USER_ID_2, starts_at=DATETIME_2024_02_29, ends_at=DATETIME_2025_03_01)
     uup_5 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_5, user_id=USER_ID_2, starts_at=DATETIME_2025_01_01, ends_at=DATETIME_2025_01_02)
     uup_6 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_6, user_id=USER_ID_2, starts_at=DATETIME_2025_03_31, ends_at=DATETIME_2025_04_01)
     uup_7 = UserUnavailablePeriod(id=USER_UNAVAILABLE_PERIOD_ID_7, user_id=USER_ID_1, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
