@@ -99,6 +99,7 @@ async def test_insert_user_unavailable_periods_bulk_success(async_client, seed_u
     ("invalid-uuid-format", {"starts_at": STARTS_AT, "ends_at": ENDS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     (USER_UNAVAILABLE_PERIOD_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
     (USER_UNAVAILABLE_PERIOD_ID_1, {"starts_at": "invalid-datetime"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    (USER_UNAVAILABLE_PERIOD_ID_1, {"starts_at": ENDS_AT, "ends_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
     (USER_UNAVAILABLE_PERIOD_ID_1, {"starts_at": STARTS_AT, "id": USER_UNAVAILABLE_PERIOD_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
 @pytest.mark.asyncio

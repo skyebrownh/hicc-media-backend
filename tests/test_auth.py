@@ -2,7 +2,6 @@ import pytest
 from fastapi import status
 from app.settings import settings
 
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "async_client,expected_status,expected_response",

@@ -1,10 +1,7 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, conditional_seed
-from tests.utils.constants import (
-    BAD_ID_0000, EVENT_ID_1, EVENT_ID_2, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3,
-    USER_ID_1, USER_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, SCHEDULE_ID_2
-)
+from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.constants import BAD_ID_0000, EVENT_ID_1, ROLE_ID_1, USER_ID_1, USER_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, SCHEDULE_ID_2
 
 VALID_UPDATE_PAYLOAD = {
     "requirement_level": "OPTIONAL",
@@ -77,6 +74,7 @@ async def test_get_all_event_assignments_for_event_success(async_client, seed_ro
     ("invalid-uuid-format", VALID_UPDATE_PAYLOAD, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     (EVENT_ASSIGNMENT_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
     (EVENT_ASSIGNMENT_ID_1, {"requirement_level": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    (EVENT_ASSIGNMENT_ID_1, {"assigned_user_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # FK violation
     (EVENT_ASSIGNMENT_ID_1, {"requirement_level": "OPTIONAL", "id": EVENT_ASSIGNMENT_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
 @pytest.mark.asyncio

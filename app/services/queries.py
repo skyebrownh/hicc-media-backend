@@ -128,10 +128,7 @@ def get_unavailable_users_for_event(session: Session, event_id: UUID) -> list[Us
     event = session.exec(
         select(Event)
         .where(Event.id == event_id)
-    ).one_or_none()
-
-    if not event:
-        return []
+    ).one()
 
     return session.exec(
         select(UserUnavailablePeriod)

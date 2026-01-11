@@ -7,7 +7,7 @@ from .team_users import TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPublic
 from .user_roles import UserRole, UserRoleUpdate, UserRolePublic
 from .schedules import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic
 from .events import Event, EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic, EventWithAssignmentsAndAvailabilityPublic
-from .event_assignments import EventAssignment, EventAssignmentCreate, EventAssignmentUpdate, EventAssignmentPublic, EventAssignmentEmbeddedPublic
+from .event_assignments import EventAssignment, EventAssignmentUpdate, EventAssignmentPublic, EventAssignmentEmbeddedPublic
 from .user_unavailable_periods import UserUnavailablePeriod, UserUnavailablePeriodCreate, UserUnavailablePeriodUpdate, UserUnavailablePeriodPublic, UserUnavailablePeriodEmbeddedPublic
 
 # Rebuild models with forward references after all imports are complete
@@ -25,6 +25,6 @@ __all__ = [
     "UserRole", "UserRoleUpdate", "UserRolePublic",
     "Schedule", "ScheduleCreate", "ScheduleUpdate", "ScheduleGridPublic",
     "Event", "EventCreate", "EventUpdate", "EventPublic", "EventWithAssignmentsPublic", "EventWithAssignmentsAndAvailabilityPublic",
-    "EventAssignment", "EventAssignmentCreate", "EventAssignmentUpdate", "EventAssignmentPublic", "EventAssignmentEmbeddedPublic",
+    "EventAssignment", "EventAssignmentUpdate", "EventAssignmentPublic", "EventAssignmentEmbeddedPublic",
     "UserUnavailablePeriod", "UserUnavailablePeriodCreate", "UserUnavailablePeriodUpdate", "UserUnavailablePeriodPublic", "UserUnavailablePeriodEmbeddedPublic",
 ]

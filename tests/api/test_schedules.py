@@ -3,7 +3,7 @@ from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from sqlmodel import select, func
 from app.db.models import Event, EventAssignment
-from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_3, SCHEDULE_ID_4, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, EVENT_TYPE_ID_1
+from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, SCHEDULE_ID_4, ROLE_ID_1, ROLE_ID_2, USER_ID_1, EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, EVENT_TYPE_ID_1
 
 # =============================
 # FIXTURES

@@ -6,7 +6,7 @@ from sqlmodel import select, func
 from app.db.models import EventAssignment
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
-    EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, TEAM_ID_1, USER_ID_1, USER_ID_2, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
+    EVENT_ID_1, TEAM_ID_1, USER_ID_1, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
     DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, DATETIME_2025_05_04
 )
 
@@ -238,12 +238,16 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
     (BAD_ID_0000, {"notes": "Updated notes"}, status.HTTP_404_NOT_FOUND), # event not found
     ("invalid-uuid-format", {"notes": "Updated notes"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     (EVENT_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    (EVENT_ID_1, {"event_type_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # FK violation
     (EVENT_ID_1, {"title": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     (EVENT_ID_1, {"title": "Invalid", "id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
 @pytest.mark.asyncio
-async def test_update_event_error_cases(async_client, event_id, payload, expected_status):
+async def test_update_event_error_cases(async_client, seed_event_types, seed_schedules, seed_events, test_events_data, test_event_types_data, test_schedules_data, event_id, payload, expected_status):
     """Test UPDATE event error cases (400, 404, and 422)"""
+    seed_event_types([test_event_types_data[0]])
+    seed_schedules([test_schedules_data[1]])
+    seed_events([test_events_data[0]])
     response = await async_client.patch(f"/events/{event_id}", json=payload)
     assert response.status_code == expected_status
 
