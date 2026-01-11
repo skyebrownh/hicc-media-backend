@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy.exc import IntegrityError
 from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic, EventWithAssignmentsAndAvailabilityPublic, EventPublic, EventAssignmentEmbeddedPublic, UserUnavailablePeriodEmbeddedPublic
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_raise_exception, raise_exception_if_not_found
-from app.services.queries import get_schedule, get_unavailable_users_for_event, get_schedule_for_cascade_delete
+from app.utils.helpers import raise_exception_if_not_found
+from app.services.queries import select_schedule_with_events_and_assignments, select_unavailable_users_for_event
 
 router = APIRouter(prefix="/schedules")
 
@@ -17,37 +18,33 @@ async def get_all_schedules(session: Session = Depends(get_db_session)):
 @router.get("/{id}", response_model=Schedule)
 async def get_single_schedule(id: UUID, session: Session = Depends(get_db_session)):
     """Get a schedule by ID"""
-    return get_or_raise_exception(session, Schedule, id)
+    schedule = session.get(Schedule, id)
+    raise_exception_if_not_found(schedule, Schedule)
+    return schedule
 
 @router.get("/{id}/grid", response_model=ScheduleGridPublic)
 async def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)):
     """Get a schedule grid by ID"""
-    schedule = get_schedule(session, id)
+    schedule = select_schedule_with_events_and_assignments(session, id)
     raise_exception_if_not_found(schedule, Schedule, status.HTTP_404_NOT_FOUND)
 
     schedule_grid_events = []
     for event in schedule.events:
-        unavailable_users = get_unavailable_users_for_event(session=session, event_id=event.id)
+        unavailable_users = select_unavailable_users_for_event(session=session, event_id=event.id)
         unavailable_users = [] if unavailable_users is None else unavailable_users
         schedule_grid_events.append(
             EventWithAssignmentsAndAvailabilityPublic(
                 event=EventPublic.from_objects(
-                    event=event,
-                    schedule=schedule,
-                    event_type=event.event_type,
-                    team=event.team,
+                    event=event, schedule=schedule, event_type=event.event_type, team=event.team
                 ),
                 event_assignments=[
                     EventAssignmentEmbeddedPublic.from_objects(
-                        event_assignment=ea,
-                        role=ea.role,
-                        assigned_user=ea.assigned_user,
+                        event_assignment=ea, role=ea.role, assigned_user=ea.assigned_user,
                     ) for ea in event.event_assignments
                 ],
                 availability=[
                     UserUnavailablePeriodEmbeddedPublic(
-                        user_first_name=ua.user.first_name,
-                        user_last_name=ua.user.last_name
+                        user_first_name=ua.user.first_name, user_last_name=ua.user.last_name
                     ) for ua in unavailable_users
                 ],
             )
@@ -84,12 +81,13 @@ async def update_schedule(id: UUID, payload: ScheduleUpdate, session: Session = 
     if not payload_dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
     
-    schedule = get_or_raise_exception(session, Schedule, id)
+    schedule = session.get(Schedule, id)
+    raise_exception_if_not_found(schedule, Schedule)
     # Only update fields that were actually provided in the payload
     for key, value in payload_dict.items():
         setattr(schedule, key, value)
     try:
-        # no need to add the schedule again, it's already in the session from get_or_raise_exception
+        # no need to add the schedule again, it's already in the session from raise_exception_if_not_found
         session.commit()
         session.refresh(schedule)
         return schedule
@@ -100,7 +98,7 @@ async def update_schedule(id: UUID, payload: ScheduleUpdate, session: Session = 
 @router.delete("/{id}")
 async def delete_schedule(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a schedule by ID"""
-    schedule = get_schedule_for_cascade_delete(session, id)
+    schedule = session.exec(select(Schedule).where(Schedule.id == id).options(selectinload(Schedule.events))).one_or_none()
     raise_exception_if_not_found(schedule, Schedule, status.HTTP_204_NO_CONTENT) # Schedule not found, nothing to delete
     session.delete(schedule)
     session.commit()

@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from app.db.models import EventType, EventTypeCreate, EventTypeUpdate
 from sqlmodel import Session, select
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_raise_exception
+from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter(prefix="/event_types")
 
@@ -16,7 +16,9 @@ async def get_all_event_types(session: Session = Depends(get_db_session)):
 @router.get("/{id}", response_model=EventType)
 async def get_single_event_type(id: UUID, session: Session = Depends(get_db_session)):
     """Get an event type by ID"""
-    return get_or_raise_exception(session, EventType, id)
+    event_type = session.get(EventType, id)
+    raise_exception_if_not_found(event_type, EventType)
+    return event_type
 
 @router.post("", response_model=EventType, status_code=status.HTTP_201_CREATED)
 async def post_event_type(event_type: EventTypeCreate, session: Session = Depends(get_db_session)):
@@ -39,7 +41,8 @@ async def update_event_type(id: UUID, payload: EventTypeUpdate, session: Session
     if not payload_dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
     
-    event_type = get_or_raise_exception(session, EventType, id)
+    event_type = session.get(EventType, id)
+    raise_exception_if_not_found(event_type, EventType)
     # Only update fields that were actually provided in the payload
     for key, value in payload_dict.items():
         setattr(event_type, key, value)
@@ -55,7 +58,8 @@ async def update_event_type(id: UUID, payload: EventTypeUpdate, session: Session
 @router.delete("/{id}")
 async def delete_event_type(id: UUID, session: Session = Depends(get_db_session)):
     """Delete an event type by ID"""
-    event_type = get_or_raise_exception(session, EventType, id, status.HTTP_204_NO_CONTENT) # Event type not found, nothing to delete
+    event_type = session.get(EventType, id)
+    raise_exception_if_not_found(event_type, EventType, status.HTTP_204_NO_CONTENT) # Event type not found, nothing to delete
     session.delete(event_type)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # Event type deleted successfully

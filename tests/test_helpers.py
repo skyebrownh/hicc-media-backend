@@ -1,7 +1,6 @@
 import pytest
 from fastapi import HTTPException, status
 from app.utils.helpers import (
-    get_or_raise_exception,
     raise_exception_if_not_found,
     build_events_with_assignments_from_schedule,
     build_events_with_assignments_from_event,
@@ -110,29 +109,6 @@ def sample_schedule_with_availability(
 # =============================
 # TESTS
 # =============================
-def test_get_or_raise_exception(get_test_db_session):
-    """Test get_or_raise_exception function"""
-    # Test: raises 404 when object not found with default status code
-    with pytest.raises(HTTPException) as exc_info:
-        get_or_raise_exception(get_test_db_session, ProficiencyLevel, BAD_ID_0000)
-    assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
-    assert exc_info.value.detail == "ProficiencyLevel not found"
-
-    # Test: raises custom status code when object not found
-    with pytest.raises(HTTPException) as exc_info:
-        get_or_raise_exception(get_test_db_session, Role, BAD_ID_0000, http_status_code=status.HTTP_400_BAD_REQUEST)
-    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-    assert exc_info.value.detail == "Role not found"
-
-    # Test: returns object when found
-    proficiency_level = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_1, name="Beginner", code="beginner")
-    get_test_db_session.add(proficiency_level)
-    get_test_db_session.commit()
-    result = get_or_raise_exception(get_test_db_session, ProficiencyLevel, PROFICIENCY_LEVEL_ID_1)
-    assert result == proficiency_level
-    assert str(result.id) == str(PROFICIENCY_LEVEL_ID_1)
-    assert result.name == "Beginner"
-
 def test_raise_exception_if_not_found():
     """Test raise_exception_if_not_found function"""
     # Test: raises 404 when object is None with default status code

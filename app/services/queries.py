@@ -3,68 +3,7 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from app.db.models import UserRole, User, Role, Schedule, Event, EventAssignment, UserUnavailablePeriod, Team, TeamUser
 
-def get_role(session: Session, role_id: UUID) -> Role | None:
-    return session.exec(
-        select(Role)
-        .where(Role.id == role_id)
-        .options(
-            selectinload(Role.user_roles)
-        )
-    ).one_or_none()
-
-def get_team(session: Session, team_id: UUID) -> Team | None:
-    return session.exec(
-        select(Team)
-        .where(Team.id == team_id)
-        .options(
-            selectinload(Team.team_users)
-            .selectinload(TeamUser.user))
-        ).one_or_none()
-
-def get_user(session: Session, user_id: UUID) -> User | None:
-    return session.exec(
-        select(User)
-        .where(User.id == user_id)
-        .options(
-            selectinload(User.user_roles)
-        )
-    ).one_or_none()
-
-def get_team_user(session: Session, team_id: UUID, user_id: UUID) -> TeamUser | None:
-    return session.exec(
-        select(TeamUser)
-        .where(TeamUser.team_id == team_id)
-        .where(TeamUser.user_id == user_id)
-    ).one_or_none()
-
-def get_user_for_user_roles(session: Session, user_id: UUID) -> User | None:
-    return session.exec(
-        select(User)
-        .where(User.id == user_id)
-        .options(
-            selectinload(User.user_roles).selectinload(UserRole.role),
-            selectinload(User.user_roles).selectinload(UserRole.proficiency_level)
-        )
-    ).one_or_none()
-
-def get_role_for_user_roles(session: Session, role_id: UUID) -> Role | None:
-    return session.exec(
-        select(Role)
-        .where(Role.id == role_id)
-        .options(
-            selectinload(Role.user_roles).selectinload(UserRole.user),
-            selectinload(Role.user_roles).selectinload(UserRole.proficiency_level)
-        )
-    ).one_or_none()
-
-def get_user_role(session: Session, user_id: UUID, role_id: UUID) -> UserRole | None:
-    return session.exec(
-        select(UserRole)
-        .where(UserRole.user_id == user_id)
-        .where(UserRole.role_id == role_id)
-    ).one_or_none()
-
-def get_schedule(session: Session, schedule_id: UUID) -> Schedule | None:
+def select_schedule_with_events_and_assignments(session: Session, schedule_id: UUID) -> Schedule | None:
     return session.exec(
         select(Schedule)
         .where(Schedule.id == schedule_id)
@@ -76,22 +15,7 @@ def get_schedule(session: Session, schedule_id: UUID) -> Schedule | None:
         )
     ).one_or_none()
 
-def get_schedule_for_cascade_delete(session: Session, schedule_id: UUID) -> Schedule | None:
-    return session.exec(
-        select(Schedule)
-        .where(Schedule.id == schedule_id)
-        .options(
-            selectinload(Schedule.events)
-        )
-    ).one_or_none()
-
-def get_schedule_only(session: Session, schedule_id: UUID) -> Schedule | None:
-    return session.exec(
-        select(Schedule)
-        .where(Schedule.id == schedule_id)
-    ).one_or_none()
-
-def get_event(session: Session, event_id: UUID) -> Event | None:
+def select_event_with_full_hierarchy(session: Session, event_id: UUID) -> Event | None:
     return session.exec(
         select(Event)
         .where(Event.id == event_id)
@@ -104,16 +28,7 @@ def get_event(session: Session, event_id: UUID) -> Event | None:
         )
     ).one_or_none()
 
-def get_event_for_cascade_delete(session: Session, event_id: UUID) -> Event | None:
-    return session.exec(
-        select(Event)
-        .where(Event.id == event_id)
-        .options(
-            selectinload(Event.event_assignments)
-        )
-    ).one_or_none()
-
-def get_event_assignment(session: Session, event_assignment_id: UUID) -> EventAssignment | None:
+def select_full_event_assignment(session: Session, event_assignment_id: UUID) -> EventAssignment | None:
     return session.exec(
         select(EventAssignment)
         .where(EventAssignment.id == event_assignment_id)
@@ -124,7 +39,7 @@ def get_event_assignment(session: Session, event_assignment_id: UUID) -> EventAs
         )
     ).one_or_none()
 
-def get_unavailable_users_for_event(session: Session, event_id: UUID) -> list[User]:
+def select_unavailable_users_for_event(session: Session, event_id: UUID) -> list[User]:
     event = session.exec(
         select(Event)
         .where(Event.id == event_id)

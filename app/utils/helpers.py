@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Type
 from fastapi import HTTPException, status
-from uuid import UUID
-from sqlmodel import Session, SQLModel
+from sqlmodel import SQLModel
 from app.db.models import EventWithAssignmentsPublic, EventPublic, EventAssignmentEmbeddedPublic
 
 if TYPE_CHECKING:
@@ -21,12 +20,6 @@ VALID_TABLES = {
     "event_assignments",
     "user_unavailable_periods",
 }
-
-def get_or_raise_exception(session: Session, model: Type[SQLModel], id: UUID, http_status_code: int = status.HTTP_404_NOT_FOUND) -> SQLModel:
-    """Get an object by ID, raising HTTPException if it is not found."""
-    obj = session.get(model, id)
-    raise_exception_if_not_found(obj, model, http_status_code)
-    return obj
 
 def raise_exception_if_not_found(obj: SQLModel | None, model: Type[SQLModel], http_status_code: int = status.HTTP_404_NOT_FOUND) -> None:
     """Raise HTTPException if an object is not found."""

@@ -53,6 +53,21 @@ class UserUnavailablePeriodPublic(UserUnavailablePeriodBase):
     user_phone: str
     user_is_active: bool
 
+    @classmethod
+    def from_objects(cls, user_unavailable_period: "UserUnavailablePeriod", user: "User"):
+        """Create a UserUnavailablePeriodPublic from the related objects."""
+        return cls(
+            id=user_unavailable_period.id,
+            user_id=user_unavailable_period.user_id,
+            starts_at=user_unavailable_period.starts_at,
+            ends_at=user_unavailable_period.ends_at,
+            user_first_name=user.first_name,
+            user_last_name=user.last_name,
+            user_email=user.email,
+            user_phone=user.phone,
+            user_is_active=user.is_active,
+        )
+
 class UserUnavailablePeriodEmbeddedPublic(SQLModel):
     user_first_name: str
     user_last_name: str

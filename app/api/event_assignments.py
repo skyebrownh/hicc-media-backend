@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from app.db.models import EventAssignment, EventAssignmentUpdate, EventAssignmentPublic, Event
 from sqlmodel import Session
 from app.utils.dependencies import get_db_session
-from app.services.queries import get_event, get_event_assignment
+from app.services.queries import select_event_with_full_hierarchy, select_full_event_assignment
 from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter()
@@ -15,7 +15,7 @@ router = APIRouter()
 @router.get("/events/{event_id}/assignments", response_model=list[EventAssignmentPublic])
 async def get_event_assignments_by_event(event_id: UUID, session: Session = Depends(get_db_session)):
     """Get all event assignments for an event"""
-    event = get_event(session, event_id)
+    event = select_event_with_full_hierarchy(session, event_id)
     raise_exception_if_not_found(event, Event, status.HTTP_404_NOT_FOUND)
     event_assignments_public = []
     for ea in event.event_assignments:
@@ -45,7 +45,7 @@ async def update_event_assignment(id: UUID, payload: EventAssignmentUpdate, sess
     if not payload_dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
     
-    event_assignment = get_event_assignment(session, id)
+    event_assignment = select_full_event_assignment(session, id)
     raise_exception_if_not_found(event_assignment, EventAssignment)
     # Only update fields that were actually provided in the payload
     for key, value in payload_dict.items():

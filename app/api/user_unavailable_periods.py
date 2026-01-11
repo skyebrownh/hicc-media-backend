@@ -5,32 +5,21 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_raise_exception, raise_exception_if_not_found
-from app.services.queries import get_user
+from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter()
 
 @router.post("/users/{user_id}/availability", response_model=UserUnavailablePeriodPublic, status_code=status.HTTP_201_CREATED)
 async def post_user_unavailable_period(user_id: UUID, payload: UserUnavailablePeriodCreate, session: Session = Depends(get_db_session)):
     """Create a new user unavailable period"""
-    user = get_user(session, user_id)
+    user = session.exec(select(User).where(User.id == user_id).options(selectinload(User.user_roles))).one_or_none()
     raise_exception_if_not_found(user, User)
     new_user_unavailable_period = UserUnavailablePeriod(user_id=user_id, starts_at=payload.starts_at, ends_at=payload.ends_at)
     try:
         session.add(new_user_unavailable_period)
         session.commit()
         session.refresh(new_user_unavailable_period)
-        return UserUnavailablePeriodPublic(
-            id=new_user_unavailable_period.id,
-            user_id=new_user_unavailable_period.user_id,
-            starts_at=new_user_unavailable_period.starts_at,
-            ends_at=new_user_unavailable_period.ends_at,
-            user_first_name=new_user_unavailable_period.user.first_name,
-            user_last_name=new_user_unavailable_period.user.last_name,
-            user_email=new_user_unavailable_period.user.email,
-            user_phone=new_user_unavailable_period.user.phone,
-            user_is_active=new_user_unavailable_period.user.is_active,
-        )
+        return UserUnavailablePeriodPublic.from_objects(user_unavailable_period=new_user_unavailable_period, user=user)
     except IntegrityError as e:
         session.rollback()
         if "user_unavailable_period_check_time_range" in str(e):
@@ -42,7 +31,7 @@ async def post_user_unavailable_periods_bulk(user_id: UUID, payload: list[UserUn
     """Create new user unavailable periods in bulk"""
     if not payload:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payload cannot be empty")
-    user = get_user(session, user_id)
+    user = session.exec(select(User).where(User.id == user_id).options(selectinload(User.user_roles))).one_or_none()
     raise_exception_if_not_found(user, User)
     bulk_periods = [UserUnavailablePeriod(user_id=user_id, starts_at=period.starts_at, ends_at=period.ends_at) for period in payload]
     period_ids = [period.id for period in bulk_periods]
@@ -57,17 +46,7 @@ async def post_user_unavailable_periods_bulk(user_id: UUID, payload: list[UserUn
         ).all()
         # build public models
         public_periods = [
-            UserUnavailablePeriodPublic(
-                id=period.id,
-                user_id=period.user_id,
-                starts_at=period.starts_at,
-                ends_at=period.ends_at,
-                user_first_name=period.user.first_name,
-                user_last_name=period.user.last_name,
-                user_email=period.user.email,
-                user_phone=period.user.phone,
-                user_is_active=period.user.is_active,
-            )
+            UserUnavailablePeriodPublic.from_objects(user_unavailable_period=period, user=period.user)
             for period in refreshed_periods
         ]
         return public_periods
@@ -85,25 +64,16 @@ async def update_user_unavailable_period(id: UUID, payload: UserUnavailablePerio
     if not payload_dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
     
-    user_unavailable_period = get_or_raise_exception(session, UserUnavailablePeriod, id)
+    user_unavailable_period = session.get(UserUnavailablePeriod, id)
+    raise_exception_if_not_found(user_unavailable_period, UserUnavailablePeriod)
     # Only update fields that were actually provided in the payload
     for key, value in payload_dict.items():
         setattr(user_unavailable_period, key, value)
     try:
-        # no need to add the user unavailable period again, it's already in the session from get_or_raise_exception
+        # no need to add the user unavailable period again, it's already in the session from raise_exception_if_not_found
         session.commit()
         session.refresh(user_unavailable_period)
-        return UserUnavailablePeriodPublic(
-            id=user_unavailable_period.id,
-            user_id=user_unavailable_period.user_id,
-            starts_at=user_unavailable_period.starts_at,
-            ends_at=user_unavailable_period.ends_at,
-            user_first_name=user_unavailable_period.user.first_name,
-            user_last_name=user_unavailable_period.user.last_name,
-            user_email=user_unavailable_period.user.email,
-            user_phone=user_unavailable_period.user.phone,
-            user_is_active=user_unavailable_period.user.is_active,
-        )
+        return UserUnavailablePeriodPublic.from_objects(user_unavailable_period=user_unavailable_period, user=user_unavailable_period.user)
     except IntegrityError as e:
         session.rollback()
         if "user_unavailable_period_check_time_range" in str(e):
@@ -113,7 +83,8 @@ async def update_user_unavailable_period(id: UUID, payload: UserUnavailablePerio
 @router.delete("/user_availability/{id}")
 async def delete_user_unavailable_period(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a user unavailable period by ID"""
-    user_unavailable_period = get_or_raise_exception(session, UserUnavailablePeriod, id, status.HTTP_204_NO_CONTENT) # User unavailable period not found, nothing to delete
+    user_unavailable_period = session.get(UserUnavailablePeriod, id)
+    raise_exception_if_not_found(user_unavailable_period, UserUnavailablePeriod, status.HTTP_204_NO_CONTENT) # User unavailable period not found, nothing to delete
     session.delete(user_unavailable_period)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT) # User unavailable period deleted successfully

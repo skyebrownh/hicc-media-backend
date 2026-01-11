@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
 from app.db.models import User, UserCreate, UserUpdate, Role, UserRole, ProficiencyLevel
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.utils.dependencies import get_db_session
-from app.utils.helpers import get_or_raise_exception, raise_exception_if_not_found
-from app.services.queries import get_user
+from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter(prefix="/users")
 
@@ -17,7 +17,9 @@ async def get_all_users(session: Session = Depends(get_db_session)):
 @router.get("/{id}", response_model=User)
 async def get_single_user(id: UUID, session: Session = Depends(get_db_session)):
     """Get a user by ID"""
-    return get_or_raise_exception(session, User, id)
+    user = session.get(User, id)
+    raise_exception_if_not_found(user, User)
+    return user
 
 @router.post("", response_model=User, status_code=status.HTTP_201_CREATED)
 async def post_user(user: UserCreate, session: Session = Depends(get_db_session)):
@@ -48,12 +50,13 @@ async def update_user(id: UUID, payload: UserUpdate, session: Session = Depends(
     if not payload_dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
     
-    user = get_or_raise_exception(session, User, id)
+    user = session.get(User, id)
+    raise_exception_if_not_found(user, User)
     # Only update fields that were actually provided in the payload
     for key, value in payload_dict.items():
         setattr(user, key, value)
     try:
-        # no need to add the user again, it's already in the session from get_or_raise_exception
+        # no need to add the user again, it's already in the session from raise_exception_if_not_found
         session.commit()
         session.refresh(user)
         return user
@@ -64,7 +67,7 @@ async def update_user(id: UUID, payload: UserUpdate, session: Session = Depends(
 @router.delete("/{id}")
 async def delete_user(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a user by ID"""
-    user = get_user(session, id)
+    user = session.exec(select(User).where(User.id == id).options(selectinload(User.user_roles))).one_or_none()
     raise_exception_if_not_found(user, User, status.HTTP_204_NO_CONTENT) # User not found, nothing to delete
     session.delete(user)
     session.commit()
