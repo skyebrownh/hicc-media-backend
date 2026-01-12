@@ -2,8 +2,9 @@ from uuid import UUID, uuid4
 from pydantic import ConfigDict
 from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship, Column, ForeignKey, UniqueConstraint, Enum as SAEnum, TIMESTAMP
-from .enums import RequirementLevel
 from datetime import datetime, timezone
+
+from app.db.models.enums import RequirementLevel
 
 if TYPE_CHECKING:
     from app.db.models import Event, Role, User, EventType, Team, ProficiencyLevel

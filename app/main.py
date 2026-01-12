@@ -42,25 +42,18 @@ def health(_: Request, session: SessionDep):
         503: Database is unavailable
     """
     # Check database connectivity
-    db_status = "ok"
+    DB_UNAVAILABLE_RESPONSE = JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"status": "unhealthy", "database": "unavailable"})
+    DB_OK_RESPONSE = JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ok", "database": "ok"})
     try:
         # Simple query to verify connection
         result = session.exec(text("SELECT 1"))
         if result.first() is None:
-            db_status = "unavailable"
-            return JSONResponse(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                content={"status": "unhealthy", "database": db_status}
-            )
+            return DB_UNAVAILABLE_RESPONSE
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
-        db_status = "unavailable"
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"status": "unhealthy", "database": db_status}
-        )
+        return DB_UNAVAILABLE_RESPONSE
     
-    return {"status": "ok", "database": db_status}
+    return DB_OK_RESPONSE
 
 # Include routers for different resources
 app.include_router(roles_router)
