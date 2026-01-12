@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.db.models import (
     Role, Team, User, UserRole, UserRoleUpdate, UserRolePublic, ProficiencyLevel, RoleCreate, UserCreate, 
     Schedule, EventPublic, ScheduleGridPublic, TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPublic,
-    Event, EventCreate, EventAssignment,
+    Event, EventCreate, EventAssignment, EventAssignmentPublic, EventAssignmentUpdate,
     EventWithAssignmentsAndAvailabilityPublic, 
     EventAssignmentEmbeddedPublic, 
     UserUnavailablePeriodEmbeddedPublic)
@@ -16,7 +16,7 @@ from app.services.queries import select_unavailable_users_for_event
 # =============================
 # CREATE OBJECT
 # =============================
-def create_object(session: Session, payload: SQLModel, model: Type[SQLModel], check_constraint: str | None = None):
+def create_object(session: Session, payload: SQLModel, model: Type[SQLModel], check_constraint: str | None = None) -> SQLModel:
     try:
         object = model.model_validate(payload)
         session.add(object)
@@ -32,7 +32,7 @@ def create_object(session: Session, payload: SQLModel, model: Type[SQLModel], ch
 # =============================
 # UPDATE OBJECT
 # =============================
-def update_object(session: Session, payload: SQLModel, object: SQLModel):
+def update_object(session: Session, payload: SQLModel, object: SQLModel) -> SQLModel:
     try:
         payload_dict = require_non_empty_payload(payload)
         for key, value in payload_dict.items():
@@ -47,7 +47,7 @@ def update_object(session: Session, payload: SQLModel, object: SQLModel):
 # =============================
 # CREATE ROLE WITH USER ROLES
 # =============================
-def create_role_with_user_roles(session: Session, payload: RoleCreate):
+def create_role_with_user_roles(session: Session, payload: RoleCreate) -> Role:
     try:
         role = Role.model_validate(payload)
         session.add(role)
@@ -69,7 +69,7 @@ def create_role_with_user_roles(session: Session, payload: RoleCreate):
 # =============================
 # CREATE USER WITH USER ROLES
 # =============================
-def create_user_with_user_roles(session: Session, payload: UserCreate):
+def create_user_with_user_roles(session: Session, payload: UserCreate) -> User:
     try:
         user = User.model_validate(payload)
         session.add(user)
@@ -91,7 +91,7 @@ def create_user_with_user_roles(session: Session, payload: UserCreate):
 # =============================
 # CREATE TEAM USER FOR TEAM
 # =============================
-def create_team_user_for_team(session: Session, payload: TeamUserCreate, team: Team):
+def create_team_user_for_team(session: Session, payload: TeamUserCreate, team: Team) -> TeamUser:
     new_team_user = TeamUser(team_id=team.id, user_id=payload.user_id, is_active=payload.is_active)
     try:
         session.add(new_team_user)
@@ -105,7 +105,7 @@ def create_team_user_for_team(session: Session, payload: TeamUserCreate, team: T
 # =============================
 # UPDATE TEAM USER
 # =============================
-def update_team_user(session: Session, payload: TeamUserUpdate, team_user: TeamUser):
+def update_team_user(session: Session, payload: TeamUserUpdate, team_user: TeamUser) -> TeamUserPublic:
     try:
         payload_dict = require_non_empty_payload(payload)
         for key, value in payload_dict.items():
@@ -120,7 +120,7 @@ def update_team_user(session: Session, payload: TeamUserUpdate, team_user: TeamU
 # =============================
 # UPDATE USER ROLE
 # =============================
-def update_user_role(session: Session, payload: UserRoleUpdate, user_role: UserRole):
+def update_user_role(session: Session, payload: UserRoleUpdate, user_role: UserRole) -> UserRolePublic:
     try:
         payload_dict = require_non_empty_payload(payload)
         for key, value in payload_dict.items():
@@ -135,7 +135,7 @@ def update_user_role(session: Session, payload: UserRoleUpdate, user_role: UserR
 # =============================
 # GET SCHEDULE GRID FROM SCHEDULE
 # =============================
-def get_schedule_grid_from_schedule(session: Session, schedule: Schedule):
+def get_schedule_grid_from_schedule(session: Session, schedule: Schedule) -> ScheduleGridPublic:
     schedule_grid_events = []
     for event in schedule.events:
         unavailable_users = select_unavailable_users_for_event(session=session, event_id=event.id)
@@ -162,7 +162,7 @@ def get_schedule_grid_from_schedule(session: Session, schedule: Schedule):
 # =============================
 # CREATE EVENT WITH DEFAULT ASSIGNMENT SLOTS
 # =============================
-def create_event_with_default_assignment_slots(session: Session, payload: EventCreate, schedule: Schedule):
+def create_event_with_default_assignment_slots(session: Session, payload: EventCreate, schedule: Schedule) -> Event:
     new_event = Event(schedule_id=schedule.id, **payload.model_dump())
     active_roles = session.exec(select(Role).where(Role.is_active == True)).all()
     for role in active_roles:
@@ -178,3 +178,51 @@ def create_event_with_default_assignment_slots(session: Session, payload: EventC
         if "event_check_time_range" in str(e):
             raise CheckConstraintError("Start time must be before end time") from e
         raise ConflictError("Event creation violates a constraint") from e
+
+# =============================
+# GET EVENT ASSIGNMENTS FROM EVENT
+# =============================
+def get_event_assignments_from_event(event: Event) -> list[EventAssignmentPublic]:
+    event_assignments_public = []
+    for ea in event.event_assignments:
+        assigned_user = ea.assigned_user
+        proficiency_level = None
+        if assigned_user:
+            proficiency_level = next((ur.proficiency_level for ur in assigned_user.user_roles if ur.role_id == ea.role_id), None)
+        
+        event_assignments_public.append(
+            EventAssignmentPublic.from_objects(
+                event_assignment=ea,
+                event=event,
+                role=ea.role,
+                event_type=event.event_type,
+                team=event.team,
+                assigned_user=assigned_user,
+                proficiency_level=proficiency_level,
+            )
+        )
+    return event_assignments_public
+
+# =============================
+# UPDATE EVENT ASSIGNMENT
+# =============================
+def update_event_assignment(session: Session, payload: EventAssignmentUpdate, event_assignment: EventAssignment) -> EventAssignmentPublic:
+    try:
+        payload_dict = require_non_empty_payload(payload)
+        for key, value in payload_dict.items():
+            setattr(event_assignment, key, value)
+        session.commit()
+        session.refresh(event_assignment)
+        proficiency_level = next((ur.proficiency_level for ur in event_assignment.assigned_user.user_roles if ur.role_id == event_assignment.role_id), None)
+        return EventAssignmentPublic.from_objects(
+            event_assignment=event_assignment,
+            event=event_assignment.event,
+            role=event_assignment.role,
+            event_type=event_assignment.event.event_type,
+            team=event_assignment.event.team,
+            assigned_user=event_assignment.assigned_user,
+            proficiency_level=proficiency_level
+        )
+    except IntegrityError as e:
+        session.rollback()
+        raise ConflictError("Event assignment update violates a constraint") from e

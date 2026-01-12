@@ -5,9 +5,9 @@ from sqlalchemy.orm import selectinload
 from fastapi import Request, HTTPException, status, Depends
 
 from app.settings import settings
-from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedule, TeamUser, UserRole, Event
+from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedule, TeamUser, UserRole, Event, EventAssignment
 from app.utils.helpers import raise_exception_if_not_found
-from app.services.queries import select_schedule_with_events_and_assignments, select_event_with_full_hierarchy
+from app.services.queries import select_schedule_with_events_and_assignments, select_event_with_full_hierarchy, select_full_event_assignment
 
 def verify_api_key(request: Request) -> None:
     """
@@ -157,3 +157,17 @@ def require_event_with_full_hierarchy(id: UUID, session: SessionDep) -> Event:
     return event
 
 EventWithFullHierarchyDep = Annotated[Event, Depends(require_event_with_full_hierarchy)]
+
+def require_event_with_full_hierarchy_for_assignments(event_id: UUID, session: SessionDep) -> Event:
+    event = select_event_with_full_hierarchy(session, event_id)
+    raise_exception_if_not_found(event, Event)
+    return event
+
+EventWithFullHierarchyForAssignmentsDep = Annotated[Event, Depends(require_event_with_full_hierarchy_for_assignments)]
+
+def require_full_event_assignment(id: UUID, session: SessionDep) -> EventAssignment:
+    event_assignment = select_full_event_assignment(session, id)
+    raise_exception_if_not_found(event_assignment, EventAssignment)
+    return event_assignment
+
+EventAssignmentDep = Annotated[EventAssignment, Depends(require_full_event_assignment)]
