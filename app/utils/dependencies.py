@@ -4,7 +4,7 @@ from sqlmodel import Session
 from fastapi import Request, HTTPException, status, Depends
 
 from app.settings import settings
-from app.db.models import Role
+from app.db.models import Role, ProficiencyLevel, EventType
 from app.utils.helpers import raise_exception_if_not_found
 
 def verify_api_key(request: Request) -> None:
@@ -42,3 +42,17 @@ def require_role(id: UUID, session: SessionDep) -> Role:
     return role
 
 RoleDep = Annotated[Role, Depends(require_role)]
+
+def require_proficiency_level(id: UUID, session: SessionDep) -> ProficiencyLevel:
+    proficiency_level = session.get(ProficiencyLevel, id)
+    raise_exception_if_not_found(proficiency_level, ProficiencyLevel)
+    return proficiency_level
+
+ProficiencyLevelDep = Annotated[ProficiencyLevel, Depends(require_proficiency_level)]
+
+def require_event_type(id: UUID, session: SessionDep) -> EventType:
+    event_type = session.get(EventType, id)
+    raise_exception_if_not_found(event_type, EventType)
+    return event_type
+
+EventTypeDep = Annotated[EventType, Depends(require_event_type)]
