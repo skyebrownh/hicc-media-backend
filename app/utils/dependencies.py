@@ -5,9 +5,9 @@ from sqlalchemy.orm import selectinload
 from fastapi import Request, HTTPException, status, Depends
 
 from app.settings import settings
-from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedule, TeamUser, UserRole
+from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedule, TeamUser, UserRole, Event
 from app.utils.helpers import raise_exception_if_not_found
-from app.services.queries import select_schedule_with_events_and_assignments
+from app.services.queries import select_schedule_with_events_and_assignments, select_event_with_full_hierarchy
 
 def verify_api_key(request: Request) -> None:
     """
@@ -116,6 +116,13 @@ def require_schedule(id: UUID, session: SessionDep) -> Schedule:
 
 ScheduleDep = Annotated[Schedule, Depends(require_schedule)]
 
+def require_schedule_for_events(schedule_id: UUID, session: SessionDep) -> Schedule:
+    schedule = session.get(Schedule, schedule_id)
+    raise_exception_if_not_found(schedule, Schedule)
+    return schedule
+
+ScheduleForEventsDep = Annotated[Schedule, Depends(require_schedule_for_events)]
+
 def require_schedule_with_events_and_assignments(id: UUID, session: SessionDep) -> Schedule:
     schedule = select_schedule_with_events_and_assignments(session, id)
     raise_exception_if_not_found(schedule, Schedule)
@@ -136,3 +143,17 @@ def require_user_role(user_id: UUID, role_id: UUID, session: SessionDep) -> User
     return user_role
 
 UserRoleDep = Annotated[UserRole, Depends(require_user_role)]
+
+def require_event(id: UUID, session: SessionDep) -> Event:
+    event = session.get(Event, id)
+    raise_exception_if_not_found(event, Event)
+    return event
+
+EventDep = Annotated[Event, Depends(require_event)]
+
+def require_event_with_full_hierarchy(id: UUID, session: SessionDep) -> Event:
+    event = select_event_with_full_hierarchy(session, id)
+    raise_exception_if_not_found(event, Event)
+    return event
+
+EventWithFullHierarchyDep = Annotated[Event, Depends(require_event_with_full_hierarchy)]

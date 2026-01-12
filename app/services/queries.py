@@ -1,6 +1,7 @@
 from uuid import UUID
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
+
 from app.db.models import UserRole, User, Schedule, Event, EventAssignment, UserUnavailablePeriod
 
 def select_schedule_with_events_and_assignments(session: Session, schedule_id: UUID) -> Schedule | None:

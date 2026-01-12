@@ -168,10 +168,10 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
 # =============================
 @pytest.mark.parametrize("schedule_indices, schedule_id, payload, expected_status", [
     ([], BAD_ID_0000, VALID_INSERT_PAYLOAD, status.HTTP_404_NOT_FOUND), # schedule not found
-    ([], SCHEDULE_ID_2, {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
-    ([], SCHEDULE_ID_2, {"title": "New Event"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
-    ([], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": "invalid-datetime"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
-    ([], SCHEDULE_ID_2, {"id": EVENT_ID_1, **VALID_INSERT_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    ([1], SCHEDULE_ID_2, {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([1], SCHEDULE_ID_2, {"title": "New Event"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
+    ([1], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": "invalid-datetime"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
+    ([1], SCHEDULE_ID_2, {"id": EVENT_ID_1, **VALID_INSERT_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
     ([1], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": DATETIME_2025_05_03.isoformat()}, status.HTTP_422_UNPROCESSABLE_CONTENT), # starts_at is before ends_at
     ([1], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "event_type_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # foreign key violation (event_type doesn't exist)
 ])

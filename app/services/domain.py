@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.db.models import (
     Role, Team, User, UserRole, UserRoleUpdate, UserRolePublic, ProficiencyLevel, RoleCreate, UserCreate, 
     Schedule, EventPublic, ScheduleGridPublic, TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPublic,
+    Event, EventCreate, EventAssignment,
     EventWithAssignmentsAndAvailabilityPublic, 
     EventAssignmentEmbeddedPublic, 
     UserUnavailablePeriodEmbeddedPublic)
@@ -157,3 +158,23 @@ def get_schedule_grid_from_schedule(session: Session, schedule: Schedule):
             )
         )
     return ScheduleGridPublic.from_objects(schedule=schedule, events=schedule_grid_events)
+
+# =============================
+# CREATE EVENT WITH DEFAULT ASSIGNMENT SLOTS
+# =============================
+def create_event_with_default_assignment_slots(session: Session, payload: EventCreate, schedule: Schedule):
+    new_event = Event(schedule_id=schedule.id, **payload.model_dump())
+    active_roles = session.exec(select(Role).where(Role.is_active == True)).all()
+    for role in active_roles:
+        # TODO: Set is_applicable and requirement_level
+        new_event.event_assignments.append(EventAssignment(event_id=new_event.id, role_id=role.id))
+    try:
+        session.add(new_event)
+        session.commit()
+        session.refresh(new_event)
+        return new_event
+    except IntegrityError as e:
+        session.rollback()
+        if "event_check_time_range" in str(e):
+            raise CheckConstraintError("Start time must be before end time") from e
+        raise ConflictError("Event creation violates a constraint") from e
