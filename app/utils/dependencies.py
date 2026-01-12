@@ -1,9 +1,13 @@
-from typing import AsyncGenerator
+from uuid import UUID
+from typing import AsyncGenerator, Annotated
 from sqlmodel import Session
-from fastapi import Request, HTTPException, status
-from app.settings import settings
+from fastapi import Request, HTTPException, status, Depends
 
-def verify_api_key(request: Request):
+from app.settings import settings
+from app.db.models import Role
+from app.utils.helpers import raise_exception_if_not_found
+
+def verify_api_key(request: Request) -> None:
     """
     Dependency to verify API key from request headers.
     
@@ -18,15 +22,23 @@ def verify_api_key(request: Request):
             detail="Unauthorized: Invalid or missing API Key"
         )
 
+APIKeyDep = Annotated[str, Depends(verify_api_key)]
+
 async def get_db_session(request: Request) -> AsyncGenerator[Session, None]:
     """
     Dependency that provides a database session for each request.
     
     Each request uses its own session from the engine. The session is
     automatically closed when the request completes.
-    
-    Yields:
-        A database session from the engine
     """
     with Session(request.app.state.db_engine) as session:
         yield session
+
+SessionDep = Annotated[Session, Depends(get_db_session)]
+
+def require_role(id: UUID, session: SessionDep) -> Role:
+    role = session.get(Role, id)
+    raise_exception_if_not_found(role, Role)
+    return role
+
+RoleDep = Annotated[Role, Depends(require_role)]

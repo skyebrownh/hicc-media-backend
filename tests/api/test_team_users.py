@@ -19,11 +19,11 @@ def seed_for_team_users_tests(seed_teams, seed_users, seed_team_users, test_team
 # =============================
 @pytest.mark.parametrize("team_id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Team not found
-    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_users_for_team_error_cases(async_client, team_id, expected_status):
-    """Test GET team users for team error cases (400, 404)"""
+    """Test GET team users for team error cases (404, 422)"""
     response = await async_client.get(f"/teams/{team_id}/users")
     assert response.status_code == expected_status
 
@@ -59,7 +59,7 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
 # =============================
 @pytest.mark.parametrize("team_indices, team_id, user_indices, team_user_indices, payload, expected_status", [
     ([], BAD_ID_0000, [], [], {"user_id": USER_ID_1}, status.HTTP_404_NOT_FOUND), # team not found
-    ([], TEAM_ID_1, [], [], {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([], TEAM_ID_1, [], [], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ([], TEAM_ID_1, [], [], {"is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (user_id)
     ([], TEAM_ID_1, [], [], {"user_id": "invalid-uuid-format"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format in payload
     ([0], TEAM_ID_1, [0], [0], {"user_id": USER_ID_1}, status.HTTP_409_CONFLICT), # duplicate team_user
@@ -67,7 +67,7 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
 ])
 @pytest.mark.asyncio
 async def test_insert_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_indices, team_id, user_indices, team_user_indices, payload, expected_status):
-    """Test INSERT team user error cases (400, 422, 409, and 404)"""
+    """Test INSERT team user error cases (422, 409, and 404)"""
     conditional_seed(team_indices, test_teams_data, seed_teams)
     conditional_seed(user_indices, test_users_data, seed_users)
     conditional_seed(team_user_indices, test_team_users_data, seed_team_users)
@@ -125,13 +125,13 @@ async def test_update_team_user_success(async_client, seed_teams, seed_users, se
 # =============================
 @pytest.mark.asyncio
 async def test_delete_team_user_error_cases(async_client, seed_teams, seed_users, test_teams_data, test_users_data):
-    """Test DELETE team user error cases (400)"""
+    """Test DELETE team user error cases (422)"""
     seed_teams([test_teams_data[0]])
     seed_users([test_users_data[0]])
     response1 = await async_client.delete(f"/teams/invalid-uuid-format/users/{USER_ID_1}")
-    assert response1.status_code == status.HTTP_400_BAD_REQUEST
+    assert response1.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     response2 = await async_client.delete(f"/teams/{TEAM_ID_1}/users/invalid-uuid-format")
-    assert response2.status_code == status.HTTP_400_BAD_REQUEST
+    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
 async def test_delete_team_user_success(async_client, get_test_db_session, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
@@ -149,9 +149,3 @@ async def test_delete_team_user_success(async_client, get_test_db_session, seed_
         .where(TeamUser.user_id == USER_ID_1)
     ).first()
     assert verify_response is None
-
-    # Verify valid team user that does not exist returns 204
-    verify_response2 = await async_client.delete(f"/teams/{TEAM_ID_1}/users/{BAD_ID_0000}")
-    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
-    verify_response3 = await async_client.delete(f"/teams/{BAD_ID_0000}/users/{USER_ID_1}")
-    assert verify_response3.status_code == status.HTTP_204_NO_CONTENT

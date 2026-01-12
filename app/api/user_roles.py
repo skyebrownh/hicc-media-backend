@@ -1,16 +1,17 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.exc import IntegrityError
-from app.db.models import UserRoleUpdate, UserRolePublic, User, Role, UserRole
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
+
+from app.db.models import UserRoleUpdate, UserRolePublic, User, Role, UserRole
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter()
 
 @router.get("/users/{user_id}/roles", response_model=list[UserRolePublic])
-async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_session)):
+def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_session)):
     """Get all roles for a user"""
     user = session.exec(select(User).where(User.id == user_id)
         .options(
@@ -25,7 +26,7 @@ async def get_roles_for_user(user_id: UUID, session: Session = Depends(get_db_se
     ]
 
 @router.get("/roles/{role_id}/users", response_model=list[UserRolePublic])
-async def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_session)):
+def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_session)):
     """Get all users for a role"""
     role = session.exec(select(Role).where(Role.id == role_id)
         .options(
@@ -42,7 +43,7 @@ async def get_users_for_role(role_id: UUID, session: Session = Depends(get_db_se
 # User roles are not created or deleted directly through an API endpoint - they are created when a user or role is created (same with delete)
 
 @router.patch("/users/{user_id}/roles/{role_id}", response_model=UserRolePublic)
-async def update_user_role(user_id: UUID, role_id: UUID, payload: UserRoleUpdate, session: Session = Depends(get_db_session)):
+def update_user_role(user_id: UUID, role_id: UUID, payload: UserRoleUpdate, session: Session = Depends(get_db_session)):
     """Update a user role by user ID and role ID"""
     # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
     payload_dict = payload.model_dump(exclude_unset=True)

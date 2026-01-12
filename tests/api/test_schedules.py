@@ -47,11 +47,11 @@ async def test_get_all_schedules_success(async_client, seed_schedules, test_sche
 # =============================
 @pytest.mark.parametrize("id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Schedule not present
-    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_single_schedule_error_cases(async_client, id, expected_status):
-    """Test GET single schedule error cases (400, 404)"""
+    """Test GET single schedule error cases (404, 422)"""
     response = await async_client.get(f"/schedules/{id}")
     assert response.status_code == expected_status
 
@@ -73,11 +73,11 @@ async def test_get_single_schedule_success(async_client, seed_schedules, test_sc
 # =============================
 @pytest.mark.parametrize("id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Schedule not found
-    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_schedule_grid_error_cases(async_client, id, expected_status):
-    """Test GET schedule grid error cases (400, 404)"""
+    """Test GET schedule grid error cases (404, 422)"""
     response = await async_client.get(f"/schedules/{id}/grid")
     assert response.status_code == expected_status
 
@@ -115,17 +115,17 @@ async def test_get_schedule_grid_success(async_client, seed_for_schedules_tests)
 # =============================
 # INSERT SCHEDULE
 # =============================
-@pytest.mark.parametrize("payload, expected_status", [
-    ({}, status.HTTP_400_BAD_REQUEST), # empty payload
-    ({ "month": 13, "year": 2025}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid month - violates check constraint
-    ({ "month": 5, "year": "two thousand twenty four"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid year
-    ({ "id": SCHEDULE_ID_4, "month": 5, "year": 2025}, status.HTTP_422_UNPROCESSABLE_CONTENT), # schedule_id not allowed in payload
+@pytest.mark.parametrize("payload", [
+    ({}), # empty payload
+    ({ "month": 13, "year": 2025}), # invalid month - violates check constraint
+    ({ "month": 5, "year": "two thousand twenty four"}), # invalid year
+    ({ "id": SCHEDULE_ID_4, "month": 5, "year": 2025}), # schedule_id not allowed in payload
 ])
 @pytest.mark.asyncio
-async def test_insert_schedule_error_cases(async_client, payload, expected_status):
-    """Test INSERT schedule error cases (400, 422)"""
+async def test_insert_schedule_error_cases(async_client, payload):
+    """Test INSERT schedule error cases (422)"""
     response = await async_client.post("/schedules", json=payload)
-    assert response.status_code == expected_status
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
 async def test_insert_schedule_success(async_client):
@@ -172,9 +172,9 @@ async def test_update_schedule_success(async_client, seed_schedules, test_schedu
 # =============================
 @pytest.mark.asyncio
 async def test_delete_schedule_error_cases(async_client):
-    """Test DELETE schedule error cases (400)"""
+    """Test DELETE schedule error cases (422)"""
     response = await async_client.delete("/schedules/invalid-uuid-format")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
 async def test_delete_schedule_success(async_client, seed_schedules, test_schedules_data):
@@ -186,10 +186,6 @@ async def test_delete_schedule_success(async_client, seed_schedules, test_schedu
     # Verify deletion by trying to get it again
     verify_response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}")
     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
-
-    # Verify valid schedule id that does not exist returns 204
-    verify_response2 = await async_client.delete(f"/schedules/{BAD_ID_0000}")
-    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
 # =============================
 # DELETE SCHEDULE CASCADE

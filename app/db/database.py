@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI
 from sqlmodel import create_engine
+
 from app.settings import settings
 
 logger = logging.getLogger(__name__)

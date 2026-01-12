@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-import asyncpg
 import logging
 
-logger = logging.getLogger(__name__)
+from app.utils.exceptions import ConflictError
 
+logger = logging.getLogger(__name__)
 
 def register_exception_handlers(app: FastAPI):
     """
@@ -14,12 +14,20 @@ def register_exception_handlers(app: FastAPI):
     This function sets up handlers for various exception types to ensure
     consistent error responses and proper logging without exposing internal
     implementation details to clients.
-    
-    Args:
-        app: FastAPI application instance
     """
+    @app.exception_handler(ConflictError)
+    def conflict_error_handler(_: Request, exc: ConflictError):
+        """
+        Handle ConflictError raised by the application.
+        """
+        logger.error(f"ConflictError: {str(exc)}")
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": str(exc)},
+        )
+
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):
+    def http_exception_handler(_: Request, exc: HTTPException):
         """
         Handle HTTPException raised by the application.
         
@@ -39,40 +47,14 @@ def register_exception_handlers(app: FastAPI):
         
         Returns validation errors to help clients fix their request format.
         """
-        # Get the raw body if possible
-        body = await request.body()
-        
-        # Check if the body is empty or just whitespace
-        if not body or body.decode().strip() == "{}":
-            logger.warning(f"Empty payload is not allowed. Body: {body}")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": "Empty payload is not allowed."},
-            )
-        
-        # Otherwise, return the standard 422 for other validation errors
         logger.warning(f"RequestValidationError: {exc.errors()}")
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": exc.errors(), "body": exc.body},
         )
 
-    @app.exception_handler(asyncpg.PostgresError)
-    async def postgres_exception_handler(request: Request, exc: asyncpg.PostgresError):
-        """
-        Handle PostgreSQL database errors.
-        
-        Logs the full error internally but returns a generic message to clients
-        to avoid exposing database structure or internal details.
-        """
-        logger.error(f"PostgresError: {str(exc)}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Database operation failed"},
-        )
-
     @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception):
+    def general_exception_handler(_: Request, exc: Exception):
         """
         Handle all other unhandled exceptions.
         

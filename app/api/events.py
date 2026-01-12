@@ -1,31 +1,33 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.exc import IntegrityError
-from app.db.models import Event, EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic, Schedule, Role, EventAssignment
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
+
+from app.db.models import Event, EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic, Schedule, Role, EventAssignment
 from app.utils.dependencies import get_db_session
 from app.services.queries import select_event_with_full_hierarchy
-from app.utils.helpers import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event, raise_exception_if_not_found
+from app.utils.helpers import raise_exception_if_not_found
+from app.services.builders import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event
 
 router = APIRouter()
 
 @router.get("/schedules/{schedule_id}/events", response_model=list[EventWithAssignmentsPublic])
-async def get_events_for_schedule(schedule_id: UUID, session: Session = Depends(get_db_session)):
+def get_events_for_schedule(schedule_id: UUID, session: Session = Depends(get_db_session)):
     """Get all events for a schedule"""
     schedule = session.exec(select(Schedule).where(Schedule.id == schedule_id)).one_or_none()
     raise_exception_if_not_found(schedule, Schedule, status.HTTP_404_NOT_FOUND)
     return build_events_with_assignments_from_schedule(schedule)
 
 @router.get("/events/{id}", response_model=EventWithAssignmentsPublic)
-async def get_single_event(id: UUID, session: Session = Depends(get_db_session)):
+def get_single_event(id: UUID, session: Session = Depends(get_db_session)):
     """Get a single event"""
     event = select_event_with_full_hierarchy(session, id)
     raise_exception_if_not_found(event, Event, status.HTTP_404_NOT_FOUND)
     return build_events_with_assignments_from_event(event)
 
 @router.post("/schedules/{schedule_id}/events", response_model=EventWithAssignmentsPublic, status_code=status.HTTP_201_CREATED)
-async def post_event(schedule_id: UUID, event: EventCreate, session: Session = Depends(get_db_session)):
+def post_event(schedule_id: UUID, event: EventCreate, session: Session = Depends(get_db_session)):
     """Create a new event for a schedule with event assignment slots for active roles"""
     schedule = session.exec(select(Schedule).where(Schedule.id == schedule_id)).one_or_none()
     raise_exception_if_not_found(schedule, Schedule, status.HTTP_404_NOT_FOUND)
@@ -48,7 +50,7 @@ async def post_event(schedule_id: UUID, event: EventCreate, session: Session = D
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.patch("/events/{id}", response_model=EventPublic)
-async def update_event(id: UUID, payload: EventUpdate, session: Session = Depends(get_db_session)):
+def update_event(id: UUID, payload: EventUpdate, session: Session = Depends(get_db_session)):
     """Update an event by ID"""
     # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
     payload_dict = payload.model_dump(exclude_unset=True)
@@ -72,7 +74,7 @@ async def update_event(id: UUID, payload: EventUpdate, session: Session = Depend
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/events/{id}")
-async def delete_event(id: UUID, session: Session = Depends(get_db_session)):
+def delete_event(id: UUID, session: Session = Depends(get_db_session)):
     """Delete an event by ID"""
     event = session.exec(select(Event).where(Event.id == id).options(selectinload(Event.event_assignments))).one_or_none()
     raise_exception_if_not_found(event, Event, status.HTTP_204_NO_CONTENT) # Event not found, nothing to delete

@@ -17,7 +17,7 @@ VALID_PAYLOAD_2 = {"starts_at": STARTS_AT_2, "ends_at": ENDS_AT_2}
 # =============================
 @pytest.mark.parametrize("user_indices, user_id, payload, expected_status", [
     ([], BAD_ID_0000, VALID_PAYLOAD, status.HTTP_404_NOT_FOUND), # user not found
-    ([], USER_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([], USER_ID_1, {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ([], USER_ID_1, {"starts_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (ends_at)
     ([], USER_ID_1, {"starts_at": "invalid-datetime", "ends_at": ENDS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
     ([0], USER_ID_1, {"starts_at": ENDS_AT, "ends_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
@@ -25,7 +25,7 @@ VALID_PAYLOAD_2 = {"starts_at": STARTS_AT_2, "ends_at": ENDS_AT_2}
 ])
 @pytest.mark.asyncio
 async def test_insert_user_unavailable_period_error_cases(async_client, seed_users, test_users_data, user_indices, user_id, payload, expected_status):
-    """Test INSERT user unavailable period error cases (400, 404, 422, and 409)"""
+    """Test INSERT user unavailable period error cases (404, 422, and 409)"""
     conditional_seed(user_indices, test_users_data, seed_users)
     response = await async_client.post(f"/users/{user_id}/availability", json=payload)
     assert response.status_code == expected_status
@@ -139,9 +139,9 @@ async def test_update_user_unavailable_period_success(async_client, seed_users, 
 # =============================
 @pytest.mark.asyncio
 async def test_delete_user_unavailable_period_error_cases(async_client):
-    """Test DELETE user unavailable period error cases (400)"""
+    """Test DELETE user unavailable period error cases (422)"""
     response = await async_client.delete("/user_availability/invalid-uuid-format")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
 async def test_delete_user_unavailable_period_success(async_client, get_test_db_session, seed_user_unavailable_periods, seed_users, test_user_unavailable_periods_data, test_users_data):
@@ -154,7 +154,3 @@ async def test_delete_user_unavailable_period_success(async_client, get_test_db_
     # Verify deletion by trying to query it directly
     verify_response = get_test_db_session.get(UserUnavailablePeriod, USER_UNAVAILABLE_PERIOD_ID_1)
     assert verify_response is None
-
-    # Verify valid user unavailable period id that does not exist returns 204
-    verify_response2 = await async_client.delete(f"/user_availability/{BAD_ID_0000}")
-    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT

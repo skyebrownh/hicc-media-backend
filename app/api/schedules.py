@@ -1,9 +1,10 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy.exc import IntegrityError
-from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic, EventWithAssignmentsAndAvailabilityPublic, EventPublic, EventAssignmentEmbeddedPublic, UserUnavailablePeriodEmbeddedPublic
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
+
+from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic, EventWithAssignmentsAndAvailabilityPublic, EventPublic, EventAssignmentEmbeddedPublic, UserUnavailablePeriodEmbeddedPublic
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import raise_exception_if_not_found
 from app.services.queries import select_schedule_with_events_and_assignments, select_unavailable_users_for_event
@@ -11,19 +12,19 @@ from app.services.queries import select_schedule_with_events_and_assignments, se
 router = APIRouter(prefix="/schedules")
 
 @router.get("", response_model=list[Schedule])
-async def get_all_schedules(session: Session = Depends(get_db_session)):
+def get_all_schedules(session: Session = Depends(get_db_session)):
     """Get all schedules"""
     return session.exec(select(Schedule)).all()
 
 @router.get("/{id}", response_model=Schedule)
-async def get_single_schedule(id: UUID, session: Session = Depends(get_db_session)):
+def get_single_schedule(id: UUID, session: Session = Depends(get_db_session)):
     """Get a schedule by ID"""
     schedule = session.get(Schedule, id)
     raise_exception_if_not_found(schedule, Schedule)
     return schedule
 
 @router.get("/{id}/grid", response_model=ScheduleGridPublic)
-async def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)):
+def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)):
     """Get a schedule grid by ID"""
     schedule = select_schedule_with_events_and_assignments(session, id)
     raise_exception_if_not_found(schedule, Schedule, status.HTTP_404_NOT_FOUND)
@@ -52,7 +53,7 @@ async def get_schedule_grid(id: UUID, session: Session = Depends(get_db_session)
     return ScheduleGridPublic.from_objects(schedule=schedule, events=schedule_grid_events)
 
 @router.post("", response_model=Schedule, status_code=status.HTTP_201_CREATED)
-async def post_schedule(schedule: ScheduleCreate, session: Session = Depends(get_db_session)):
+def post_schedule(schedule: ScheduleCreate, session: Session = Depends(get_db_session)):
     """Create a new schedule"""
     new_schedule = Schedule.model_validate(schedule)
     try:
@@ -74,7 +75,7 @@ async def post_schedule(schedule: ScheduleCreate, session: Session = Depends(get
 #     # TODO: Generate events for a schedule - using a service
 
 @router.patch("/{id}", response_model=Schedule)
-async def update_schedule(id: UUID, payload: ScheduleUpdate, session: Session = Depends(get_db_session)):
+def update_schedule(id: UUID, payload: ScheduleUpdate, session: Session = Depends(get_db_session)):
     """Update a schedule by ID"""
     # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
     payload_dict = payload.model_dump(exclude_unset=True)
@@ -96,7 +97,7 @@ async def update_schedule(id: UUID, payload: ScheduleUpdate, session: Session = 
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/{id}")
-async def delete_schedule(id: UUID, session: Session = Depends(get_db_session)):
+def delete_schedule(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a schedule by ID"""
     schedule = session.exec(select(Schedule).where(Schedule.id == id).options(selectinload(Schedule.events))).one_or_none()
     raise_exception_if_not_found(schedule, Schedule, status.HTTP_204_NO_CONTENT) # Schedule not found, nothing to delete

@@ -41,11 +41,11 @@ async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
 # =============================
 @pytest.mark.parametrize("id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Role not present
-    ("invalid-uuid-format", status.HTTP_400_BAD_REQUEST), # Invalid UUID format
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
 @pytest.mark.asyncio
 async def test_get_single_role_error_cases(async_client, id, expected_status):
-    """Test GET single role error cases (400, 404)"""
+    """Test GET single role error cases (404, 422)"""
     response = await async_client.get(f"/roles/{id}")
     assert response.status_code == expected_status
 
@@ -67,7 +67,7 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
 # INSERT ROLE
 # =============================
 @pytest.mark.parametrize("role_indices, payload, expected_status", [    
-    ([], {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ([], {"name": "Incomplete Role"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Role", "order": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([3], {"name": "Duplicate Code", "order": 6, "code": "new_role"}, status.HTTP_409_CONFLICT), # duplicate role_code
@@ -75,7 +75,7 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
 ])
 @pytest.mark.asyncio
 async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, payload, expected_status):
-    """Test INSERT role error cases (400, 422, and 409)"""
+    """Test INSERT role error cases (422, and 409)"""
     conditional_seed(role_indices, test_roles_data, seed_roles)
     response = await async_client.post("/roles", json=payload)
     assert response.status_code == expected_status
@@ -134,11 +134,15 @@ async def test_update_role_success(async_client, seed_roles, test_roles_data, pa
 # =============================
 # DELETE ROLE
 # =============================
+@pytest.mark.parametrize("id, expected_status", [
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Role not present
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+])
 @pytest.mark.asyncio
-async def test_delete_role_error_cases(async_client):
-    """Test DELETE role error cases (400)"""
-    response = await async_client.delete("/roles/invalid-uuid-format")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+async def test_delete_role_error_cases(async_client, id, expected_status):
+    """Test DELETE role error cases (404, 422)"""
+    response = await async_client.delete(f"/roles/{id}")
+    assert response.status_code == expected_status
 
 @pytest.mark.asyncio
 async def test_delete_role_success(async_client, seed_roles, test_roles_data):
@@ -150,10 +154,6 @@ async def test_delete_role_success(async_client, seed_roles, test_roles_data):
     # Verify deletion by trying to get it again
     verify_response = await async_client.get(f"/roles/{ROLE_ID_1}")
     assert verify_response.status_code == status.HTTP_404_NOT_FOUND
-
-    # Verify valid role id that does not exist returns 204
-    verify_response2 = await async_client.delete(f"/roles/{BAD_ID_0000}")
-    assert verify_response2.status_code == status.HTTP_204_NO_CONTENT
 
 # =============================
 # DELETE ROLE CASCADE

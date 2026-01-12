@@ -1,24 +1,17 @@
 import logging
-from fastapi import FastAPI, Depends, Request, status
+from fastapi import FastAPI, Request, status, Depends
 from fastapi.responses import JSONResponse
-from sqlmodel import Session, text
+from sqlmodel import text
 from contextlib import asynccontextmanager
-from app.utils.dependencies import verify_api_key, get_db_session
+
+from app.utils.dependencies import verify_api_key, get_db_session, SessionDep
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
 from app.db.database import connect_db, close_db
 from app.api import (
-    roles_router,
-    proficiency_levels_router,
-    event_types_router,
-    users_router,
-    teams_router,
-    team_users_router,
-    user_roles_router,
-    schedules_router,
-    events_router,
-    event_assignments_router,
-    user_unavailable_periods_router,
+    roles_router, proficiency_levels_router, event_types_router,
+    users_router, teams_router, team_users_router, user_roles_router,
+    schedules_router, events_router, event_assignments_router, user_unavailable_periods_router,
 )
 
 # Set up logging configuration
@@ -33,19 +26,16 @@ async def lifespan(app: FastAPI):
     await close_db(app)
 
 # Create the FastAPI application with the defined lifespan and global dependencies
-app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_api_key)])
+app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_api_key), Depends(get_db_session)])
 
 # Register exception handlers
 register_exception_handlers(app)
 
 # Health check endpoint
 @app.get("/health")
-async def health(request: Request, session: Session = Depends(get_db_session)):
+def health(_: Request, session: SessionDep):
     """
     Health check endpoint that verifies application and database connectivity.
-    
-    Returns:
-        dict: Health status with "status" and "database" fields
         
     Status codes:
         200: Application and database are healthy
@@ -60,26 +50,17 @@ async def health(request: Request, session: Session = Depends(get_db_session)):
             db_status = "unavailable"
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                content={
-                    "status": "unhealthy",
-                    "database": db_status
-                }
+                content={"status": "unhealthy", "database": db_status}
             )
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
         db_status = "unavailable"
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={
-                "status": "unhealthy",
-                "database": db_status
-            }
+            content={"status": "unhealthy", "database": db_status}
         )
     
-    return {
-        "status": "ok",
-        "database": db_status
-    }
+    return {"status": "ok", "database": db_status}
 
 # Include routers for different resources
 app.include_router(roles_router)

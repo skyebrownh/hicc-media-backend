@@ -1,68 +1,21 @@
-from typing import TYPE_CHECKING, Type
+from typing import Type
 from fastapi import HTTPException, status
 from sqlmodel import SQLModel
-from app.db.models import EventWithAssignmentsPublic, EventPublic, EventAssignmentEmbeddedPublic
-
-if TYPE_CHECKING:
-    from app.db.models import Schedule, Event
 
 # Whitelist of valid table names to prevent SQL injection
 VALID_TABLES = {
-    "roles",
-    "proficiency_levels",
-    "event_types",
-    "teams",
-    "users",
-    "team_users",
-    "user_roles",
-    "schedules",
-    "events",
-    "event_assignments",
-    "user_unavailable_periods",
+    "roles", "proficiency_levels", "event_types",
+    "teams", "users", "team_users", "user_roles",
+    "schedules", "events", "event_assignments", "user_unavailable_periods",
 }
+
+def require_non_empty_payload(payload: SQLModel) -> None:
+    payload_dict = payload.model_dump(exclude_unset=True)
+    if not payload_dict:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty payload is not allowed.")
+    return payload_dict
 
 def raise_exception_if_not_found(obj: SQLModel | None, model: Type[SQLModel], http_status_code: int = status.HTTP_404_NOT_FOUND) -> None:
     """Raise HTTPException if an object is not found."""
     if not obj:
         raise HTTPException(status_code=http_status_code, detail=f"{model.__name__} not found")
-
-def build_events_with_assignments_from_schedule(schedule: "Schedule") -> list["EventWithAssignmentsPublic"]:
-    """Build a list of EventWithAssignmentsPublic from a Schedule."""
-    events = []
-    for event in schedule.events:
-        events.append(
-            EventWithAssignmentsPublic(
-                event=EventPublic.from_objects(
-                    event=event,
-                    schedule=schedule,
-                    event_type=event.event_type,
-                    team=event.team,
-                ),
-                event_assignments=[
-                    EventAssignmentEmbeddedPublic.from_objects(
-                        event_assignment=ea,
-                        role=ea.role,
-                        assigned_user=ea.assigned_user,
-                    ) for ea in event.event_assignments
-                ],
-            )
-        )
-    return events
-
-def build_events_with_assignments_from_event(event: "Event") -> "EventWithAssignmentsPublic":
-    """Build a EventWithAssignmentsPublic from an Event."""
-    return EventWithAssignmentsPublic(
-        event=EventPublic.from_objects(
-            event=event,
-            schedule=event.schedule,
-            event_type=event.event_type,
-            team=event.team,
-        ),
-        event_assignments=[
-            EventAssignmentEmbeddedPublic.from_objects(
-                event_assignment=ea,
-                role=ea.role,
-                assigned_user=ea.assigned_user,
-            ) for ea in event.event_assignments
-        ],
-    )

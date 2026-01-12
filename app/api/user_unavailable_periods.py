@@ -1,16 +1,17 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, Response, HTTPException
-from app.db.models import UserUnavailablePeriod, UserUnavailablePeriodCreate, UserUnavailablePeriodUpdate, UserUnavailablePeriodPublic, User
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
+
+from app.db.models import UserUnavailablePeriod, UserUnavailablePeriodCreate, UserUnavailablePeriodUpdate, UserUnavailablePeriodPublic, User
 from app.utils.dependencies import get_db_session
 from app.utils.helpers import raise_exception_if_not_found
 
 router = APIRouter()
 
 @router.post("/users/{user_id}/availability", response_model=UserUnavailablePeriodPublic, status_code=status.HTTP_201_CREATED)
-async def post_user_unavailable_period(user_id: UUID, payload: UserUnavailablePeriodCreate, session: Session = Depends(get_db_session)):
+def post_user_unavailable_period(user_id: UUID, payload: UserUnavailablePeriodCreate, session: Session = Depends(get_db_session)):
     """Create a new user unavailable period"""
     user = session.exec(select(User).where(User.id == user_id).options(selectinload(User.user_roles))).one_or_none()
     raise_exception_if_not_found(user, User)
@@ -27,7 +28,7 @@ async def post_user_unavailable_period(user_id: UUID, payload: UserUnavailablePe
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.post("/users/{user_id}/availability/bulk", response_model=list[UserUnavailablePeriodPublic], status_code=status.HTTP_201_CREATED)
-async def post_user_unavailable_periods_bulk(user_id: UUID, payload: list[UserUnavailablePeriodCreate], session: Session = Depends(get_db_session)):
+def post_user_unavailable_periods_bulk(user_id: UUID, payload: list[UserUnavailablePeriodCreate], session: Session = Depends(get_db_session)):
     """Create new user unavailable periods in bulk"""
     if not payload:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payload cannot be empty")
@@ -57,7 +58,7 @@ async def post_user_unavailable_periods_bulk(user_id: UUID, payload: list[UserUn
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.patch("/user_availability/{id}", response_model=UserUnavailablePeriodPublic)
-async def update_user_unavailable_period(id: UUID, payload: UserUnavailablePeriodUpdate, session: Session = Depends(get_db_session)):
+def update_user_unavailable_period(id: UUID, payload: UserUnavailablePeriodUpdate, session: Session = Depends(get_db_session)):
     """Update a user unavailable period by ID"""
     # Check if payload has any fields to update - not caught by Pydantic's RequestValidationError since update fields are not required
     payload_dict = payload.model_dump(exclude_unset=True)
@@ -81,7 +82,7 @@ async def update_user_unavailable_period(id: UUID, payload: UserUnavailablePerio
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 @router.delete("/user_availability/{id}")
-async def delete_user_unavailable_period(id: UUID, session: Session = Depends(get_db_session)):
+def delete_user_unavailable_period(id: UUID, session: Session = Depends(get_db_session)):
     """Delete a user unavailable period by ID"""
     user_unavailable_period = session.get(UserUnavailablePeriod, id)
     raise_exception_if_not_found(user_unavailable_period, UserUnavailablePeriod, status.HTTP_204_NO_CONTENT) # User unavailable period not found, nothing to delete
