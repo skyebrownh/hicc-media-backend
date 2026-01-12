@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 import logging
 
-from app.utils.exceptions import ConflictError
+from app.utils.exceptions import ConflictError, CheckConstraintError
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,17 @@ def register_exception_handlers(app: FastAPI):
         logger.error(f"ConflictError: {str(exc)}")
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(CheckConstraintError)
+    def check_constraint_error_handler(_: Request, exc: CheckConstraintError):
+        """
+        Handle CheckConstraintError raised by the application.
+        """
+        logger.error(f"CheckConstraintError: {str(exc)}")
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": str(exc)},
         )
 

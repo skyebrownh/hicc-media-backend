@@ -5,7 +5,6 @@ if TYPE_CHECKING:
     from app.db.models import Schedule, Event
 
 def build_events_with_assignments_from_schedule(schedule: "Schedule") -> list["EventWithAssignmentsPublic"]:
-    """Build a list of EventWithAssignmentsPublic from a Schedule."""
     events = []
     for event in schedule.events:
         events.append(
@@ -28,7 +27,6 @@ def build_events_with_assignments_from_schedule(schedule: "Schedule") -> list["E
     return events
 
 def build_events_with_assignments_from_event(event: "Event") -> "EventWithAssignmentsPublic":
-    """Build a EventWithAssignmentsPublic from an Event."""
     return EventWithAssignmentsPublic(
         event=EventPublic.from_objects(
             event=event,
