@@ -59,11 +59,11 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
 # =============================
 @pytest.mark.parametrize("team_indices, team_id, user_indices, team_user_indices, payload, expected_status", [
     ([], BAD_ID_0000, [], [], {"user_id": USER_ID_1}, status.HTTP_404_NOT_FOUND), # team not found
-    ([], TEAM_ID_1, [], [], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
-    ([], TEAM_ID_1, [], [], {"is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (user_id)
-    ([], TEAM_ID_1, [], [], {"user_id": "invalid-uuid-format"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format in payload
+    ([0], TEAM_ID_1, [], [], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([0], TEAM_ID_1, [], [], {"is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (user_id)
+    ([0], TEAM_ID_1, [], [], {"user_id": "invalid-uuid-format"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format in payload
     ([0], TEAM_ID_1, [0], [0], {"user_id": USER_ID_1}, status.HTTP_409_CONFLICT), # duplicate team_user
-    ([], TEAM_ID_1, [], [], {"user_id": USER_ID_2, "team_user_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    ([0], TEAM_ID_1, [], [], {"user_id": USER_ID_2, "team_user_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
 @pytest.mark.asyncio
 async def test_insert_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_indices, team_id, user_indices, team_user_indices, payload, expected_status):

@@ -3,8 +3,8 @@ from sqlmodel import Session, select, SQLModel
 from sqlalchemy.exc import IntegrityError
 
 from app.db.models import (
-    Role, User, UserRole, ProficiencyLevel, RoleCreate, UserCreate, 
-    Schedule, EventPublic, ScheduleGridPublic,
+    Role, Team, User, UserRole, UserRoleUpdate, UserRolePublic, ProficiencyLevel, RoleCreate, UserCreate, 
+    Schedule, EventPublic, ScheduleGridPublic, TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPublic,
     EventWithAssignmentsAndAvailabilityPublic, 
     EventAssignmentEmbeddedPublic, 
     UserUnavailablePeriodEmbeddedPublic)
@@ -86,6 +86,50 @@ def create_user_with_user_roles(session: Session, payload: UserCreate):
     except IntegrityError as e:
         session.rollback()
         raise ConflictError("User creation violates a constraint") from e
+
+# =============================
+# CREATE TEAM USER FOR TEAM
+# =============================
+def create_team_user_for_team(session: Session, payload: TeamUserCreate, team: Team):
+    new_team_user = TeamUser(team_id=team.id, user_id=payload.user_id, is_active=payload.is_active)
+    try:
+        session.add(new_team_user)
+        session.commit()
+        session.refresh(new_team_user)
+        return new_team_user
+    except IntegrityError as e:
+        session.rollback()
+        raise ConflictError("Team user creation violates a constraint") from e
+
+# =============================
+# UPDATE TEAM USER
+# =============================
+def update_team_user(session: Session, payload: TeamUserUpdate, team_user: TeamUser):
+    try:
+        payload_dict = require_non_empty_payload(payload)
+        for key, value in payload_dict.items():
+            setattr(team_user, key, value)
+        session.commit()
+        session.refresh(team_user)
+        return TeamUserPublic.from_objects(team_user=team_user, team=team_user.team, user=team_user.user)
+    except IntegrityError as e:
+        session.rollback()
+        raise ConflictError("Team user update violates a constraint") from e
+
+# =============================
+# UPDATE USER ROLE
+# =============================
+def update_user_role(session: Session, payload: UserRoleUpdate, user_role: UserRole):
+    try:
+        payload_dict = require_non_empty_payload(payload)
+        for key, value in payload_dict.items():
+            setattr(user_role, key, value)
+        session.commit()
+        session.refresh(user_role)
+        return UserRolePublic.from_objects(user_role=user_role, user=user_role.user, role=user_role.role, proficiency_level=user_role.proficiency_level)
+    except IntegrityError as e:
+        session.rollback()
+        raise ConflictError("User role update violates a constraint") from e
 
 # =============================
 # GET SCHEDULE GRID FROM SCHEDULE
