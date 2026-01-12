@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 import logging
 
-from app.utils.exceptions import ConflictError, CheckConstraintError
+from app.utils.exceptions import ConflictError, CheckConstraintError, EmptyPayloadError, NotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,28 @@ def register_exception_handlers(app: FastAPI):
             content={"detail": str(exc)},
         )
 
+    @app.exception_handler(EmptyPayloadError)
+    def empty_payload_error_handler(_: Request, exc: EmptyPayloadError):
+        """
+        Handle EmptyPayloadError raised by the application.
+        """
+        logger.error(f"EmptyPayloadError: {str(exc)}")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(NotFoundError)
+    def not_found_error_handler(_: Request, exc: NotFoundError):
+        """
+        Handle NotFoundError raised by the application.
+        """
+        logger.error(f"NotFoundError: {str(exc)}")
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"detail": str(exc)},
+        )
+    
     @app.exception_handler(HTTPException)
     def http_exception_handler(_: Request, exc: HTTPException):
         """

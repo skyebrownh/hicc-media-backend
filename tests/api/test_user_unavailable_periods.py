@@ -1,5 +1,4 @@
 import pytest
-import json
 from fastapi import status
 from tests.utils.helpers import assert_single_item_201, assert_list_201, conditional_seed, parse_to_utc
 from app.db.models import UserUnavailablePeriod
@@ -17,11 +16,11 @@ VALID_PAYLOAD_2 = {"starts_at": STARTS_AT_2, "ends_at": ENDS_AT_2}
 # =============================
 @pytest.mark.parametrize("user_indices, user_id, payload, expected_status", [
     ([], BAD_ID_0000, VALID_PAYLOAD, status.HTTP_404_NOT_FOUND), # user not found
-    ([], USER_ID_1, {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
-    ([], USER_ID_1, {"starts_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (ends_at)
-    ([], USER_ID_1, {"starts_at": "invalid-datetime", "ends_at": ENDS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
+    ([0], USER_ID_1, {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    ([0], USER_ID_1, {"starts_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (ends_at)
+    ([0], USER_ID_1, {"starts_at": "invalid-datetime", "ends_at": ENDS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
     ([0], USER_ID_1, {"starts_at": ENDS_AT, "ends_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
-    ([], USER_ID_1, {"id": BAD_ID_0000, **VALID_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    ([0], USER_ID_1, {"id": BAD_ID_0000, **VALID_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
 @pytest.mark.asyncio
 async def test_insert_user_unavailable_period_error_cases(async_client, seed_users, test_users_data, user_indices, user_id, payload, expected_status):
@@ -53,10 +52,10 @@ async def test_insert_user_unavailable_period_success(async_client, seed_users, 
 @pytest.mark.parametrize("user_indices, user_id, payload, expected_status", [
     ([], BAD_ID_0000, [VALID_PAYLOAD], status.HTTP_404_NOT_FOUND), # user not found
     ([0], USER_ID_1, [], status.HTTP_400_BAD_REQUEST), # empty list
-    ([], USER_ID_1, [{"starts_at": STARTS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (ends_at)
-    ([], USER_ID_1, [{"starts_at": "invalid-datetime", "ends_at": ENDS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
+    ([0], USER_ID_1, [{"starts_at": STARTS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (ends_at)
+    ([0], USER_ID_1, [{"starts_at": "invalid-datetime", "ends_at": ENDS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
     ([0], USER_ID_1, [{"starts_at": ENDS_AT, "ends_at": STARTS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
-    ([], USER_ID_1, [{"id": BAD_ID_0000, **VALID_PAYLOAD}], status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    ([0], USER_ID_1, [{"id": BAD_ID_0000, **VALID_PAYLOAD}], status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
 @pytest.mark.asyncio
 async def test_insert_user_unavailable_periods_bulk_error_cases(async_client, seed_users, test_users_data, user_indices, user_id, payload, expected_status):

@@ -1,9 +1,9 @@
 import pytest
-from fastapi import HTTPException, status
 
 from app.utils.helpers import raise_exception_if_not_found, require_non_empty_payload
 from app.db.models import ProficiencyLevel, Role, RoleUpdate
 from tests.utils.constants import PROFICIENCY_LEVEL_ID_1
+from app.utils.exceptions import EmptyPayloadError, NotFoundError
 
 # =============================
 # TESTS
@@ -11,16 +11,14 @@ from tests.utils.constants import PROFICIENCY_LEVEL_ID_1
 def test_raise_exception_if_not_found():
     """Test raise_exception_if_not_found function"""
     # Test: raises 404 when object is None with default status code
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(NotFoundError) as exc_info:
         raise_exception_if_not_found(None, ProficiencyLevel)
-    assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
-    assert exc_info.value.detail == "ProficiencyLevel not found"
+    assert str(exc_info.value) == "ProficiencyLevel not found"
 
     # Test: raises custom status code when object is None
-    with pytest.raises(HTTPException) as exc_info:
-        raise_exception_if_not_found(None, Role, http_status_code=status.HTTP_400_BAD_REQUEST)
-    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-    assert exc_info.value.detail == "Role not found"
+    with pytest.raises(NotFoundError) as exc_info:
+        raise_exception_if_not_found(None, Role)
+    assert str(exc_info.value) == "Role not found"
 
     # Test: does nothing when object exists
     proficiency_level = ProficiencyLevel(id=PROFICIENCY_LEVEL_ID_1, name="Beginner", code="beginner")
@@ -30,10 +28,9 @@ def test_raise_exception_if_not_found():
 def test_require_non_empty_payload():
     """Test require_non_empty_payload function"""
     # Test: raises 400 when payload is empty (all fields unset)
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(EmptyPayloadError) as exc_info:
         require_non_empty_payload(RoleUpdate())
-    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-    assert exc_info.value.detail == "Empty payload is not allowed."
+    assert str(exc_info.value) == "Empty payload is not allowed."
 
     # Test: returns dict when payload has at least one field set
     payload = RoleUpdate(name="Test Role")

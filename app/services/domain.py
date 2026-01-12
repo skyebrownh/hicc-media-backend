@@ -1,5 +1,6 @@
 from typing import Type
 from sqlmodel import Session, select, SQLModel
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from app.db.models import (
@@ -8,9 +9,10 @@ from app.db.models import (
     Event, EventCreate, EventAssignment, EventAssignmentPublic, EventAssignmentUpdate,
     EventWithAssignmentsAndAvailabilityPublic, 
     EventAssignmentEmbeddedPublic, 
-    UserUnavailablePeriodEmbeddedPublic)
+    UserUnavailablePeriodEmbeddedPublic,
+    UserUnavailablePeriod, UserUnavailablePeriodCreate, UserUnavailablePeriodPublic, UserUnavailablePeriodUpdate)
 from app.utils.helpers import require_non_empty_payload
-from app.utils.exceptions import ConflictError, CheckConstraintError
+from app.utils.exceptions import ConflictError, CheckConstraintError, EmptyPayloadError
 from app.services.queries import select_unavailable_users_for_event
 
 # =============================
@@ -226,3 +228,65 @@ def update_event_assignment(session: Session, payload: EventAssignmentUpdate, ev
     except IntegrityError as e:
         session.rollback()
         raise ConflictError("Event assignment update violates a constraint") from e
+
+# =============================
+# CREATE USER UNAVAILABLE PERIOD
+# =============================
+def create_user_unavailable_period(session: Session, payload: UserUnavailablePeriodCreate, user: User) -> UserUnavailablePeriod:
+    new_user_unavailable_period = UserUnavailablePeriod(user_id=user.id, starts_at=payload.starts_at, ends_at=payload.ends_at)
+    try:
+        session.add(new_user_unavailable_period)
+        session.commit()
+        session.refresh(new_user_unavailable_period)
+        return UserUnavailablePeriodPublic.from_objects(user_unavailable_period=new_user_unavailable_period, user=user)
+    except IntegrityError as e:
+        session.rollback()
+        if "user_unavailable_period_check_time_range" in str(e):
+            raise CheckConstraintError("Start time must be before end time") from e
+        raise ConflictError("User unavailable period creation violates a constraint") from e
+
+# =============================
+# CREATE USER UNAVAILABLE PERIODS IN BULK
+# =============================
+def create_user_unavailable_periods_bulk(session: Session, payload: list[UserUnavailablePeriodCreate], user: User) -> list[UserUnavailablePeriod]:
+    if not payload:
+        raise EmptyPayloadError("Payload cannot be empty")
+    bulk_periods = [UserUnavailablePeriod(user_id=user.id, starts_at=period.starts_at, ends_at=period.ends_at) for period in payload]
+    period_ids = [period.id for period in bulk_periods]
+    try:
+        session.add_all(bulk_periods)
+        session.commit()
+        # re-fetch to refresh the objects
+        refreshed_periods = session.exec(
+            select(UserUnavailablePeriod)
+            .where(UserUnavailablePeriod.id.in_(period_ids))
+            .options(selectinload(UserUnavailablePeriod.user))
+        ).all()
+        # build public models
+        public_periods = [
+            UserUnavailablePeriodPublic.from_objects(user_unavailable_period=period, user=period.user)
+            for period in refreshed_periods
+        ]
+        return public_periods
+    except IntegrityError as e:
+        session.rollback()
+        if "user_unavailable_period_check_time_range" in str(e):
+            raise CheckConstraintError("Start time must be before end time") from e
+        raise ConflictError("User unavailable period creation violates a constraint") from e
+
+# =============================
+# UPDATE USER UNAVAILABLE PERIOD
+# =============================
+def update_user_unavailable_period(session: Session, payload: UserUnavailablePeriodUpdate, user_unavailable_period: UserUnavailablePeriod) -> UserUnavailablePeriodPublic:
+    try:
+        payload_dict = require_non_empty_payload(payload)
+        for key, value in payload_dict.items():
+            setattr(user_unavailable_period, key, value)
+        session.commit()
+        session.refresh(user_unavailable_period)
+        return UserUnavailablePeriodPublic.from_objects(user_unavailable_period=user_unavailable_period, user=user_unavailable_period.user)
+    except IntegrityError as e:
+        session.rollback()
+        if "user_unavailable_period_check_time_range" in str(e):
+            raise CheckConstraintError("Start time must be before end time") from e
+        raise ConflictError("User unavailable period update violates a constraint") from e

@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import Request, HTTPException, status, Depends
 
 from app.settings import settings
-from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedule, TeamUser, UserRole, Event, EventAssignment
+from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedule, TeamUser, UserRole, Event, EventAssignment, UserUnavailablePeriod
 from app.utils.helpers import raise_exception_if_not_found
 from app.services.queries import select_schedule_with_events_and_assignments, select_event_with_full_hierarchy, select_full_event_assignment
 
@@ -109,6 +109,17 @@ def require_user_with_user_roles(user_id: UUID, session: SessionDep) -> User:
 
 UserWithUserRolesDep = Annotated[User, Depends(require_user_with_user_roles)]
 
+def require_user_with_user_roles_for_unavailable_periods(user_id: UUID, session: SessionDep) -> User:
+    user = session.exec(select(User).where(User.id == user_id)
+        .options(
+            selectinload(User.user_roles).selectinload(UserRole.role),
+            selectinload(User.user_roles).selectinload(UserRole.proficiency_level)
+        )).one_or_none()
+    raise_exception_if_not_found(user, User)
+    return user
+
+UserWithUserRolesForUnavailablePeriodsDep = Annotated[User, Depends(require_user_with_user_roles_for_unavailable_periods)]
+
 def require_schedule(id: UUID, session: SessionDep) -> Schedule:
     schedule = session.get(Schedule, id)
     raise_exception_if_not_found(schedule, Schedule)
@@ -171,3 +182,10 @@ def require_full_event_assignment(id: UUID, session: SessionDep) -> EventAssignm
     return event_assignment
 
 EventAssignmentDep = Annotated[EventAssignment, Depends(require_full_event_assignment)]
+
+def require_user_unavailable_period(id: UUID, session: SessionDep) -> UserUnavailablePeriod:
+    user_unavailable_period = session.get(UserUnavailablePeriod, id)
+    raise_exception_if_not_found(user_unavailable_period, UserUnavailablePeriod)
+    return user_unavailable_period
+
+UserUnavailablePeriodDep = Annotated[UserUnavailablePeriod, Depends(require_user_unavailable_period)]
