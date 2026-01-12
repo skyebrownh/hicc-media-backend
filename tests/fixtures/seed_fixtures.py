@@ -1,8 +1,9 @@
 import pytest
 import pytest_asyncio
+from sqlmodel import text
+
 from app.utils.helpers import VALID_TABLES
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
-from sqlmodel import text
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
 async def truncate_tables(test_db_engine):
@@ -25,7 +26,6 @@ async def truncate_tables(test_db_engine):
 # =============================
 @pytest.fixture
 def seed_roles(get_test_db_session):
-    """Helper fixture to seed roles in the database"""
     def _seed_roles(roles: list[Role]):
         if roles:
             get_test_db_session.add_all(roles)
@@ -34,7 +34,6 @@ def seed_roles(get_test_db_session):
 
 @pytest.fixture
 def seed_proficiency_levels(get_test_db_session):
-    """Helper fixture to seed proficiency_levels in the database"""
     def _seed_proficiency_levels(proficiency_levels: list[ProficiencyLevel]):
         if proficiency_levels:
             get_test_db_session.add_all(proficiency_levels)
@@ -43,7 +42,6 @@ def seed_proficiency_levels(get_test_db_session):
 
 @pytest.fixture
 def seed_event_types(get_test_db_session):
-    """Helper fixture to seed event_types in the database"""
     def _seed_event_types(event_types: list[EventType]):
         if event_types:
             get_test_db_session.add_all(event_types)
@@ -52,7 +50,6 @@ def seed_event_types(get_test_db_session):
 
 @pytest.fixture
 def seed_users(get_test_db_session):
-    """Helper fixture to seed users in the database"""
     def _seed_users(users: list[User]):
         if users:
             get_test_db_session.add_all(users)
@@ -61,7 +58,6 @@ def seed_users(get_test_db_session):
 
 @pytest.fixture
 def seed_teams(get_test_db_session):
-    """Helper fixture to seed teams in the database"""
     def _seed_teams(teams: list[Team]):
         if teams:
             get_test_db_session.add_all(teams)
@@ -70,7 +66,6 @@ def seed_teams(get_test_db_session):
 
 @pytest.fixture
 def seed_user_roles(get_test_db_session):
-    """Helper fixture to seed user_roles in the database"""
     def _seed_user_roles(user_roles: list[UserRole]):
         if user_roles:
             get_test_db_session.add_all(user_roles)
@@ -79,7 +74,6 @@ def seed_user_roles(get_test_db_session):
 
 @pytest.fixture
 def seed_team_users(get_test_db_session):
-    """Helper fixture to seed team_users in the database"""
     def _seed_team_users(team_users: list[TeamUser]):
         if team_users:
             get_test_db_session.add_all(team_users)
@@ -88,7 +82,6 @@ def seed_team_users(get_test_db_session):
 
 @pytest.fixture
 def seed_schedules(get_test_db_session):
-    """Helper fixture to seed schedules in the database"""
     def _seed_schedules(schedules: list[Schedule]):
         if schedules:
             get_test_db_session.add_all(schedules)
@@ -97,7 +90,6 @@ def seed_schedules(get_test_db_session):
 
 @pytest.fixture
 def seed_events(get_test_db_session):
-    """Helper fixture to seed events in the database"""
     def _seed_events(events: list[Event]):
         if events:
             get_test_db_session.add_all(events)
@@ -106,7 +98,6 @@ def seed_events(get_test_db_session):
 
 @pytest.fixture
 def seed_event_assignments(get_test_db_session):
-    """Helper fixture to seed event_assignments in the database"""
     def _seed_event_assignments(event_assignments: list[EventAssignment]):
         if event_assignments:
             get_test_db_session.add_all(event_assignments)
@@ -115,7 +106,6 @@ def seed_event_assignments(get_test_db_session):
 
 @pytest.fixture
 def seed_user_unavailable_periods(get_test_db_session):
-    """Helper fixture to seed user_unavailable_periods in the database"""
     def _seed_user_unavailable_periods(user_unavailable_periods: list[UserUnavailablePeriod]):
         if user_unavailable_periods:
             get_test_db_session.add_all(user_unavailable_periods)

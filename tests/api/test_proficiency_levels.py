@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_4
+from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1
 
 VALID_UPDATE_PAYLOAD = {
     "name": "Updated Level Name", 
@@ -67,8 +67,8 @@ async def test_get_single_proficiency_level_success(async_client, seed_proficien
     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ([], {"name": "Incomplete Proficiency Level"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Proficiency Level", "rank": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
-    ([3], {"name": "Duplicate Code", "rank": 6, "code": "new_level"}, status.HTTP_409_CONFLICT), # duplicate proficiency_level_code
-    ([], {"id": PROFICIENCY_LEVEL_ID_4, "name": "ID Not Allowed", "rank": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # proficiency_level_id not allowed in payload
+    ([0], {"name": "Duplicate Code", "rank": 6, "code": "novice"}, status.HTTP_409_CONFLICT), # duplicate proficiency_level_code
+    ([], {"id": BAD_ID_0000, "name": "ID Not Allowed", "rank": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # proficiency_level_id not allowed in payload
 ])
 @pytest.mark.asyncio
 async def test_insert_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, proficiency_level_indices, payload, expected_status):

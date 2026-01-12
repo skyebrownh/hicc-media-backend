@@ -3,7 +3,7 @@ from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from sqlmodel import select, func
 from app.db.models import UserRole
-from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_4, PROFICIENCY_LEVEL_ID_3, USER_ID_1, USER_ID_2
+from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_3, PROFICIENCY_LEVEL_ID_3, USER_ID_1, USER_ID_2
 
 VALID_UPDATE_PAYLOAD = {
     "name": "Updated Role Name",
@@ -70,8 +70,8 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ([], {"name": "Incomplete Role"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Role", "order": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
-    ([3], {"name": "Duplicate Code", "order": 6, "code": "new_role"}, status.HTTP_409_CONFLICT), # duplicate role_code
-    ([], {"id": ROLE_ID_4, "name": "ID Not Allowed", "order": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # role_id not allowed in payload
+    ([2], {"name": "Duplicate Code", "order": 6, "code": "new_role"}, status.HTTP_409_CONFLICT), # duplicate role_code
+    ([], {"id": ROLE_ID_3, "name": "ID Not Allowed", "order": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # role_id not allowed in payload
 ])
 @pytest.mark.asyncio
 async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, payload, expected_status):

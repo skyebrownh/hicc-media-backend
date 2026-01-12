@@ -3,7 +3,7 @@ from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from sqlmodel import select, func
 from app.db.models import TeamUser, UserRole
-from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, USER_ID_4, PROFICIENCY_LEVEL_ID_3
+from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, PROFICIENCY_LEVEL_ID_3
 
 VALID_UPDATE_PAYLOAD = {
     "first_name": "Updated First Name",
@@ -69,7 +69,7 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
     ({}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ({ "first_name": "Incomplete"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ({ "first_name": 123, "last_name": True, "phone": 555, "email": 999}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
-    ({ "id": USER_ID_4, "first_name": "ID Not Allowed", "last_name": "ID", "phone": "555-6666", "email": "id_not_allowed@example.com"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # user_id not allowed in payload
+    ({ "id": BAD_ID_0000, "first_name": "ID Not Allowed", "last_name": "ID", "phone": "555-6666", "email": "id_not_allowed@example.com"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # user_id not allowed in payload
 ])
 @pytest.mark.asyncio
 async def test_insert_user_error_cases(async_client, payload, expected_status):

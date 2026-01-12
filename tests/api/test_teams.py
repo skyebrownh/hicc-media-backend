@@ -3,7 +3,7 @@ from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from sqlmodel import select, func
 from app.db.models import TeamUser
-from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_4
+from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_3
 
 # =============================
 # GET ALL TEAMS
@@ -58,8 +58,8 @@ async def test_get_single_team_success(async_client, seed_teams, test_teams_data
     ([], {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ([], {"name": "Incomplete Team"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Team", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
-    ([3], {"name": "Duplicate Team Code", "code": "new_team"}, status.HTTP_409_CONFLICT), # duplicate team_code
-    ([], {"id": TEAM_ID_4, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # team_id not allowed in payload
+    ([2], {"name": "Duplicate Team Code", "code": "new_team"}, status.HTTP_409_CONFLICT), # duplicate team_code
+    ([], {"id": TEAM_ID_3, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # team_id not allowed in payload
 ])
 @pytest.mark.asyncio
 async def test_insert_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, payload, expected_status):

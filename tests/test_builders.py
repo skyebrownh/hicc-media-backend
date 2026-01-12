@@ -2,7 +2,6 @@ from app.services.builders import build_events_with_assignments_from_schedule, b
 from tests.utils.constants import EVENT_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_ASSIGNMENT_ID_1, ROLE_ID_1, USER_ID_1
 
 def test_build_events_with_assignments_from_schedule(sample_schedule_with_events):
-    """Test build_events_with_assignments_from_schedule function"""
     # Build events with assignments from in-memory schedule
     result = build_events_with_assignments_from_schedule(sample_schedule_with_events)
     
@@ -26,7 +25,6 @@ def test_build_events_with_assignments_from_schedule(sample_schedule_with_events
     assert first_assignment.assigned_user_first_name == "Alice"
 
 def test_build_events_with_assignments_from_event(sample_event_with_assignments):
-    """Test build_events_with_assignments_from_event function"""
     # Build event with assignments from in-memory event
     result = build_events_with_assignments_from_event(sample_event_with_assignments)
     

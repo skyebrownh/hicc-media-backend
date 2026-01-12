@@ -113,7 +113,7 @@ async def async_client(test_db_engine, request):
     app.state.db_engine = test_db_engine
     
     # Override the get_db_session dependency to use test engine
-    def get_test_session(request: Request):
+    def get_test_session(_: Request):
         with Session(test_db_engine) as session:
             yield session
 

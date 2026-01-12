@@ -9,7 +9,6 @@ from app.utils.exceptions import EmptyPayloadError, NotFoundError
 # TESTS
 # =============================
 def test_raise_exception_if_not_found():
-    """Test raise_exception_if_not_found function"""
     # Test: raises 404 when object is None with default status code
     with pytest.raises(NotFoundError) as exc_info:
         raise_exception_if_not_found(None, ProficiencyLevel)
@@ -26,7 +25,6 @@ def test_raise_exception_if_not_found():
     assert str(proficiency_level.id) == str(PROFICIENCY_LEVEL_ID_1)
 
 def test_require_non_empty_payload():
-    """Test require_non_empty_payload function"""
     # Test: raises 400 when payload is empty (all fields unset)
     with pytest.raises(EmptyPayloadError) as exc_info:
         require_non_empty_payload(RoleUpdate())

@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1, EVENT_TYPE_ID_4
+from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1
 
 # =============================
 # GET ALL EVENT TYPES
@@ -57,7 +57,7 @@ async def test_get_single_event_type_success(async_client, seed_event_types, tes
     ([], {"name": "Incomplete Type"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Type", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([2], {"name": "Duplicate Code", "code": "new_type"}, status.HTTP_409_CONFLICT), # duplicate event_type_code
-    ([], {"id": EVENT_TYPE_ID_4, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # event_type_id not allowed in payload
+    ([], {"id": BAD_ID_0000, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # event_type_id not allowed in payload
 ])
 @pytest.mark.asyncio
 async def test_insert_event_type_error_cases(async_client, seed_event_types, test_event_types_data, type_indices, payload, expected_status):

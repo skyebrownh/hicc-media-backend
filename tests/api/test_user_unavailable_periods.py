@@ -2,7 +2,7 @@ import pytest
 from fastapi import status
 from tests.utils.helpers import assert_single_item_201, assert_list_201, conditional_seed, parse_to_utc
 from app.db.models import UserUnavailablePeriod
-from tests.utils.constants import BAD_ID_0000, DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, USER_ID_1, USER_UNAVAILABLE_PERIOD_ID_1, USER_UNAVAILABLE_PERIOD_ID_2, USER_UNAVAILABLE_PERIOD_ID_7
+from tests.utils.constants import BAD_ID_0000, DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, USER_ID_1, USER_UNAVAILABLE_PERIOD_ID_1, USER_UNAVAILABLE_PERIOD_ID_2, USER_UNAVAILABLE_PERIOD_ID_3
 
 STARTS_AT = DATETIME_2025_01_01.isoformat()
 ENDS_AT = DATETIME_2025_01_02.isoformat()
@@ -118,8 +118,8 @@ async def test_update_user_unavailable_period_error_cases(async_client, seed_use
 async def test_update_user_unavailable_period_success(async_client, seed_users, seed_user_unavailable_periods, test_users_data, test_user_unavailable_periods_data, payload, unchanged_fields):
     """Test valid user unavailable period updates"""
     seed_users([test_users_data[0]])
-    seed_user_unavailable_periods([test_user_unavailable_periods_data[6]])
-    response = await async_client.patch(f"/user_availability/{USER_UNAVAILABLE_PERIOD_ID_7}", json=payload)
+    seed_user_unavailable_periods([test_user_unavailable_periods_data[1]])
+    response = await async_client.patch(f"/user_availability/{USER_UNAVAILABLE_PERIOD_ID_2}", json=payload)
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     for field, value in payload.items():
