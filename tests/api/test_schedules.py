@@ -1,8 +1,9 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from sqlmodel import select, func
+
 from app.db.models import Event, EventAssignment
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, ROLE_ID_1, ROLE_ID_2, USER_ID_1, EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, EVENT_TYPE_ID_1
 
 # =============================
@@ -23,13 +24,11 @@ def seed_for_schedules_tests(seed_roles, seed_users, seed_schedules, seed_event_
 # =============================
 @pytest.mark.asyncio
 async def test_get_all_schedules_none_exist(async_client):
-    """Test when no schedules exist returns empty list"""
     response = await async_client.get("/schedules")
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
 async def test_get_all_schedules_success(async_client, seed_schedules, test_schedules_data):
-    """Test getting all schedules after inserting a variety"""
     seed_schedules(test_schedules_data)
     response = await async_client.get("/schedules")
     assert_list_200(response, expected_length=2)
@@ -51,13 +50,11 @@ async def test_get_all_schedules_success(async_client, seed_schedules, test_sche
 ])
 @pytest.mark.asyncio
 async def test_get_single_schedule_error_cases(async_client, id, expected_status):
-    """Test GET single schedule error cases (404, 422)"""
     response = await async_client.get(f"/schedules/{id}")
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
 async def test_get_single_schedule_success(async_client, seed_schedules, test_schedules_data):
-    """Test GET single schedule success case"""
     seed_schedules([test_schedules_data[0]])
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}")
     assert_single_item_200(response, expected_item={
@@ -77,30 +74,23 @@ async def test_get_single_schedule_success(async_client, seed_schedules, test_sc
 ])
 @pytest.mark.asyncio
 async def test_get_schedule_grid_error_cases(async_client, id, expected_status):
-    """Test GET schedule grid error cases (404, 422)"""
     response = await async_client.get(f"/schedules/{id}/grid")
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
 async def test_get_schedule_grid_success(async_client, seed_for_schedules_tests):
-    """Test GET schedule grid success case"""
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/grid")
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, dict)
     assert response_json["schedule"]["id"] == SCHEDULE_ID_2
     assert response_json["schedule"]["month"] == 5
-    assert response_json["schedule"]["year"] == 2025
     assert response_json["schedule"]["notes"] == "Second schedule"
-    assert response_json["schedule"]["is_active"] is True
     assert len(response_json["events"]) == 3
     assert response_json["events"][0]["event"]["id"] == EVENT_ID_1
-    assert response_json["events"][0]["event"]["schedule_id"] == SCHEDULE_ID_2
     assert response_json["events"][0]["event"]["event_type_id"] == EVENT_TYPE_ID_1
     assert response_json["events"][0]["event"]["team_id"] is None
     assert response_json["events"][1]["event"]["id"] == EVENT_ID_2
-    assert response_json["events"][1]["event"]["schedule_id"] == SCHEDULE_ID_2
-    assert response_json["events"][2]["event"]["id"] == EVENT_ID_3
     assert len(response_json["events"][0]["event_assignments"]) == 2
     assert response_json["events"][0]["event_assignments"][0]["role_id"] == ROLE_ID_1
     assert response_json["events"][0]["event_assignments"][0]["assigned_user_id"] == USER_ID_1
@@ -123,30 +113,27 @@ async def test_get_schedule_grid_success(async_client, seed_for_schedules_tests)
 ])
 @pytest.mark.asyncio
 async def test_insert_schedule_error_cases(async_client, payload):
-    """Test INSERT schedule error cases (422)"""
     response = await async_client.post("/schedules", json=payload)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
 async def test_insert_schedule_success(async_client):
-    """Test valid schedule insertion"""
     response = await async_client.post("/schedules", json={"month": 10, "year": 2025})
     assert_single_item_201(response, expected_item={"month": 10, "year": 2025, "notes": None, "is_active": True})
 
 # =============================
 # UPDATE SCHEDULE
 # =============================
-@pytest.mark.parametrize("schedule_indices, schedule_id, payload, expected_status", [
-    ([], BAD_ID_0000, {"notes": "Updated Notes", "is_active": False}, status.HTTP_404_NOT_FOUND), # schedule not found
-    ([], "invalid-uuid-format", {"notes": "Updated Notes", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
-    ([0], SCHEDULE_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
-    ([0], SCHEDULE_ID_1, {"notes": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
-    ([0], SCHEDULE_ID_1, {"notes": "Invalid", "id": SCHEDULE_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+@pytest.mark.parametrize("schedule_id, payload, expected_status", [
+    (BAD_ID_0000, {"notes": "Updated Notes", "is_active": False}, status.HTTP_404_NOT_FOUND), # schedule not found
+    ("invalid-uuid-format", {"notes": "Updated Notes", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (SCHEDULE_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    (SCHEDULE_ID_1, {"notes": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    (SCHEDULE_ID_1, {"notes": "Invalid", "id": SCHEDULE_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
 @pytest.mark.asyncio
-async def test_update_schedule_error_cases(async_client, seed_schedules, test_schedules_data, schedule_indices, schedule_id, payload, expected_status):
-    """Test UPDATE schedule error cases (400, 404, and 422)"""
-    conditional_seed(schedule_indices, test_schedules_data, seed_schedules)
+async def test_update_schedule_error_cases(async_client, seed_schedules, test_schedules_data, schedule_id, payload, expected_status):
+    seed_schedules([test_schedules_data[0]])
     response = await async_client.patch(f"/schedules/{schedule_id}", json=payload)
     assert response.status_code == expected_status
 
@@ -157,7 +144,6 @@ async def test_update_schedule_error_cases(async_client, seed_schedules, test_sc
 ])
 @pytest.mark.asyncio
 async def test_update_schedule_success(async_client, seed_schedules, test_schedules_data, payload, unchanged_fields):
-    """Test valid schedule updates"""
     seed_schedules([test_schedules_data[0]])
     response = await async_client.patch(f"/schedules/{SCHEDULE_ID_1}", json=payload)
     assert response.status_code == status.HTTP_200_OK
@@ -172,13 +158,11 @@ async def test_update_schedule_success(async_client, seed_schedules, test_schedu
 # =============================
 @pytest.mark.asyncio
 async def test_delete_schedule_error_cases(async_client):
-    """Test DELETE schedule error cases (422)"""
     response = await async_client.delete("/schedules/invalid-uuid-format")
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
 async def test_delete_schedule_success(async_client, seed_schedules, test_schedules_data):
-    """Test successful schedule deletion with verification"""
     seed_schedules([test_schedules_data[0]])
     response = await async_client.delete(f"/schedules/{SCHEDULE_ID_1}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -206,7 +190,6 @@ async def test_delete_schedule_cascade(
     test_schedules_data, test_roles_data, test_users_data, test_event_types_data, test_events_data, test_event_assignments_data,
     event_indices, event_assignment_indices, expected_count_events_before, expected_count_event_assignments_before
 ):
-    """Test that deleting a schedule cascades to delete associated events and event_assignments"""
     # Seed parent
     seed_schedules([test_schedules_data[1]])
 

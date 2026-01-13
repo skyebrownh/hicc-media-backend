@@ -1,9 +1,10 @@
 import pytest
 import json
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc, conditional_seed
 from sqlmodel import select, func
+
 from app.db.models import EventAssignment
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc, conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
     EVENT_ID_1, TEAM_ID_1, USER_ID_1, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
@@ -43,14 +44,12 @@ def seed_for_events_tests(seed_users, seed_roles, seed_schedules, seed_event_typ
 # =============================
 @pytest.mark.asyncio
 async def test_get_all_events_for_schedule_none_exist(async_client, seed_schedules, test_schedules_data):
-    """Test GET all events for schedule when none exist returns empty list"""
     seed_schedules([test_schedules_data[0]])
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/events")
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
 async def test_get_all_events_for_schedule_success(async_client, seed_for_events_tests):
-    """Test GET all events for schedule success case"""
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/events")
     assert_list_200(response, expected_length=3)
     response_json = response.json()
@@ -101,13 +100,11 @@ async def test_get_all_events_for_schedule_success(async_client, seed_for_events
 ])
 @pytest.mark.asyncio
 async def test_get_single_event_error_cases(async_client, event_id, expected_status):
-    """Test GET single schedule date error cases (404, 422)"""
     response = await async_client.get(f"/events/{event_id}")
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
 async def test_get_single_event_success(async_client, seed_for_events_tests):
-    """Test GET single event success case"""
     response = await async_client.get(f"/events/{EVENT_ID_1}")
     response_json = response.json()
     assert parse_to_utc(response_json["event"]["starts_at"]) == DATETIME_2025_05_01
@@ -166,29 +163,27 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
 # =============================
 # INSERT EVENT FOR SCHEDULE
 # =============================
-@pytest.mark.parametrize("schedule_indices, schedule_id, payload, expected_status", [
-    ([], BAD_ID_0000, VALID_INSERT_PAYLOAD, status.HTTP_404_NOT_FOUND), # schedule not found
-    ([1], SCHEDULE_ID_2, {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
-    ([1], SCHEDULE_ID_2, {"title": "New Event"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
-    ([1], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": "invalid-datetime"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
-    ([1], SCHEDULE_ID_2, {"id": EVENT_ID_1, **VALID_INSERT_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
-    ([1], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": DATETIME_2025_05_03.isoformat()}, status.HTTP_422_UNPROCESSABLE_CONTENT), # starts_at is before ends_at
-    ([1], SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "event_type_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # foreign key violation (event_type doesn't exist)
+@pytest.mark.parametrize("schedule_id, payload, expected_status", [
+    (BAD_ID_0000, VALID_INSERT_PAYLOAD, status.HTTP_404_NOT_FOUND), # schedule not found
+    (SCHEDULE_ID_2, {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
+    (SCHEDULE_ID_2, {"title": "New Event"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
+    (SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": "invalid-datetime"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
+    (SCHEDULE_ID_2, {"id": EVENT_ID_1, **VALID_INSERT_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    (SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": DATETIME_2025_05_03.isoformat()}, status.HTTP_422_UNPROCESSABLE_CONTENT), # starts_at is before ends_at
+    (SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "event_type_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # foreign key violation (event_type doesn't exist)
 ])
 @pytest.mark.asyncio
 async def test_insert_event_for_schedule_error_cases(
     async_client, seed_schedules, seed_event_types, test_schedules_data, test_event_types_data, 
-    schedule_indices, schedule_id, payload, expected_status
+    schedule_id, payload, expected_status
 ):
-    """Test INSERT event for schedule error cases (404, 422, and 409)"""
     seed_event_types([test_event_types_data[0]])
-    conditional_seed(schedule_indices, test_schedules_data, seed_schedules)
+    seed_schedules([test_schedules_data[1]])
     response = await async_client.post(f"/schedules/{schedule_id}/events", json=payload)
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
 async def test_insert_event_for_schedule_success(async_client, seed_schedules, seed_event_types, seed_roles, test_schedules_data, test_event_types_data, test_roles_data):
-    """Test valid event for schedule insertion"""
     seed_roles([test_roles_data[0]])
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])
@@ -244,7 +239,6 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
 ])
 @pytest.mark.asyncio
 async def test_update_event_error_cases(async_client, seed_event_types, seed_schedules, seed_events, test_events_data, test_event_types_data, test_schedules_data, event_id, payload, expected_status):
-    """Test UPDATE event error cases (400, 404, and 422)"""
     seed_event_types([test_event_types_data[0]])
     seed_schedules([test_schedules_data[1]])
     seed_events([test_events_data[0]])
@@ -258,7 +252,6 @@ async def test_update_event_error_cases(async_client, seed_event_types, seed_sch
 ])
 @pytest.mark.asyncio
 async def test_update_event_success(async_client, seed_schedules, seed_event_types, seed_teams, seed_events, test_schedules_data, test_event_types_data, test_teams_data, test_events_data, payload, unchanged_fields):
-    """Test valid event updates"""
     seed_schedules([test_schedules_data[1]])
     seed_event_types(test_event_types_data[:2])
     seed_teams([test_teams_data[0]])
@@ -282,13 +275,11 @@ async def test_update_event_success(async_client, seed_schedules, seed_event_typ
 # =============================
 @pytest.mark.asyncio
 async def test_delete_event_error_cases(async_client):
-    """Test DELETE event error cases (422)"""
     response = await async_client.delete("/events/invalid-uuid-format")
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
 async def test_delete_event_success(async_client, seed_events, seed_event_types, seed_schedules, test_events_data, test_event_types_data, test_schedules_data):
-    """Test successful event deletion with verification"""
     seed_event_types([test_event_types_data[0]])
     seed_schedules([test_schedules_data[1]])
     seed_events([test_events_data[0]])
@@ -313,7 +304,6 @@ async def test_delete_event_cascade_event_assignments(
     test_users_data, test_schedules_data, test_event_types_data, test_events_data, test_roles_data, test_event_assignments_data,
     event_assignment_indices, expected_count_before
 ):
-    """Test that deleting a event cascades to delete associated event_assignments"""
     # Seed parent
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])

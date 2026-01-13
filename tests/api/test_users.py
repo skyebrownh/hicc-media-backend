@@ -1,8 +1,9 @@
 import pytest
 from fastapi import status
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from sqlmodel import select, func
+
 from app.db.models import TeamUser, UserRole
+from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
 from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, PROFICIENCY_LEVEL_ID_3
 
 VALID_UPDATE_PAYLOAD = {
@@ -18,13 +19,11 @@ VALID_UPDATE_PAYLOAD = {
 # =============================
 @pytest.mark.asyncio
 async def test_get_all_users_none_exist(async_client):
-    """Test when no users exist returns empty list"""
     response = await async_client.get("/users")
     assert_empty_list_200(response)
 
 @pytest.mark.asyncio
 async def test_get_all_users_success(async_client, seed_users, test_users_data):
-    """Test getting all users after inserting a variety"""
     seed_users(test_users_data[:3])
     response = await async_client.get("/users")
     assert_list_200(response, expected_length=3)
@@ -44,13 +43,11 @@ async def test_get_all_users_success(async_client, seed_users, test_users_data):
 ])
 @pytest.mark.asyncio
 async def test_get_single_user_error_cases(async_client, id, expected_status):
-    """Test GET single user error cases (404, 422)"""
     response = await async_client.get(f"/users/{id}")
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
 async def test_get_single_user_success(async_client, seed_users, test_users_data):
-    """Test GET single user success case"""
     seed_users([test_users_data[0]])
     response = await async_client.get(f"/users/{USER_ID_1}")
     assert_single_item_200(response, expected_item={
@@ -73,13 +70,11 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
 ])
 @pytest.mark.asyncio
 async def test_insert_user_error_cases(async_client, payload, expected_status):
-    """Test INSERT user error cases (422)"""
     response = await async_client.post("/users", json=payload)
     assert response.status_code == expected_status
 
 @pytest.mark.asyncio
 async def test_insert_user_success(async_client, get_test_db_session, seed_roles, seed_proficiency_levels, test_roles_data, test_proficiency_levels_data):
-    """Test valid user insertion"""
     seed_proficiency_levels([test_proficiency_levels_data[2]]) # Untrained proficiency level
     seed_roles(test_roles_data[:2])
     response = await async_client.post("/users", json={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com"})
@@ -97,17 +92,16 @@ async def test_insert_user_success(async_client, get_test_db_session, seed_roles
 # =============================
 # UPDATE USER
 # =============================
-@pytest.mark.parametrize("user_indices, user_id, payload, expected_status", [
-    ([], BAD_ID_0000, VALID_UPDATE_PAYLOAD, status.HTTP_404_NOT_FOUND), # user not found
-    ([], "invalid-uuid-format", VALID_UPDATE_PAYLOAD, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
-    ([0], USER_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
-    ([0], USER_ID_1, {"first_name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
-    ([0], USER_ID_1, {"first_name": "Invalid", "id": USER_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
+@pytest.mark.parametrize("user_id, payload, expected_status", [
+    (BAD_ID_0000, VALID_UPDATE_PAYLOAD, status.HTTP_404_NOT_FOUND), # user not found
+    ("invalid-uuid-format", VALID_UPDATE_PAYLOAD, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (USER_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
+    (USER_ID_1, {"first_name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    (USER_ID_1, {"first_name": "Invalid", "id": USER_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
 @pytest.mark.asyncio
-async def test_update_user_error_cases(async_client, seed_users, test_users_data, user_indices, user_id, payload, expected_status):
-    """Test UPDATE user error cases (400, 404, and 422)"""
-    conditional_seed(user_indices, test_users_data, seed_users)
+async def test_update_user_error_cases(async_client, seed_users, test_users_data, user_id, payload, expected_status):
+    seed_users([test_users_data[0]])
     response = await async_client.patch(f"/users/{user_id}", json=payload)
     assert response.status_code == expected_status
 
@@ -118,7 +112,6 @@ async def test_update_user_error_cases(async_client, seed_users, test_users_data
 ])
 @pytest.mark.asyncio
 async def test_update_user_success(async_client, seed_users, test_users_data, payload, unchanged_fields):
-    """Test valid user updates"""
     seed_users([test_users_data[0]])
     response = await async_client.patch(f"/users/{USER_ID_1}", json=payload)
     assert response.status_code == status.HTTP_200_OK
@@ -133,13 +126,11 @@ async def test_update_user_success(async_client, seed_users, test_users_data, pa
 # =============================
 @pytest.mark.asyncio
 async def test_delete_user_error_cases(async_client):
-    """Test DELETE user error cases (422)"""
     response = await async_client.delete("/users/invalid-uuid-format")
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 @pytest.mark.asyncio
 async def test_delete_user_success(async_client, seed_users, test_users_data):
-    """Test successful user deletion with verification"""
     seed_users([test_users_data[0]])
     response = await async_client.delete(f"/users/{USER_ID_1}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -166,7 +157,6 @@ async def test_delete_user_cascade(
     team_indices, team_user_indices, role_indices, user_role_indices,
     expected_team_user_count, expected_user_role_count
 ):
-    """Test that deleting a user cascades to delete all associated team_users and user_roles"""
     # Seed parent
     seed_users([test_users_data[0]])
 
