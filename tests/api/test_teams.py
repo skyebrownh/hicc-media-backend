@@ -2,28 +2,29 @@ import pytest
 from fastapi import status
 from sqlmodel import select, func
 
+pytestmark = pytest.mark.asyncio
+
 from app.db.models import TeamUser
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_3
+from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3
 
 # =============================
 # GET ALL TEAMS
 # =============================
-@pytest.mark.asyncio
 async def test_get_all_teams_none_exist(async_client):
     response = await async_client.get("/teams")
     assert_empty_list_200(response)
 
-@pytest.mark.asyncio
 async def test_get_all_teams_success(async_client, seed_teams, test_teams_data):
     seed_teams(test_teams_data[:3])
     response = await async_client.get("/teams")
     assert_list_200(response, expected_length=3)
     response_json = response.json()
-    assert response_json[0]["name"] == "Team 1"
-    assert response_json[1]["id"] is not None
-    assert response_json[1]["code"] == "team_2"
-    assert response_json[2]["is_active"] is True
+    response_dict = {t["id"]: t for t in response_json}
+    assert response_dict[TEAM_ID_1]["name"] == "Team 1"
+    assert response_dict[TEAM_ID_2]["id"] is not None
+    assert response_dict[TEAM_ID_2]["code"] == "team_2"
+    assert response_dict[TEAM_ID_3]["is_active"] is True
 
 # =============================
 # GET SINGLE TEAM
@@ -32,12 +33,10 @@ async def test_get_all_teams_success(async_client, seed_teams, test_teams_data):
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Team not present
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
-@pytest.mark.asyncio
 async def test_get_single_team_error_cases(async_client, id, expected_status):
     response = await async_client.get(f"/teams/{id}")
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_get_single_team_success(async_client, seed_teams, test_teams_data):
     seed_teams([test_teams_data[0]])
     response = await async_client.get(f"/teams/{TEAM_ID_1}")
@@ -58,20 +57,18 @@ async def test_get_single_team_success(async_client, seed_teams, test_teams_data
     ([2], {"name": "Duplicate Team Code", "code": "new_team"}, status.HTTP_409_CONFLICT), # duplicate team_code
     ([], {"id": TEAM_ID_3, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # team_id not allowed in payload
 ])
-@pytest.mark.asyncio
 async def test_insert_team_error_cases(async_client, seed_teams, test_teams_data, team_indices, payload, expected_status):
     conditional_seed(team_indices, test_teams_data, seed_teams)
     response = await async_client.post("/teams", json=payload)
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_insert_team_success(async_client):
     response = await async_client.post("/teams", json={"name": "New Team", "code": "new_team"})
     assert_single_item_201(response, expected_item={"name": "New Team", "code": "new_team", "is_active": True})
 
-# # =============================
-# # UPDATE TEAM
-# # =============================
+# =============================
+# UPDATE TEAM
+# =============================
 @pytest.mark.parametrize("team_id, payload, expected_status", [
     (BAD_ID_0000, {"name": "Updated Team Name", "is_active": False}, status.HTTP_404_NOT_FOUND), # team not found
     ("invalid-uuid-format", {"name": "Updated Team Name", "is_active": False}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
@@ -79,7 +76,6 @@ async def test_insert_team_success(async_client):
     (TEAM_ID_1, {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     (TEAM_ID_1, {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
-@pytest.mark.asyncio
 async def test_update_team_error_cases(async_client, seed_teams, test_teams_data, team_id, payload, expected_status):
     seed_teams([test_teams_data[0]])
     response = await async_client.patch(f"/teams/{team_id}", json=payload)
@@ -87,10 +83,9 @@ async def test_update_team_error_cases(async_client, seed_teams, test_teams_data
 
 @pytest.mark.parametrize("payload, unchanged_fields", [
     ({"name": "Updated Team Name", "is_active": False}, {"code": "team_1"}), # full update
-    ({"is_active": False}, {"name": "Service", "code": "service"}), # partial update (is_active only)
+    ({"is_active": False}, {"name": "Team 1", "code": "team_1"}), # partial update (is_active only)
     ({"name": "Partially Updated Team"}, {"code": "team_1", "is_active": True}), # partial update (team_name only)
 ])
-@pytest.mark.asyncio
 async def test_update_team_success(async_client, seed_teams, test_teams_data, payload, unchanged_fields):
     seed_teams([test_teams_data[0]])
     response = await async_client.patch(f"/teams/{TEAM_ID_1}", json=payload)
@@ -99,17 +94,15 @@ async def test_update_team_success(async_client, seed_teams, test_teams_data, pa
     for field, value in payload.items():
         assert response_json[field] == value
     for field, value in unchanged_fields.items():
-        assert response_json[field] == getattr(test_teams_data[0], field)
+        assert response_json[field] == value
 
 # =============================
 # DELETE TEAM
 # =============================
-@pytest.mark.asyncio
 async def test_delete_team_error_cases(async_client):
     response = await async_client.delete("/teams/invalid-uuid-format")
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-@pytest.mark.asyncio
 async def test_delete_team_success(async_client, seed_teams, test_teams_data):
     seed_teams([test_teams_data[0]])
     response = await async_client.delete(f"/teams/{TEAM_ID_1}")
@@ -127,7 +120,6 @@ async def test_delete_team_success(async_client, seed_teams, test_teams_data):
     ([0], [0], 1), # One team_user to cascade delete
     ([0, 1], [0, 1], 2), # Multiple team_users to cascade delete
 ])
-@pytest.mark.asyncio
 async def test_delete_team_cascade_team_users(
     async_client, get_test_db_session, seed_teams, seed_users, seed_team_users,
     test_teams_data, test_users_data, test_team_users_data,

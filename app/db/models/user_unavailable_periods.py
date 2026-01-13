@@ -69,5 +69,6 @@ class UserUnavailablePeriodPublic(UserUnavailablePeriodBase):
         )
 
 class UserUnavailablePeriodEmbeddedPublic(SQLModel):
+    user_id: UUID
     user_first_name: str
     user_last_name: str

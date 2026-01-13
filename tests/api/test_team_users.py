@@ -2,6 +2,8 @@ import pytest
 from fastapi import status
 from sqlmodel import select
 
+pytestmark = pytest.mark.asyncio
+
 from app.db.models import TeamUser
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_201, conditional_seed
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, USER_ID_1, USER_ID_2
@@ -22,18 +24,15 @@ def seed_for_team_users_tests(seed_teams, seed_users, seed_team_users, test_team
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Team not found
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
-@pytest.mark.asyncio
 async def test_get_users_for_team_error_cases(async_client, team_id, expected_status):
     response = await async_client.get(f"/teams/{team_id}/users")
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_get_users_for_team_none_exist(async_client, seed_teams, test_teams_data):
     seed_teams([test_teams_data[0]])
     response = await async_client.get(f"/teams/{TEAM_ID_1}/users")
     assert_empty_list_200(response)
 
-@pytest.mark.asyncio
 async def test_get_users_for_team_success(async_client, seed_for_team_users_tests):
     response = await async_client.get(f"/teams/{TEAM_ID_1}/users")
     assert_list_200(response, expected_length=2)
@@ -49,8 +48,9 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
     # data assertions
     assert all(tu["team_id"] == TEAM_ID_1 for tu in response_json)
     assert {tu["user_id"] for tu in response_json} == {USER_ID_1, USER_ID_2}
-    assert response_json[0]["team_code"] == "team_1"
-    assert response_json[0]["user_first_name"] == "Alice"
+    team_users_dict = {tu["user_id"]: tu for tu in response_json}
+    assert team_users_dict[USER_ID_1]["team_code"] == "team_1"
+    assert team_users_dict[USER_ID_1]["user_first_name"] == "Alice"
 
 # =============================
 # INSERT TEAM USER
@@ -63,7 +63,6 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
     (TEAM_ID_1, [0], [0], {"user_id": USER_ID_1}, status.HTTP_409_CONFLICT), # duplicate team_user
     (TEAM_ID_1, [], [], {"user_id": USER_ID_2, "team_user_id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
-@pytest.mark.asyncio
 async def test_insert_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_id, user_indices, team_user_indices, payload, expected_status):
     seed_teams([test_teams_data[0]])
     conditional_seed(user_indices, test_users_data, seed_users)
@@ -71,7 +70,6 @@ async def test_insert_team_user_error_cases(async_client, seed_teams, seed_users
     response = await async_client.post(f"/teams/{team_id}/users", json=payload)
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_insert_team_user_success(async_client, seed_teams, seed_users, test_teams_data, test_users_data):
     seed_teams([test_teams_data[1]])
     seed_users([test_users_data[0]])
@@ -89,7 +87,6 @@ async def test_insert_team_user_success(async_client, seed_teams, seed_users, te
     (TEAM_ID_1, USER_ID_1, {"is_active": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     (TEAM_ID_1, USER_ID_1, {"is_active": False, "id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
-@pytest.mark.asyncio
 async def test_update_team_user_error_cases(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, team_id, user_id, payload, expected_status):
     seed_teams([test_teams_data[0]])
     seed_users([test_users_data[0]])
@@ -101,7 +98,6 @@ async def test_update_team_user_error_cases(async_client, seed_teams, seed_users
     ({"is_active": False}, {}), # full update
     # ({"is_active": False}, {}), # partial update (is_active only)
 ])
-@pytest.mark.asyncio
 async def test_update_team_user_success(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, payload, unchanged_fields):
     seed_teams([test_teams_data[0]])
     seed_users([test_users_data[0]])
@@ -112,12 +108,11 @@ async def test_update_team_user_success(async_client, seed_teams, seed_users, se
     for field, value in payload.items():
         assert response_json[field] == value
     for field, value in unchanged_fields.items():
-        assert response_json[field] == getattr(test_team_users_data[0], field)
+        assert response_json[field] == value
 
 # =============================
 # DELETE TEAM USER
 # =============================
-@pytest.mark.asyncio
 async def test_delete_team_user_error_cases(async_client, seed_teams, seed_users, test_teams_data, test_users_data):
     seed_teams([test_teams_data[0]])
     seed_users([test_users_data[0]])
@@ -126,7 +121,6 @@ async def test_delete_team_user_error_cases(async_client, seed_teams, seed_users
     response2 = await async_client.delete(f"/teams/{TEAM_ID_1}/users/invalid-uuid-format")
     assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-@pytest.mark.asyncio
 async def test_delete_team_user_success(async_client, get_test_db_session, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
     seed_teams([test_teams_data[0]])
     seed_users([test_users_data[0]])

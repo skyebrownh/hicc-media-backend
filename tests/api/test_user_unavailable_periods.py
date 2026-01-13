@@ -1,6 +1,8 @@
 import pytest
 from fastapi import status
 
+pytestmark = pytest.mark.asyncio
+
 from app.db.models import UserUnavailablePeriod
 from tests.utils.helpers import assert_single_item_201, assert_list_201, conditional_seed, parse_to_utc
 from tests.utils.constants import BAD_ID_0000, DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, USER_ID_1, USER_UNAVAILABLE_PERIOD_ID_1, USER_UNAVAILABLE_PERIOD_ID_2
@@ -23,13 +25,11 @@ VALID_PAYLOAD_2 = {"starts_at": STARTS_AT_2, "ends_at": ENDS_AT_2}
     (USER_ID_1, {"starts_at": ENDS_AT, "ends_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
     (USER_ID_1, {"id": BAD_ID_0000, **VALID_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
-@pytest.mark.asyncio
 async def test_insert_user_unavailable_period_error_cases(async_client, seed_users, test_users_data, user_id, payload, expected_status):
     seed_users([test_users_data[0]])
     response = await async_client.post(f"/users/{user_id}/availability", json=payload)
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_insert_user_unavailable_period_success(async_client, seed_users, test_users_data):
     seed_users([test_users_data[0]])    
     response = await async_client.post(f"/users/{USER_ID_1}/availability", json=VALID_PAYLOAD)
@@ -56,13 +56,11 @@ async def test_insert_user_unavailable_period_success(async_client, seed_users, 
     (USER_ID_1, [{"starts_at": ENDS_AT, "ends_at": STARTS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
     (USER_ID_1, [{"id": BAD_ID_0000, **VALID_PAYLOAD}], status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
-@pytest.mark.asyncio
 async def test_insert_user_unavailable_periods_bulk_error_cases(async_client, seed_users, test_users_data, user_id, payload, expected_status):
     seed_users([test_users_data[0]])
     response = await async_client.post(f"/users/{user_id}/availability/bulk", json=payload)
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_insert_user_unavailable_periods_bulk_success(async_client, seed_users, test_users_data):
     seed_users([test_users_data[0]])
     response = await async_client.post(f"/users/{USER_ID_1}/availability/bulk", json=[VALID_PAYLOAD, VALID_PAYLOAD_2])
@@ -79,13 +77,13 @@ async def test_insert_user_unavailable_periods_bulk_success(async_client, seed_u
     
     # data assertions
     assert all(item["user_id"] == USER_ID_1 for item in response_json)
-    assert response_json[0]["id"] is not None
-    assert response_json[0]["user_first_name"] == "Alice"
-    assert parse_to_utc(response_json[0]["starts_at"]) == DATETIME_2025_01_01
-    assert parse_to_utc(response_json[0]["ends_at"]) == DATETIME_2025_01_02
-    assert response_json[1]["user_email"] == "alice@example.com"
-    assert parse_to_utc(response_json[1]["starts_at"]) == DATETIME_2025_05_01
-    assert parse_to_utc(response_json[1]["ends_at"]) == DATETIME_2025_05_02
+    # Group by starts_at to identify which period is which (since we know the datetimes)
+    periods_by_start = {parse_to_utc(item["starts_at"]): item for item in response_json}
+    assert periods_by_start[DATETIME_2025_01_01]["id"] is not None
+    assert periods_by_start[DATETIME_2025_01_01]["user_first_name"] == "Alice"
+    assert parse_to_utc(periods_by_start[DATETIME_2025_01_01]["ends_at"]) == DATETIME_2025_01_02
+    assert periods_by_start[DATETIME_2025_05_01]["user_email"] == "alice@example.com"
+    assert parse_to_utc(periods_by_start[DATETIME_2025_05_01]["ends_at"]) == DATETIME_2025_05_02
 
 # =============================
 # UPDATE USER UNAVAILABLE PERIOD
@@ -98,7 +96,6 @@ async def test_insert_user_unavailable_periods_bulk_success(async_client, seed_u
     (USER_UNAVAILABLE_PERIOD_ID_1, {"starts_at": ENDS_AT, "ends_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
     (USER_UNAVAILABLE_PERIOD_ID_1, {"starts_at": STARTS_AT, "id": USER_UNAVAILABLE_PERIOD_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
-@pytest.mark.asyncio
 async def test_update_user_unavailable_period_error_cases(async_client, seed_users, seed_user_unavailable_periods, test_users_data, test_user_unavailable_periods_data, uup_id, payload, expected_status):
     seed_users([test_users_data[0]])
     seed_user_unavailable_periods([test_user_unavailable_periods_data[0]])
@@ -110,7 +107,6 @@ async def test_update_user_unavailable_period_error_cases(async_client, seed_use
     ({"starts_at": DATETIME_2025_04_01.isoformat()}, {"ends_at": ENDS_AT_2}), # partial update (starts_at only)
     ({"ends_at": DATETIME_2025_05_03.isoformat()}, {"starts_at": STARTS_AT_2}), # partial update (ends_at only)
 ])
-@pytest.mark.asyncio
 async def test_update_user_unavailable_period_success(async_client, seed_users, seed_user_unavailable_periods, test_users_data, test_user_unavailable_periods_data, payload, unchanged_fields):
     seed_users([test_users_data[0]])
     seed_user_unavailable_periods([test_user_unavailable_periods_data[1]])
@@ -131,13 +127,11 @@ async def test_update_user_unavailable_period_success(async_client, seed_users, 
 # =============================
 # DELETE USER UNAVAILABLE PERIOD
 # =============================
-@pytest.mark.asyncio
 async def test_delete_user_unavailable_period_error_cases(async_client):
     """Test DELETE user unavailable period error cases (422)"""
     response = await async_client.delete("/user_availability/invalid-uuid-format")
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-@pytest.mark.asyncio
 async def test_delete_user_unavailable_period_success(async_client, get_test_db_session, seed_user_unavailable_periods, seed_users, test_user_unavailable_periods_data, test_users_data):
     seed_users([test_users_data[0]])
     seed_user_unavailable_periods([test_user_unavailable_periods_data[0]])

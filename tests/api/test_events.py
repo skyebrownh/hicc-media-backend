@@ -3,11 +3,13 @@ import json
 from fastapi import status
 from sqlmodel import select, func
 
+pytestmark = pytest.mark.asyncio
+
 from app.db.models import EventAssignment
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc, conditional_seed
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
-    EVENT_ID_1, TEAM_ID_1, USER_ID_1, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
+    EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, TEAM_ID_1, USER_ID_1, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
     DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, DATETIME_2025_05_04
 )
 
@@ -42,13 +44,11 @@ def seed_for_events_tests(seed_users, seed_roles, seed_schedules, seed_event_typ
 # =============================
 # GET ALL EVENTS FOR SCHEDULE
 # =============================
-@pytest.mark.asyncio
 async def test_get_all_events_for_schedule_none_exist(async_client, seed_schedules, test_schedules_data):
     seed_schedules([test_schedules_data[0]])
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}/events")
     assert_empty_list_200(response)
 
-@pytest.mark.asyncio
 async def test_get_all_events_for_schedule_success(async_client, seed_for_events_tests):
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/events")
     assert_list_200(response, expected_length=3)
@@ -77,19 +77,21 @@ async def test_get_all_events_for_schedule_success(async_client, seed_for_events
             assert "assigned_user_id" in ea
             assert "assigned_user_first_name" in ea
 
-    assert response_json[0]["event"]["id"] is not None
-    assert response_json[0]["event"]["schedule_id"] == SCHEDULE_ID_2
-    assert response_json[1]["event"]["event_type_id"] == EVENT_TYPE_ID_1
-    assert parse_to_utc(response_json[1]["event"]["starts_at"]) == DATETIME_2025_05_02
-    assert parse_to_utc(response_json[2]["event"]["ends_at"]) == DATETIME_2025_05_04
-    assert response_json[2]["event"]["team_id"] is None
-    assert response_json[0]["event_assignments"][0]["id"] is not None
-    assert response_json[0]["event_assignments"][0]["role_id"] == ROLE_ID_1
-    assert response_json[0]["event_assignments"][0]["role_name"] == "ProPresenter"
-    assert response_json[0]["event_assignments"][0]["is_applicable"] is True
-    assert response_json[0]["event_assignments"][0]["requirement_level"] == "REQUIRED"
-    assert response_json[0]["event_assignments"][0]["assigned_user_id"] == USER_ID_1
-    assert response_json[0]["event_assignments"][0]["assigned_user_first_name"] == "Alice"
+    events_dict = {obj["event"]["id"]: obj for obj in response_json}
+    assert events_dict[EVENT_ID_1]["event"]["id"] is not None
+    assert events_dict[EVENT_ID_1]["event"]["schedule_id"] == SCHEDULE_ID_2
+    assert events_dict[EVENT_ID_2]["event"]["event_type_id"] == EVENT_TYPE_ID_1
+    assert parse_to_utc(events_dict[EVENT_ID_2]["event"]["starts_at"]) == DATETIME_2025_05_02
+    assert parse_to_utc(events_dict[EVENT_ID_3]["event"]["ends_at"]) == DATETIME_2025_05_04
+    assert events_dict[EVENT_ID_3]["event"]["team_id"] is None
+    event_assignments_dict = {ea["role_id"]: ea for ea in events_dict[EVENT_ID_1]["event_assignments"]}
+    assert event_assignments_dict[ROLE_ID_1]["id"] is not None
+    assert event_assignments_dict[ROLE_ID_1]["role_id"] == ROLE_ID_1
+    assert event_assignments_dict[ROLE_ID_1]["role_name"] == "ProPresenter"
+    assert event_assignments_dict[ROLE_ID_1]["is_applicable"] is True
+    assert event_assignments_dict[ROLE_ID_1]["requirement_level"] == "REQUIRED"
+    assert event_assignments_dict[ROLE_ID_1]["assigned_user_id"] == USER_ID_1
+    assert event_assignments_dict[ROLE_ID_1]["assigned_user_first_name"] == "Alice"
 
 # =============================
 # GET SINGLE EVENT
@@ -98,12 +100,10 @@ async def test_get_all_events_for_schedule_success(async_client, seed_for_events
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Event not found
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
-@pytest.mark.asyncio
 async def test_get_single_event_error_cases(async_client, event_id, expected_status):
     response = await async_client.get(f"/events/{event_id}")
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_get_single_event_success(async_client, seed_for_events_tests):
     response = await async_client.get(f"/events/{EVENT_ID_1}")
     response_json = response.json()
@@ -172,7 +172,6 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
     (SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": DATETIME_2025_05_03.isoformat()}, status.HTTP_422_UNPROCESSABLE_CONTENT), # starts_at is before ends_at
     (SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "event_type_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # foreign key violation (event_type doesn't exist)
 ])
-@pytest.mark.asyncio
 async def test_insert_event_for_schedule_error_cases(
     async_client, seed_schedules, seed_event_types, test_schedules_data, test_event_types_data, 
     schedule_id, payload, expected_status
@@ -182,7 +181,6 @@ async def test_insert_event_for_schedule_error_cases(
     response = await async_client.post(f"/schedules/{schedule_id}/events", json=payload)
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_insert_event_for_schedule_success(async_client, seed_schedules, seed_event_types, seed_roles, test_schedules_data, test_event_types_data, test_roles_data):
     seed_roles([test_roles_data[0]])
     seed_schedules([test_schedules_data[1]])
@@ -216,15 +214,16 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
     assert response_json["event"]["id"] is not None
     assert response_json["event"]["schedule_id"] == SCHEDULE_ID_2
     assert response_json["event"]["event_type_id"] == EVENT_TYPE_ID_1
-    assert response_json["event_assignments"][0]["id"] is not None
     assert parse_to_utc(response_json["event"]["starts_at"]) == DATETIME_2025_05_01
     assert parse_to_utc(response_json["event"]["ends_at"]) == DATETIME_2025_05_02
-    assert response_json["event_assignments"][0]["role_id"] == ROLE_ID_1
-    assert response_json["event_assignments"][0]["role_name"] == "ProPresenter"
-    assert response_json["event_assignments"][0]["is_applicable"] is True
-    assert response_json["event_assignments"][0]["requirement_level"] == "REQUIRED"
-    assert response_json["event_assignments"][0]["assigned_user_id"] is None
-    assert response_json["event_assignments"][0]["assigned_user_first_name"] is None
+    event_assignments_dict = {ea["role_id"]: ea for ea in response_json["event_assignments"]}
+    assert event_assignments_dict[ROLE_ID_1]["id"] is not None
+    assert event_assignments_dict[ROLE_ID_1]["role_id"] == ROLE_ID_1
+    assert event_assignments_dict[ROLE_ID_1]["role_name"] == "ProPresenter"
+    assert event_assignments_dict[ROLE_ID_1]["is_applicable"] is True
+    assert event_assignments_dict[ROLE_ID_1]["requirement_level"] == "REQUIRED"
+    assert event_assignments_dict[ROLE_ID_1]["assigned_user_id"] is None
+    assert event_assignments_dict[ROLE_ID_1]["assigned_user_first_name"] is None
 
 # =============================
 # UPDATE EVENT
@@ -237,7 +236,6 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
     (EVENT_ID_1, {"title": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     (EVENT_ID_1, {"title": "Invalid", "id": BAD_ID_0000}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
 ])
-@pytest.mark.asyncio
 async def test_update_event_error_cases(async_client, seed_event_types, seed_schedules, seed_events, test_events_data, test_event_types_data, test_schedules_data, event_id, payload, expected_status):
     seed_event_types([test_event_types_data[0]])
     seed_schedules([test_schedules_data[1]])
@@ -250,7 +248,6 @@ async def test_update_event_error_cases(async_client, seed_event_types, seed_sch
     ({"is_active": False}, {"title": None, "starts_at": DATETIME_2025_05_01.isoformat(), "ends_at": DATETIME_2025_05_02.isoformat(), "event_type_id": EVENT_TYPE_ID_1, "notes": None, "team_id": None}), # partial update (is_active only)
     ({"title": "Partially Updated Event"}, {"starts_at": DATETIME_2025_05_01.isoformat(), "ends_at": DATETIME_2025_05_02.isoformat(), "event_type_id": EVENT_TYPE_ID_1, "notes": None, "is_active": True, "team_id": None}), # partial update (title only)
 ])
-@pytest.mark.asyncio
 async def test_update_event_success(async_client, seed_schedules, seed_event_types, seed_teams, seed_events, test_schedules_data, test_event_types_data, test_teams_data, test_events_data, payload, unchanged_fields):
     seed_schedules([test_schedules_data[1]])
     seed_event_types(test_event_types_data[:2])
@@ -273,12 +270,10 @@ async def test_update_event_success(async_client, seed_schedules, seed_event_typ
 # =============================
 # DELETE EVENT
 # =============================
-@pytest.mark.asyncio
 async def test_delete_event_error_cases(async_client):
     response = await async_client.delete("/events/invalid-uuid-format")
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-@pytest.mark.asyncio
 async def test_delete_event_success(async_client, seed_events, seed_event_types, seed_schedules, test_events_data, test_event_types_data, test_schedules_data):
     seed_event_types([test_event_types_data[0]])
     seed_schedules([test_schedules_data[1]])
@@ -298,7 +293,6 @@ async def test_delete_event_success(async_client, seed_events, seed_event_types,
     ([0], 1), # One event_assignment to cascade delete
     ([0, 1], 2), # Multiple event_assignments to cascade delete
 ])
-@pytest.mark.asyncio
 async def test_delete_event_cascade_event_assignments(
     async_client, get_test_db_session, seed_users, seed_schedules, seed_event_types, seed_events, seed_roles, seed_event_assignments,
     test_users_data, test_schedules_data, test_event_types_data, test_events_data, test_roles_data, test_event_assignments_data,

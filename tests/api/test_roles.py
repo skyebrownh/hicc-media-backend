@@ -2,9 +2,11 @@ import pytest
 from fastapi import status
 from sqlmodel import select, func
 
+pytestmark = pytest.mark.asyncio
+
 from app.db.models import UserRole
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_3, USER_ID_1, USER_ID_2
+from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, USER_ID_1, USER_ID_2
 
 VALID_UPDATE_PAYLOAD = {
     "name": "Updated Role Name",
@@ -16,23 +18,22 @@ VALID_UPDATE_PAYLOAD = {
 # =============================
 # GET ALL ROLES
 # =============================
-@pytest.mark.asyncio
 async def test_get_all_roles_none_exist(async_client):
     response = await async_client.get("/roles")
     assert_empty_list_200(response)
 
-@pytest.mark.asyncio
 async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
     seed_roles(test_roles_data[:3])
     response = await async_client.get("/roles")
     assert_list_200(response, expected_length=3)
     response_json = response.json()
-    assert response_json[0]["name"] == "ProPresenter"
-    assert response_json[1]["id"] is not None
-    assert response_json[1]["code"] == "sound"
-    assert response_json[1]["order"] == 20
-    assert response_json[2]["description"] is None
-    assert response_json[2]["is_active"] is True
+    response_dict = {r["id"]: r for r in response_json}
+    assert response_dict[ROLE_ID_1]["name"] == "ProPresenter"
+    assert response_dict[ROLE_ID_2]["id"] is not None
+    assert response_dict[ROLE_ID_2]["code"] == "sound"
+    assert response_dict[ROLE_ID_2]["order"] == 20
+    assert response_dict[ROLE_ID_3]["description"] is None
+    assert response_dict[ROLE_ID_3]["is_active"] is True
 
 # =============================
 # GET SINGLE ROLE
@@ -41,12 +42,10 @@ async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Role not present
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
-@pytest.mark.asyncio
 async def test_get_single_role_error_cases(async_client, id, expected_status):
     response = await async_client.get(f"/roles/{id}")
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_get_single_role_success(async_client, seed_roles, test_roles_data):
     seed_roles([test_roles_data[0]])
     response = await async_client.get(f"/roles/{ROLE_ID_1}")
@@ -67,15 +66,13 @@ async def test_get_single_role_success(async_client, seed_roles, test_roles_data
     ([], {"name": "Incomplete Role"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Role", "order": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([2], {"name": "Duplicate Code", "order": 6, "code": "new_role"}, status.HTTP_409_CONFLICT), # duplicate role_code
-    ([], {"id": ROLE_ID_3, "name": "ID Not Allowed", "order": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # role_id not allowed in payload
+    ([], {"id": ROLE_ID_3, "name": "ID Not Allowed", "order": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # role.id not allowed in payload
 ])
-@pytest.mark.asyncio
 async def test_insert_role_error_cases(async_client, seed_roles, test_roles_data, role_indices, payload, expected_status):
     conditional_seed(role_indices, test_roles_data, seed_roles)
     response = await async_client.post("/roles", json=payload)
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_insert_role_success(async_client, get_test_db_session, seed_users, seed_proficiency_levels, test_users_data, test_proficiency_levels_data):
     seed_proficiency_levels([test_proficiency_levels_data[2]]) # Untrained proficiency level
     seed_users(test_users_data[:2])
@@ -86,10 +83,11 @@ async def test_insert_role_success(async_client, get_test_db_session, seed_users
     role_id = response.json()["id"]
     user_roles = get_test_db_session.exec(select(UserRole).where(UserRole.role_id == role_id)).all()
     assert len(user_roles) == 2
-    assert str(user_roles[0].user_id) == USER_ID_1
-    assert str(user_roles[0].proficiency_level_id) == PROFICIENCY_LEVEL_ID_3
-    assert str(user_roles[1].user_id) == USER_ID_2
-    assert str(user_roles[1].role_id) == role_id
+    user_roles_dict = {str(ur.user_id): ur for ur in user_roles}
+    assert str(user_roles_dict[USER_ID_1].user_id) == USER_ID_1
+    assert str(user_roles_dict[USER_ID_1].proficiency_level_id) == PROFICIENCY_LEVEL_ID_3
+    assert str(user_roles_dict[USER_ID_2].user_id) == USER_ID_2
+    assert str(user_roles_dict[USER_ID_2].role_id) == role_id
 
 # =============================
 # UPDATE ROLE
@@ -101,7 +99,6 @@ async def test_insert_role_success(async_client, get_test_db_session, seed_users
     (ROLE_ID_1, {"name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     (ROLE_ID_1, {"name": "Invalid", "code": "invalid"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
-@pytest.mark.asyncio
 async def test_update_role_error_cases(async_client, seed_roles, test_roles_data, role_id, payload, expected_status):
     seed_roles([test_roles_data[0]])
     response = await async_client.patch(f"/roles/{role_id}", json=payload)
@@ -112,7 +109,6 @@ async def test_update_role_error_cases(async_client, seed_roles, test_roles_data
     ({"is_active": False}, {"name": "ProPresenter", "code": "propresenter"}), # partial update (is_active only)
     ({"name": "Partially Updated Role"}, {"code": "propresenter", "is_active": True}), # partial update (role_name only)
 ])
-@pytest.mark.asyncio
 async def test_update_role_success(async_client, seed_roles, test_roles_data, payload, unchanged_fields):
     seed_roles([test_roles_data[0]])
     response = await async_client.patch(f"/roles/{ROLE_ID_1}", json=payload)
@@ -121,7 +117,7 @@ async def test_update_role_success(async_client, seed_roles, test_roles_data, pa
     for field, value in payload.items():
         assert response_json[field] == value
     for field, value in unchanged_fields.items():
-        assert response_json[field] == getattr(test_roles_data[0], field)
+        assert response_json[field] == value
 
 # =============================
 # DELETE ROLE
@@ -130,12 +126,10 @@ async def test_update_role_success(async_client, seed_roles, test_roles_data, pa
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Role not present
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
 ])
-@pytest.mark.asyncio
 async def test_delete_role_error_cases(async_client, id, expected_status):
     response = await async_client.delete(f"/roles/{id}")
     assert response.status_code == expected_status
 
-@pytest.mark.asyncio
 async def test_delete_role_success(async_client, seed_roles, test_roles_data):
     seed_roles([test_roles_data[0]])
     response = await async_client.delete(f"/roles/{ROLE_ID_1}")
@@ -153,7 +147,6 @@ async def test_delete_role_success(async_client, seed_roles, test_roles_data):
     ([0], [0], [0], 1), # One user_role to cascade delete
     ([0, 1], [0], [0, 2], 2), # Multiple user_roles to cascade delete
 ])
-@pytest.mark.asyncio
 async def test_delete_role_cascade_user_roles(
     async_client, get_test_db_session, seed_roles, seed_users, seed_proficiency_levels, seed_user_roles,
     test_roles_data, test_users_data, test_proficiency_levels_data, test_user_roles_data,

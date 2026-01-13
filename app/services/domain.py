@@ -159,7 +159,7 @@ def get_schedule_grid_from_schedule(session: Session, schedule: Schedule) -> Sch
                 ],
                 availability=[
                     UserUnavailablePeriodEmbeddedPublic(
-                        user_first_name=ua.user.first_name, user_last_name=ua.user.last_name,
+                        user_id=ua.user.id, user_first_name=ua.user.first_name, user_last_name=ua.user.last_name,
                     ) for ua in unavailable_users
                 ],
             )

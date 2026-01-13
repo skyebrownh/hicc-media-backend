@@ -1,8 +1,10 @@
 import pytest
 from fastapi import status
 
+pytestmark = pytest.mark.asyncio
+
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
-from tests.utils.constants import BAD_ID_0000, EVENT_ID_1, ROLE_ID_1, USER_ID_1, USER_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, SCHEDULE_ID_2
+from tests.utils.constants import BAD_ID_0000, EVENT_ID_1, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, SCHEDULE_ID_2
 
 VALID_UPDATE_PAYLOAD = {
     "requirement_level": "OPTIONAL",
@@ -27,7 +29,6 @@ def seed_for_event_assignments_tests(seed_roles, seed_proficiency_levels, seed_u
 # =============================
 # GET ALL EVENT ASSIGNMENTS FOR EVENT
 # =============================
-@pytest.mark.asyncio
 async def test_get_all_event_assignments_for_event_none_exist(async_client, seed_schedules, seed_event_types, seed_events, test_schedules_data, test_event_types_data, test_events_data):
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])
@@ -35,7 +36,6 @@ async def test_get_all_event_assignments_for_event_none_exist(async_client, seed
     response = await async_client.get(f"/events/{EVENT_ID_1}/assignments")
     assert_empty_list_200(response)
 
-@pytest.mark.asyncio
 async def test_get_all_event_assignments_for_event_success(async_client, seed_for_event_assignments_tests):
     response = await async_client.get(f"/events/{EVENT_ID_1}/assignments")
     assert_list_200(response, expected_length=2)
@@ -57,18 +57,19 @@ async def test_get_all_event_assignments_for_event_success(async_client, seed_fo
     assert all("proficiency_level_name" in ea for ea in response_json)
 
     # data assertions
-    assert response_json[0]["id"] is not None
-    assert response_json[0]["event_id"] == EVENT_ID_1
-    assert response_json[0]["role_id"] == ROLE_ID_1
-    assert response_json[0]["assigned_user_id"] == USER_ID_1
-    assert response_json[0]["proficiency_level_rank"] == 3
-    assert response_json[1]["is_applicable"] is True
-    assert response_json[1]["requirement_level"] == "REQUIRED"
-    assert response_json[1]["assigned_user_phone"] is None
-    assert response_json[1]["event_schedule_id"] == SCHEDULE_ID_2
-    assert response_json[1]["event_team_name"] is None
-    assert response_json[1]["event_type_code"] == "service"
-    assert response_json[1]["role_code"] == "sound"
+    event_assignments_dict = {ea["role_id"]: ea for ea in response_json}
+    assert event_assignments_dict[ROLE_ID_1]["id"] is not None
+    assert event_assignments_dict[ROLE_ID_1]["event_id"] == EVENT_ID_1
+    assert event_assignments_dict[ROLE_ID_1]["role_id"] == ROLE_ID_1
+    assert event_assignments_dict[ROLE_ID_1]["assigned_user_id"] == USER_ID_1
+    assert event_assignments_dict[ROLE_ID_1]["proficiency_level_rank"] == 3
+    assert event_assignments_dict[ROLE_ID_2]["is_applicable"] is True
+    assert event_assignments_dict[ROLE_ID_2]["requirement_level"] == "REQUIRED"
+    assert event_assignments_dict[ROLE_ID_2]["assigned_user_phone"] is None
+    assert event_assignments_dict[ROLE_ID_2]["event_schedule_id"] == SCHEDULE_ID_2
+    assert event_assignments_dict[ROLE_ID_2]["event_team_name"] is None
+    assert event_assignments_dict[ROLE_ID_2]["event_type_code"] == "service"
+    assert event_assignments_dict[ROLE_ID_2]["role_code"] == "sound"
 
 # =============================
 # UPDATE EVENT ASSIGNMENT
@@ -81,7 +82,6 @@ async def test_get_all_event_assignments_for_event_success(async_client, seed_fo
     (EVENT_ASSIGNMENT_ID_1, {"assigned_user_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # FK violation
     (EVENT_ASSIGNMENT_ID_1, {"requirement_level": "OPTIONAL", "id": EVENT_ASSIGNMENT_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
-@pytest.mark.asyncio
 async def test_update_event_assignment_error_cases(async_client, seed_for_event_assignments_tests, assignment_id, payload, expected_status):
     response = await async_client.patch(f"/assignments/{assignment_id}", json=payload)
     assert response.status_code == expected_status
@@ -91,7 +91,6 @@ async def test_update_event_assignment_error_cases(async_client, seed_for_event_
     ({"is_active": False}, {"requirement_level": "REQUIRED", "assigned_user_id": USER_ID_1}), # partial update (is_active only)
     ({"requirement_level": "OPTIONAL"}, {"assigned_user_id": USER_ID_1, "is_active": True}), # partial update (requirement_level only)
 ])
-@pytest.mark.asyncio
 async def test_update_event_assignment_success(async_client, seed_for_event_assignments_tests, payload, unchanged_fields):
     response = await async_client.patch(f"/assignments/{EVENT_ASSIGNMENT_ID_1}", json=payload)
     assert response.status_code == status.HTTP_200_OK
