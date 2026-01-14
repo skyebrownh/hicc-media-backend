@@ -1,6 +1,6 @@
-# HICC Media Backend
+# StewardHQ API
 
-FastAPI + Railway Postgres DB + Redis backend for a scheduling application (specifically for a volunteer church media team)
+StewardHQ is a people-centric platform for managing team scheduling, availability, assignments, and training. This API provides backend services for frontend channels.
 
 ## Architecture
 
@@ -19,11 +19,10 @@ FastAPI + Railway Postgres DB + Redis backend for a scheduling application (spec
 3. Configure environment variables
     - `.env`
         - `FAST_API_KEY` - `x-api-key` header is used for auth
-    - `test.env`
-        - `FAST_API_KEY` - `x-api-key` header is used for auth
+        - `RAILWAY_DB_URL` is for remote database connection, and `LOCAL_TEST_DB_URL` is local database connection for tests.
 4. Run tests (optional)
     ```bash
-    pytest
+    uv run pytest
     ```
 5. Run dev server
     ```bash
@@ -34,9 +33,8 @@ FastAPI + Railway Postgres DB + Redis backend for a scheduling application (spec
 
 ## Roadmap
 
--   [x] Refactor to Railway Postgres DB
--   [x] Refactor FastAPI that runs CRUDs on Railway DB
-        routes
--   [x] Refactor unit testing and integration testing with Railway DB
+-   [x] Design the data model and seed historical data
+-   [x] Create FastAPI for MVP logic as routes
+-   [x] Implement unit and integration testing
 -   [ ] Implement Redis as a cache
--   [ ] Create an auto-scheduling algorithm
+-   [ ] Create a schedule generation algorithm, including drafting assignments based on rules and constraints
