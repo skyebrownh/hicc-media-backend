@@ -1,25 +1,26 @@
 # StewardHQ API
 
-StewardHQ is a people-centric platform for managing team scheduling, availability, assignments, and training. This API provides backend services for frontend channels.
+StewardHQ is a people-centric platform for managing team scheduling, availability, assignments, and training. This repository contains the backend API that powers StewardHQ's frontend applications.
 
 ## Architecture
 
--   [Fast API](https://fastapi.tiangolo.com/) - Python web framework for the API
--   [Railway](https://railway.com/) - Infrastructure
+-   [Fast API](https://fastapi.tiangolo.com/) - Python web framework
+-   [Railway](https://railway.com/) - Hosting an infrastructure
     -   [Postgres](https://www.postgresql.org/) - Database
     -   [Redis](https://redis.io/) - Cache (coming soon)
 
 ## Getting Started / Installation
 
 1. Clone this repo
-2. Create and activate Python virtual environment (v3.13.3) and install dependencies
+2. Create and activate Python virtual environment (Python 3.13.3 recommended), then install dependencies:
     ```bash
     uv sync
     ```
 3. Configure environment variables
     - `.env`
-        - `FAST_API_KEY` - `x-api-key` header is used for auth
-        - `RAILWAY_DB_URL` is for remote database connection, and `LOCAL_TEST_DB_URL` is local database connection for tests.
+        - `FAST_API_KEY` – API key used for `x-api-key` header authentication
+        - `RAILWAY_DB_URL` – Remote database connection string
+        - `LOCAL_TEST_DB_URL` – Local database connection string used for tests
 4. Run tests (optional)
     ```bash
     uv run pytest
@@ -34,7 +35,7 @@ StewardHQ is a people-centric platform for managing team scheduling, availabilit
 ## Roadmap
 
 -   [x] Design the data model and seed historical data
--   [x] Create FastAPI for MVP logic as routes
+-   [x] Implement FastAPI routes for MVP business logic
 -   [x] Implement unit and integration testing
 -   [ ] Implement Redis as a cache
--   [ ] Create a schedule generation algorithm, including drafting assignments based on rules and constraints
+-   [ ] Implement a schedule generation engine with rule- and constraint-based assignment logic
