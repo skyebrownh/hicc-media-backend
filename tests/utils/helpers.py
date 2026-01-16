@@ -29,9 +29,20 @@ def assert_list_201(response: Response, expected_length: int) -> None:
 
 def _filter_timestamp_keys(data, additional_keys_to_exclude=None):
     """Recursively filter out specified keys from dictionaries and lists at any nesting level."""
-    keys_to_exclude = ["created_at", "updated_at", "starts_at", "ends_at"]
+    keys_to_exclude = ["created_at", "updated_at"]
     if additional_keys_to_exclude is not None:
         keys_to_exclude.extend(additional_keys_to_exclude)
+    
+    # Handle dict_keys and other set-like views (dict_keys, dict_values, etc.)
+    # These are iterable but not dict/list/set/str/bytes
+    if hasattr(data, '__iter__') and not isinstance(data, (str, bytes, dict, list, set)):
+        # Check if all items are hashable (indicating it's a set-like view)
+        try:
+            # Try to convert to set and filter - this works for dict_keys, dict_values, etc.
+            return {k for k in data if k not in keys_to_exclude}
+        except (TypeError, ValueError):
+            # If conversion fails (e.g., unhashable items), fall through to other handling
+            pass
     
     if isinstance(data, dict):
         return {
@@ -39,6 +50,8 @@ def _filter_timestamp_keys(data, additional_keys_to_exclude=None):
             for k, v in data.items()
             if k not in keys_to_exclude
         }
+    elif isinstance(data, set):
+        return {k for k in data if k not in keys_to_exclude}
     elif isinstance(data, list):
         return [_filter_timestamp_keys(item, keys_to_exclude) for item in data]
     else:
@@ -49,7 +62,7 @@ def assert_single_item_200(response: Response, expected_item: dict) -> None:
     assert response.status_code == status.HTTP_200_OK
     response_json = response.json()
     assert isinstance(response_json, dict)
-    filtered_response = _filter_timestamp_keys(response_json)
+    filtered_response = _filter_timestamp_keys(response_json, additional_keys_to_exclude=["starts_at", "ends_at"])
     print(json.dumps(find_dict_difference(filtered_response, expected_item), indent=4))
     assert filtered_response == expected_item
 
@@ -59,7 +72,7 @@ def assert_single_item_201(response: Response, expected_item: dict) -> None:
     response_json = response.json()
     assert isinstance(response_json, dict)
     assert response_json["id"] is not None
-    filtered_response = _filter_timestamp_keys(response_json, additional_keys_to_exclude=["id"])
+    filtered_response = _filter_timestamp_keys(response_json, additional_keys_to_exclude=["id", "starts_at", "ends_at"])
     print(json.dumps(find_dict_difference(filtered_response, expected_item), indent=4))
     assert filtered_response == expected_item
 

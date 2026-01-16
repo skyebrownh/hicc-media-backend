@@ -1,10 +1,15 @@
 import pytest
 from fastapi import status
 
+from tests.utils.helpers import (
+    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
+    _filter_timestamp_keys
+)
+from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3
+
 pytestmark = pytest.mark.asyncio
 
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3
+PROFICIENCY_LEVELS_RESPONSE_KEYS = {"id", "name", "code", "rank", "is_active", "is_assignable"}
 
 VALID_UPDATE_PAYLOAD = {
     "name": "Updated Level Name", 
@@ -26,6 +31,7 @@ async def test_get_all_proficiency_levels_success(async_client, seed_proficiency
     assert_list_200(response, expected_length=3)
     response_json = response.json()
     response_dict = {pl["id"]: pl for pl in response_json}
+    assert set(_filter_timestamp_keys(response_dict[PROFICIENCY_LEVEL_ID_1].keys())) == PROFICIENCY_LEVELS_RESPONSE_KEYS
     assert response_dict[PROFICIENCY_LEVEL_ID_1]["name"] == "Novice"
     assert response_dict[PROFICIENCY_LEVEL_ID_2]["id"] is not None
     assert response_dict[PROFICIENCY_LEVEL_ID_2]["code"] == "proficient"

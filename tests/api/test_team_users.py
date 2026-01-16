@@ -2,11 +2,13 @@ import pytest
 from fastapi import status
 from sqlmodel import select
 
-pytestmark = pytest.mark.asyncio
-
 from app.db.models import TeamUser
 from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_201, conditional_seed
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, USER_ID_1, USER_ID_2
+
+pytestmark = pytest.mark.asyncio
+
+TEAM_USERS_RESPONSE_KEYS = {"id", "team_id", "user_id", "team_name", "team_code", "team_is_active", "user_first_name", "user_last_name", "user_email", "user_phone", "user_is_active", "is_active"}
 
 # =============================
 # FIXTURES
@@ -37,15 +39,8 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
     response = await async_client.get(f"/teams/{TEAM_ID_1}/users")
     assert_list_200(response, expected_length=2)
     response_json = response.json()
-
-    # shape assertions
-    assert all("id" in tu for tu in response_json)
-    assert all("team_id" in tu for tu in response_json)
-    assert all("user_id" in tu for tu in response_json)
-    assert all("team_code" in tu for tu in response_json)
-    assert all("user_first_name" in tu for tu in response_json)
-    
-    # data assertions
+    response_dict = {tu["user_id"]: tu for tu in response_json}
+    assert set(response_dict[USER_ID_1].keys()) == TEAM_USERS_RESPONSE_KEYS
     assert all(tu["team_id"] == TEAM_ID_1 for tu in response_json)
     assert {tu["user_id"] for tu in response_json} == {USER_ID_1, USER_ID_2}
     team_users_dict = {tu["user_id"]: tu for tu in response_json}

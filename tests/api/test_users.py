@@ -2,11 +2,16 @@ import pytest
 from fastapi import status
 from sqlmodel import select, func
 
+from app.db.models import TeamUser, UserRole
+from tests.utils.helpers import (
+    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
+    _filter_timestamp_keys
+)
+from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, USER_ID_3, PROFICIENCY_LEVEL_ID_3
+
 pytestmark = pytest.mark.asyncio
 
-from app.db.models import TeamUser, UserRole
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, USER_ID_3, PROFICIENCY_LEVEL_ID_3
+USERS_RESPONSE_KEYS = {"id", "first_name", "last_name", "email", "phone", "is_active"}
 
 VALID_UPDATE_PAYLOAD = {
     "first_name": "Updated First Name",
@@ -29,6 +34,7 @@ async def test_get_all_users_success(async_client, seed_users, test_users_data):
     assert_list_200(response, expected_length=3)
     response_json = response.json()
     response_dict = {u["id"]: u for u in response_json}
+    assert set(_filter_timestamp_keys(response_dict[USER_ID_1].keys())) == USERS_RESPONSE_KEYS
     assert response_dict[USER_ID_1]["first_name"] == "Alice"
     assert response_dict[USER_ID_2]["id"] is not None
     assert response_dict[USER_ID_2]["email"] == "bob@example.com"

@@ -2,11 +2,16 @@ import pytest
 from fastapi import status
 from sqlmodel import select, func
 
+from app.db.models import TeamUser
+from tests.utils.helpers import (
+    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
+    _filter_timestamp_keys
+)
+from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3
+
 pytestmark = pytest.mark.asyncio
 
-from app.db.models import TeamUser
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3
+TEAMS_RESPONSE_KEYS = {"id", "name", "code", "is_active"}
 
 # =============================
 # GET ALL TEAMS
@@ -21,6 +26,7 @@ async def test_get_all_teams_success(async_client, seed_teams, test_teams_data):
     assert_list_200(response, expected_length=3)
     response_json = response.json()
     response_dict = {t["id"]: t for t in response_json}
+    assert set(_filter_timestamp_keys(response_dict[TEAM_ID_1].keys())) == TEAMS_RESPONSE_KEYS
     assert response_dict[TEAM_ID_1]["name"] == "Team 1"
     assert response_dict[TEAM_ID_2]["id"] is not None
     assert response_dict[TEAM_ID_2]["code"] == "team_2"

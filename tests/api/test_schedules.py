@@ -2,11 +2,16 @@ import pytest
 from fastapi import status
 from sqlmodel import select, func
 
+from app.db.models import Event, EventAssignment
+from tests.utils.helpers import (
+    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
+    _filter_timestamp_keys
+)
+from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_TYPE_ID_1
+
 pytestmark = pytest.mark.asyncio
 
-from app.db.models import Event, EventAssignment
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_TYPE_ID_1
+SCHEDULES_RESPONSE_KEYS = {"id", "month", "year", "notes", "is_active"}
 
 # =============================
 # FIXTURES
@@ -34,6 +39,7 @@ async def test_get_all_schedules_success(async_client, seed_schedules, test_sche
     assert_list_200(response, expected_length=2)
     response_json = response.json()
     response_dict = {s["id"]: s for s in response_json}
+    assert set(_filter_timestamp_keys(response_dict[SCHEDULE_ID_1].keys())) == SCHEDULES_RESPONSE_KEYS
     assert response_dict[SCHEDULE_ID_1]["month"] == 1
     assert response_dict[SCHEDULE_ID_1]["year"] == 2025
     assert response_dict[SCHEDULE_ID_2]["id"] is not None

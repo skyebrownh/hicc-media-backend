@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, Response
 
 from app.db.models import EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic
-from app.utils.dependencies import SessionDep, ScheduleDep, ScheduleForEventsDep, EventDep, EventWithFullHierarchyDep
+from app.utils.dependencies import SessionDep, ScheduleForEventsDep, EventDep, EventWithFullHierarchyDep
 from app.services.builders import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event
 from app.services.domain import update_object, create_event_with_default_assignment_slots
 

@@ -3,15 +3,22 @@ import json
 from fastapi import status
 from sqlmodel import select, func
 
-pytestmark = pytest.mark.asyncio
-
 from app.db.models import EventAssignment
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc, conditional_seed
+from tests.utils.helpers import (
+    assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc, conditional_seed,
+    _filter_timestamp_keys
+)
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
     EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, TEAM_ID_1, USER_ID_1, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
     DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, DATETIME_2025_05_04
 )
+
+pytestmark = pytest.mark.asyncio
+
+EVENTS_RESPONSE_KEYS = {"event", "event_assignments"}
+EVENT_RESPONSE_KEYS = {"id", "schedule_id", "title", "event_type_id", "starts_at", "ends_at", "team_id", "notes", "is_active", "schedule_month", "schedule_year", "schedule_notes", "schedule_is_active", "team_name", "team_code", "team_is_active", "event_type_name", "event_type_code", "event_type_is_active"}
+EVENT_ASSIGNMENTS_RESPONSE_KEYS = {"id", "role_id", "role_name", "role_order", "role_code", "is_applicable", "requirement_level", "assigned_user_id", "assigned_user_first_name", "assigned_user_last_name", "is_active"}
 
 VALID_INSERT_PAYLOAD = {
     "title": "New Event",
@@ -54,37 +61,19 @@ async def test_get_all_events_for_schedule_success(async_client, seed_for_events
     assert_list_200(response, expected_length=3)
     response_json = response.json()
     print(f"GET all events for schedule response_json: {json.dumps(response_json, indent=4)}")
+    response_dict = {e["event"]["id"]: e for e in response_json}
+    assert set(_filter_timestamp_keys(response_dict[EVENT_ID_1].keys())) == EVENTS_RESPONSE_KEYS
+    assert set(response_dict[EVENT_ID_1]["event"].keys()) == EVENT_RESPONSE_KEYS
+    for ea in response_dict[EVENT_ID_1]["event_assignments"]:
+        assert set(_filter_timestamp_keys(ea.keys())) == EVENT_ASSIGNMENTS_RESPONSE_KEYS
 
-    # shape assertions
-    for obj in response_json:
-        assert "event" in obj
-        assert "event_assignments" in obj
-        
-        event = obj["event"]
-        assert "id" in event
-        assert "schedule_id" in event
-        assert "event_type_id" in event
-        assert "starts_at" in event
-        assert "ends_at" in event
-        assert "team_id" in event
-
-        for ea in obj["event_assignments"]:
-            assert "id" in ea
-            assert "role_id" in ea
-            assert "role_name" in ea
-            assert "is_applicable" in ea
-            assert "requirement_level" in ea
-            assert "assigned_user_id" in ea
-            assert "assigned_user_first_name" in ea
-
-    events_dict = {obj["event"]["id"]: obj for obj in response_json}
-    assert events_dict[EVENT_ID_1]["event"]["id"] is not None
-    assert events_dict[EVENT_ID_1]["event"]["schedule_id"] == SCHEDULE_ID_2
-    assert events_dict[EVENT_ID_2]["event"]["event_type_id"] == EVENT_TYPE_ID_1
-    assert parse_to_utc(events_dict[EVENT_ID_2]["event"]["starts_at"]) == DATETIME_2025_05_02
-    assert parse_to_utc(events_dict[EVENT_ID_3]["event"]["ends_at"]) == DATETIME_2025_05_04
-    assert events_dict[EVENT_ID_3]["event"]["team_id"] is None
-    event_assignments_dict = {ea["role_id"]: ea for ea in events_dict[EVENT_ID_1]["event_assignments"]}
+    assert response_dict[EVENT_ID_1]["event"]["id"] is not None
+    assert response_dict[EVENT_ID_1]["event"]["schedule_id"] == SCHEDULE_ID_2
+    assert response_dict[EVENT_ID_2]["event"]["event_type_id"] == EVENT_TYPE_ID_1
+    assert parse_to_utc(response_dict[EVENT_ID_2]["event"]["starts_at"]) == DATETIME_2025_05_02
+    assert parse_to_utc(response_dict[EVENT_ID_3]["event"]["ends_at"]) == DATETIME_2025_05_04
+    assert response_dict[EVENT_ID_3]["event"]["team_id"] is None
+    event_assignments_dict = {ea["role_id"]: ea for ea in response_dict[EVENT_ID_1]["event_assignments"]}
     assert event_assignments_dict[ROLE_ID_1]["id"] is not None
     assert event_assignments_dict[ROLE_ID_1]["role_id"] == ROLE_ID_1
     assert event_assignments_dict[ROLE_ID_1]["role_name"] == "ProPresenter"
@@ -188,29 +177,11 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
     response = await async_client.post(f"/schedules/{SCHEDULE_ID_2}/events", json=VALID_INSERT_PAYLOAD)
     assert response.status_code == status.HTTP_201_CREATED
     response_json = response.json()
-
-    # shape assertions
-    assert "event" in response_json
-    assert "event_assignments" in response_json
-
-    event = response_json["event"]
-    assert "id" in event
-    assert "schedule_id" in event
-    assert "event_type_id" in event
-    assert "starts_at" in event
-    assert "ends_at" in event
-    assert "team_id" in event
-
+    assert set(_filter_timestamp_keys(response_json.keys())) == EVENTS_RESPONSE_KEYS
+    assert set(_filter_timestamp_keys(response_json["event"].keys())) == EVENT_RESPONSE_KEYS
     for ea in response_json["event_assignments"]:
-        assert "id" in ea
-        assert "role_id" in ea
-        assert "role_name" in ea
-        assert "is_applicable" in ea
-        assert "requirement_level" in ea
-        assert "assigned_user_id" in ea
-        assert "assigned_user_first_name" in ea
+        assert set(_filter_timestamp_keys(ea.keys())) == EVENT_ASSIGNMENTS_RESPONSE_KEYS
 
-    # data assertions
     assert response_json["event"]["id"] is not None
     assert response_json["event"]["schedule_id"] == SCHEDULE_ID_2
     assert response_json["event"]["event_type_id"] == EVENT_TYPE_ID_1

@@ -1,10 +1,15 @@
 import pytest
 from fastapi import status
 
+from tests.utils.helpers import (
+    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
+    _filter_timestamp_keys
+)
+from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2, EVENT_TYPE_ID_3
+
 pytestmark = pytest.mark.asyncio
 
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2, EVENT_TYPE_ID_3
+EVENT_TYPES_RESPONSE_KEYS = {"id", "name", "code", "is_active"}
 
 # =============================
 # GET ALL EVENT TYPES
@@ -19,6 +24,7 @@ async def test_get_all_event_types_success(async_client, seed_event_types, test_
     assert_list_200(response, expected_length=2)
     response_json = response.json()
     response_dict = {et["id"]: et for et in response_json}
+    assert set(_filter_timestamp_keys(response_dict[EVENT_TYPE_ID_1].keys())) == EVENT_TYPES_RESPONSE_KEYS
     assert response_dict[EVENT_TYPE_ID_1]["name"] == "Service"
     assert response_dict[EVENT_TYPE_ID_2]["id"] is not None
     assert response_dict[EVENT_TYPE_ID_2]["code"] == "rehearsal"

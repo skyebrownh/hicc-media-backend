@@ -1,10 +1,10 @@
 import pytest
 from fastapi import status
 
-pytestmark = pytest.mark.asyncio
-
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.utils.constants import BAD_ID_0000, EVENT_ID_1, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, SCHEDULE_ID_2
+
+pytestmark = pytest.mark.asyncio
 
 VALID_UPDATE_PAYLOAD = {
     "requirement_level": "OPTIONAL",

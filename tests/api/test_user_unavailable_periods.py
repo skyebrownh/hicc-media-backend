@@ -1,11 +1,11 @@
 import pytest
 from fastapi import status
 
-pytestmark = pytest.mark.asyncio
-
 from app.db.models import UserUnavailablePeriod
-from tests.utils.helpers import assert_single_item_201, assert_list_201, conditional_seed, parse_to_utc
+from tests.utils.helpers import assert_single_item_201, assert_list_201, parse_to_utc
 from tests.utils.constants import BAD_ID_0000, DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, USER_ID_1, USER_UNAVAILABLE_PERIOD_ID_1, USER_UNAVAILABLE_PERIOD_ID_2
+
+pytestmark = pytest.mark.asyncio
 
 STARTS_AT = DATETIME_2025_01_01.isoformat()
 ENDS_AT = DATETIME_2025_01_02.isoformat()

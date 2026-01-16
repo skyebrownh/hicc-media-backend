@@ -1,10 +1,12 @@
 import pytest
 from fastapi import status
 
-pytestmark = pytest.mark.asyncio
-
 from tests.utils.helpers import assert_empty_list_200, assert_list_200
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, ROLE_ID_1, ROLE_ID_2, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
+
+pytestmark = pytest.mark.asyncio
+
+USER_ROLES_RESPONSE_KEYS = {"id", "user_id", "role_id", "proficiency_level_id", "user_first_name", "user_last_name", "user_email", "user_phone", "user_is_active", "role_name", "role_description", "role_order", "role_is_active", "role_code", "proficiency_level_name", "proficiency_level_rank", "proficiency_level_is_assignable", "proficiency_level_is_active", "proficiency_level_code"}
 
 # =============================
 # FIXTURES
@@ -36,17 +38,8 @@ async def test_get_roles_for_user_success(async_client, seed_for_user_roles_test
     response = await async_client.get(f"/users/{USER_ID_1}/roles")
     assert_list_200(response, expected_length=2)
     response_json = response.json()
-
-    # shape assertions
-    assert all("id" in ur for ur in response_json)
-    assert all("user_id" in ur for ur in response_json)
-    assert all("role_id" in ur for ur in response_json)
-    assert all("proficiency_level_id" in ur for ur in response_json)
-    assert all("user_last_name" in ur for ur in response_json)
-    assert all("role_name" in ur for ur in response_json)
-    assert all("proficiency_level_rank" in ur for ur in response_json)
-
-    # data assertions
+    response_dict = {ur["role_id"]: ur for ur in response_json}
+    assert set(response_dict[ROLE_ID_1].keys()) == USER_ROLES_RESPONSE_KEYS
     assert all(ur["user_id"] == USER_ID_1 for ur in response_json)
     assert {ur["role_id"] for ur in response_json} == {ROLE_ID_1, ROLE_ID_2}
     assert {ur["proficiency_level_id"] for ur in response_json} == {PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2}
@@ -75,17 +68,8 @@ async def test_get_users_for_role_success(async_client, seed_for_user_roles_test
     response = await async_client.get(f"/roles/{ROLE_ID_1}/users")
     assert_list_200(response, expected_length=2)
     response_json = response.json()
-
-    # shape assertions
-    assert all("id" in ur for ur in response_json)
-    assert all("role_id" in ur for ur in response_json)
-    assert all("user_id" in ur for ur in response_json)
-    assert all("proficiency_level_id" in ur for ur in response_json)
-    assert all("user_email" in ur for ur in response_json)
-    assert all("role_is_active" in ur for ur in response_json)
-    assert all("proficiency_level_rank" in ur for ur in response_json)
-
-    # data assertions
+    response_dict = {ur["user_id"]: ur for ur in response_json}
+    assert set(response_dict[USER_ID_1].keys()) == USER_ROLES_RESPONSE_KEYS
     assert all(ur["role_id"] == ROLE_ID_1 for ur in response_json)
     assert {ur["user_id"] for ur in response_json} == {USER_ID_1, USER_ID_2}
     assert all(ur["proficiency_level_id"] == PROFICIENCY_LEVEL_ID_1 for ur in response_json)

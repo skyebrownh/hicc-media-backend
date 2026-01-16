@@ -2,11 +2,16 @@ import pytest
 from fastapi import status
 from sqlmodel import select, func
 
+from app.db.models import UserRole
+from tests.utils.helpers import (
+    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
+    _filter_timestamp_keys
+)
+from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, USER_ID_1, USER_ID_2
+
 pytestmark = pytest.mark.asyncio
 
-from app.db.models import UserRole
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed
-from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, USER_ID_1, USER_ID_2
+ROLES_RESPONSE_KEYS = {"id", "name", "code", "order", "description", "is_active"}
 
 VALID_UPDATE_PAYLOAD = {
     "name": "Updated Role Name",
@@ -28,6 +33,7 @@ async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
     assert_list_200(response, expected_length=3)
     response_json = response.json()
     response_dict = {r["id"]: r for r in response_json}
+    assert set(_filter_timestamp_keys(response_dict[ROLE_ID_1].keys())) == ROLES_RESPONSE_KEYS
     assert response_dict[ROLE_ID_1]["name"] == "ProPresenter"
     assert response_dict[ROLE_ID_2]["id"] is not None
     assert response_dict[ROLE_ID_2]["code"] == "sound"
