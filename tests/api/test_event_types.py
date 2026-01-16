@@ -2,8 +2,8 @@ import pytest
 from fastapi import status
 
 from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
-    _filter_timestamp_keys
+    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
+    _filter_excluded_keys
 )
 from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2, EVENT_TYPE_ID_3
 
@@ -21,10 +21,10 @@ async def test_get_all_event_types_none_exist(async_client):
 async def test_get_all_event_types_success(async_client, seed_event_types, test_event_types_data):
     seed_event_types(test_event_types_data[:2])
     response = await async_client.get("/event_types")
-    assert_list_200(response, expected_length=2)
+    assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {et["id"]: et for et in response_json}
-    assert set(_filter_timestamp_keys(response_dict[EVENT_TYPE_ID_1].keys())) == EVENT_TYPES_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_dict[EVENT_TYPE_ID_1].keys())) == EVENT_TYPES_RESPONSE_KEYS
     assert response_dict[EVENT_TYPE_ID_1]["name"] == "Service"
     assert response_dict[EVENT_TYPE_ID_2]["id"] is not None
     assert response_dict[EVENT_TYPE_ID_2]["code"] == "rehearsal"
@@ -44,7 +44,7 @@ async def test_get_single_event_type_error_cases(async_client, id, expected_stat
 async def test_get_single_event_type_success(async_client, seed_event_types, test_event_types_data):
     seed_event_types([test_event_types_data[0]])
     response = await async_client.get(f"/event_types/{EVENT_TYPE_ID_1}")
-    assert_single_item_200(response, expected_item={
+    assert_single_item_response(response, expected_item={
         "id": EVENT_TYPE_ID_1,
         "name": "Service",
         "code": "service",
@@ -68,7 +68,7 @@ async def test_insert_event_type_error_cases(async_client, seed_event_types, tes
 
 async def test_insert_event_type_success(async_client):
     response = await async_client.post("/event_types", json={"name": "New Type", "code": "new_type"})
-    assert_single_item_201(response, expected_item={"name": "New Type", "code": "new_type", "is_active": True})
+    assert_single_item_response(response, expected_item={"name": "New Type", "code": "new_type", "is_active": True}, status_code=status.HTTP_201_CREATED)
 
 # =============================
 # UPDATE EVENT TYPE

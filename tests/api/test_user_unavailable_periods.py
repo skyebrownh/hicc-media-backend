@@ -2,7 +2,7 @@ import pytest
 from fastapi import status
 
 from app.db.models import UserUnavailablePeriod
-from tests.utils.helpers import assert_single_item_201, assert_list_201, parse_to_utc
+from tests.utils.helpers import assert_single_item_response, assert_list_response, parse_to_utc
 from tests.utils.constants import BAD_ID_0000, DATETIME_2025_01_01, DATETIME_2025_01_02, DATETIME_2025_04_01, DATETIME_2025_05_01, DATETIME_2025_05_02, DATETIME_2025_05_03, USER_ID_1, USER_UNAVAILABLE_PERIOD_ID_1, USER_UNAVAILABLE_PERIOD_ID_2
 
 pytestmark = pytest.mark.asyncio
@@ -36,14 +36,14 @@ async def test_insert_user_unavailable_period_success(async_client, seed_users, 
     response_json = response.json()
     assert parse_to_utc(response_json["starts_at"]) == DATETIME_2025_01_01
     assert parse_to_utc(response_json["ends_at"]) == DATETIME_2025_01_02
-    assert_single_item_201(response, expected_item={
+    assert_single_item_response(response, expected_item={
         "user_id": USER_ID_1,
         "user_first_name": "Alice",
         "user_last_name": "Smith",
         "user_email": "alice@example.com",
         "user_phone": "555-1111",
         "user_is_active": True
-    })
+    }, status_code=status.HTTP_201_CREATED, additional_keys_to_exclude=["starts_at", "ends_at"])
 
 # =============================
 # INSERT USER UNAVAILABLE PERIODS BULK
@@ -65,7 +65,7 @@ async def test_insert_user_unavailable_periods_bulk_success(async_client, seed_u
     seed_users([test_users_data[0]])
     response = await async_client.post(f"/users/{USER_ID_1}/availability/bulk", json=[VALID_PAYLOAD, VALID_PAYLOAD_2])
     response_json = response.json()
-    assert_list_201(response, expected_length=2)
+    assert_list_response(response, expected_length=2, status_code=status.HTTP_201_CREATED)
 
     # shape assertions
     for item in response_json:

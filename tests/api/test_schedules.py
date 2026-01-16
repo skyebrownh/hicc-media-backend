@@ -4,8 +4,8 @@ from sqlmodel import select, func
 
 from app.db.models import Event, EventAssignment
 from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
-    _filter_timestamp_keys
+    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
+    _filter_excluded_keys
 )
 from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_TYPE_ID_1
 
@@ -36,10 +36,10 @@ async def test_get_all_schedules_none_exist(async_client):
 async def test_get_all_schedules_success(async_client, seed_schedules, test_schedules_data):
     seed_schedules(test_schedules_data)
     response = await async_client.get("/schedules")
-    assert_list_200(response, expected_length=2)
+    assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {s["id"]: s for s in response_json}
-    assert set(_filter_timestamp_keys(response_dict[SCHEDULE_ID_1].keys())) == SCHEDULES_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_dict[SCHEDULE_ID_1].keys())) == SCHEDULES_RESPONSE_KEYS
     assert response_dict[SCHEDULE_ID_1]["month"] == 1
     assert response_dict[SCHEDULE_ID_1]["year"] == 2025
     assert response_dict[SCHEDULE_ID_2]["id"] is not None
@@ -62,7 +62,7 @@ async def test_get_single_schedule_error_cases(async_client, id, expected_status
 async def test_get_single_schedule_success(async_client, seed_schedules, test_schedules_data):
     seed_schedules([test_schedules_data[0]])
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_1}")
-    assert_single_item_200(response, expected_item={
+    assert_single_item_response(response, expected_item={
         "id": SCHEDULE_ID_1,
         "month": 1,
         "year": 2025,
@@ -123,7 +123,7 @@ async def test_insert_schedule_error_cases(async_client, payload):
 
 async def test_insert_schedule_success(async_client):
     response = await async_client.post("/schedules", json={"month": 10, "year": 2025})
-    assert_single_item_201(response, expected_item={"month": 10, "year": 2025, "notes": None, "is_active": True})
+    assert_single_item_response(response, expected_item={"month": 10, "year": 2025, "notes": None, "is_active": True}, status_code=status.HTTP_201_CREATED)
 
 # =============================
 # UPDATE SCHEDULE

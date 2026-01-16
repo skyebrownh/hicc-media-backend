@@ -2,21 +2,15 @@ import pytest
 from fastapi import status
 
 from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
-    _filter_timestamp_keys
+    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
+    _filter_excluded_keys
 )
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3
 
 pytestmark = pytest.mark.asyncio
 
 PROFICIENCY_LEVELS_RESPONSE_KEYS = {"id", "name", "code", "rank", "is_active", "is_assignable"}
-
-VALID_UPDATE_PAYLOAD = {
-    "name": "Updated Level Name", 
-    "rank": 100, 
-    "is_active": False, 
-    "is_assignable": True
-}
+VALID_UPDATE_PAYLOAD = {"name": "Updated Level Name", "rank": 100, "is_active": False, "is_assignable": True}
 
 # =============================
 # GET ALL PROFICIENCY LEVELS
@@ -28,10 +22,10 @@ async def test_get_all_proficiency_levels_none_exist(async_client):
 async def test_get_all_proficiency_levels_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
     seed_proficiency_levels(test_proficiency_levels_data[:3])
     response = await async_client.get("/proficiency_levels")
-    assert_list_200(response, expected_length=3)
+    assert_list_response(response, expected_length=3)
     response_json = response.json()
     response_dict = {pl["id"]: pl for pl in response_json}
-    assert set(_filter_timestamp_keys(response_dict[PROFICIENCY_LEVEL_ID_1].keys())) == PROFICIENCY_LEVELS_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_dict[PROFICIENCY_LEVEL_ID_1].keys())) == PROFICIENCY_LEVELS_RESPONSE_KEYS
     assert response_dict[PROFICIENCY_LEVEL_ID_1]["name"] == "Novice"
     assert response_dict[PROFICIENCY_LEVEL_ID_2]["id"] is not None
     assert response_dict[PROFICIENCY_LEVEL_ID_2]["code"] == "proficient"
@@ -53,7 +47,7 @@ async def test_get_single_proficiency_level_error_cases(async_client, id, expect
 async def test_get_single_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
     seed_proficiency_levels([test_proficiency_levels_data[0]])
     response = await async_client.get(f"/proficiency_levels/{PROFICIENCY_LEVEL_ID_1}")
-    assert_single_item_200(response, expected_item={
+    assert_single_item_response(response, expected_item={
         "id": PROFICIENCY_LEVEL_ID_1,
         "name": "Novice",
         "code": "novice",
@@ -79,7 +73,7 @@ async def test_insert_proficiency_level_error_cases(async_client, seed_proficien
 
 async def test_insert_proficiency_level_success(async_client):
     response = await async_client.post("/proficiency_levels", json={"name": "New Level", "code": "new_level"})
-    assert_single_item_201(response, expected_item={"name": "New Level", "code": "new_level", "rank": None, "is_active": True, "is_assignable": False})
+    assert_single_item_response(response, expected_item={"name": "New Level", "code": "new_level", "rank": None, "is_active": True, "is_assignable": False}, status_code=status.HTTP_201_CREATED)
 
 # =============================
 # UPDATE PROFICIENCY LEVEL

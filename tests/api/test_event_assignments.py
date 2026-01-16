@@ -1,16 +1,12 @@
 import pytest
 from fastapi import status
 
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_response
 from tests.utils.constants import BAD_ID_0000, EVENT_ID_1, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2, SCHEDULE_ID_2
 
 pytestmark = pytest.mark.asyncio
 
-VALID_UPDATE_PAYLOAD = {
-    "requirement_level": "OPTIONAL",
-    "assigned_user_id": USER_ID_2,
-    "is_active": False
-}
+VALID_UPDATE_PAYLOAD = {"requirement_level": "OPTIONAL", "assigned_user_id": USER_ID_2, "is_active": False} 
 
 # =============================
 # FIXTURES
@@ -38,7 +34,7 @@ async def test_get_all_event_assignments_for_event_none_exist(async_client, seed
 
 async def test_get_all_event_assignments_for_event_success(async_client, seed_for_event_assignments_tests):
     response = await async_client.get(f"/events/{EVENT_ID_1}/assignments")
-    assert_list_200(response, expected_length=2)
+    assert_list_response(response, expected_length=2)
     response_json = response.json()
 
     # shape assertions

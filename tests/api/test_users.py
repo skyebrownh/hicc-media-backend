@@ -4,22 +4,15 @@ from sqlmodel import select, func
 
 from app.db.models import TeamUser, UserRole
 from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
-    _filter_timestamp_keys
+    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
+    _filter_excluded_keys
 )
 from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, USER_ID_3, PROFICIENCY_LEVEL_ID_3
 
 pytestmark = pytest.mark.asyncio
 
 USERS_RESPONSE_KEYS = {"id", "first_name", "last_name", "email", "phone", "is_active"}
-
-VALID_UPDATE_PAYLOAD = {
-    "first_name": "Updated First Name",
-    "last_name": "Updated Last Name",
-    "email": "updated@example.com",
-    "phone": "555-7777",
-    "is_active": False
-}
+VALID_UPDATE_PAYLOAD = {"first_name": "Updated First Name", "last_name": "Updated Last Name", "email": "updated@example.com", "phone": "555-7777", "is_active": False}
 
 # =============================
 # GET ALL USERS
@@ -31,10 +24,10 @@ async def test_get_all_users_none_exist(async_client):
 async def test_get_all_users_success(async_client, seed_users, test_users_data):
     seed_users(test_users_data[:3])
     response = await async_client.get("/users")
-    assert_list_200(response, expected_length=3)
+    assert_list_response(response, expected_length=3)
     response_json = response.json()
     response_dict = {u["id"]: u for u in response_json}
-    assert set(_filter_timestamp_keys(response_dict[USER_ID_1].keys())) == USERS_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_dict[USER_ID_1].keys())) == USERS_RESPONSE_KEYS
     assert response_dict[USER_ID_1]["first_name"] == "Alice"
     assert response_dict[USER_ID_2]["id"] is not None
     assert response_dict[USER_ID_2]["email"] == "bob@example.com"
@@ -55,7 +48,7 @@ async def test_get_single_user_error_cases(async_client, id, expected_status):
 async def test_get_single_user_success(async_client, seed_users, test_users_data):
     seed_users([test_users_data[0]])
     response = await async_client.get(f"/users/{USER_ID_1}")
-    assert_single_item_200(response, expected_item={
+    assert_single_item_response(response, expected_item={
         "id": USER_ID_1,
         "first_name": "Alice",
         "last_name": "Smith",
@@ -81,7 +74,7 @@ async def test_insert_user_success(async_client, get_test_db_session, seed_roles
     seed_proficiency_levels([test_proficiency_levels_data[2]]) # Untrained proficiency level
     seed_roles(test_roles_data[:2])
     response = await async_client.post("/users", json={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com"})
-    assert_single_item_201(response, expected_item={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com", "is_active": True})
+    assert_single_item_response(response, expected_item={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com", "is_active": True}, status_code=status.HTTP_201_CREATED)
 
     # Verify user_roles were created for this new user
     user_id = response.json()["id"]

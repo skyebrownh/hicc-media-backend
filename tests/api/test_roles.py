@@ -4,21 +4,15 @@ from sqlmodel import select, func
 
 from app.db.models import UserRole
 from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
-    _filter_timestamp_keys
+    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
+    _filter_excluded_keys
 )
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, USER_ID_1, USER_ID_2
 
 pytestmark = pytest.mark.asyncio
 
 ROLES_RESPONSE_KEYS = {"id", "name", "code", "order", "description", "is_active"}
-
-VALID_UPDATE_PAYLOAD = {
-    "name": "Updated Role Name",
-    "description": "Updated description",
-    "order": 100,
-    "is_active": False
-}
+VALID_UPDATE_PAYLOAD = {"name": "Updated Role Name", "description": "Updated description", "order": 100, "is_active": False}
 
 # =============================
 # GET ALL ROLES
@@ -30,10 +24,10 @@ async def test_get_all_roles_none_exist(async_client):
 async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
     seed_roles(test_roles_data[:3])
     response = await async_client.get("/roles")
-    assert_list_200(response, expected_length=3)
+    assert_list_response(response, expected_length=3)
     response_json = response.json()
     response_dict = {r["id"]: r for r in response_json}
-    assert set(_filter_timestamp_keys(response_dict[ROLE_ID_1].keys())) == ROLES_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_dict[ROLE_ID_1].keys())) == ROLES_RESPONSE_KEYS
     assert response_dict[ROLE_ID_1]["name"] == "ProPresenter"
     assert response_dict[ROLE_ID_2]["id"] is not None
     assert response_dict[ROLE_ID_2]["code"] == "sound"
@@ -55,7 +49,7 @@ async def test_get_single_role_error_cases(async_client, id, expected_status):
 async def test_get_single_role_success(async_client, seed_roles, test_roles_data):
     seed_roles([test_roles_data[0]])
     response = await async_client.get(f"/roles/{ROLE_ID_1}")
-    assert_single_item_200(response, expected_item={
+    assert_single_item_response(response, expected_item={
         "id": ROLE_ID_1,
         "name": "ProPresenter",
         "code": "propresenter",
@@ -83,7 +77,7 @@ async def test_insert_role_success(async_client, get_test_db_session, seed_users
     seed_proficiency_levels([test_proficiency_levels_data[2]]) # Untrained proficiency level
     seed_users(test_users_data[:2])
     response = await async_client.post("/roles", json={"name": "New Role", "order": 4, "code": "new_role"})
-    assert_single_item_201(response, expected_item={"name": "New Role", "code": "new_role", "order": 4, "description": None, "is_active": True})
+    assert_single_item_response(response, expected_item={"name": "New Role", "code": "new_role", "order": 4, "description": None, "is_active": True}, status_code=status.HTTP_201_CREATED)
 
     # Verify user_roles were created for this new role
     role_id = response.json()["id"]

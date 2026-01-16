@@ -5,8 +5,8 @@ from sqlmodel import select, func
 
 from app.db.models import EventAssignment
 from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_200, assert_single_item_200, parse_to_utc, conditional_seed,
-    _filter_timestamp_keys
+    assert_empty_list_200, assert_list_response, assert_single_item_response, parse_to_utc, conditional_seed,
+    _filter_excluded_keys
 )
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
@@ -20,21 +20,8 @@ EVENTS_RESPONSE_KEYS = {"event", "event_assignments"}
 EVENT_RESPONSE_KEYS = {"id", "schedule_id", "title", "event_type_id", "starts_at", "ends_at", "team_id", "notes", "is_active", "schedule_month", "schedule_year", "schedule_notes", "schedule_is_active", "team_name", "team_code", "team_is_active", "event_type_name", "event_type_code", "event_type_is_active"}
 EVENT_ASSIGNMENTS_RESPONSE_KEYS = {"id", "role_id", "role_name", "role_order", "role_code", "is_applicable", "requirement_level", "assigned_user_id", "assigned_user_first_name", "assigned_user_last_name", "is_active"}
 
-VALID_INSERT_PAYLOAD = {
-    "title": "New Event",
-    "starts_at": DATETIME_2025_05_01.isoformat(),
-    "ends_at": DATETIME_2025_05_02.isoformat(),
-    "event_type_id": EVENT_TYPE_ID_1
-}
-VALID_UPDATE_PAYLOAD = {
-    "title": "Updated Event",
-    "starts_at": DATETIME_2025_05_03.isoformat(),
-    "ends_at": DATETIME_2025_05_04.isoformat(),
-    "team_id": TEAM_ID_1,
-    "event_type_id": EVENT_TYPE_ID_2,
-    "notes": "Updated notes",
-    "is_active": False
-}
+VALID_INSERT_PAYLOAD = {"title": "New Event", "starts_at": DATETIME_2025_05_01.isoformat(), "ends_at": DATETIME_2025_05_02.isoformat(), "event_type_id": EVENT_TYPE_ID_1}
+VALID_UPDATE_PAYLOAD = {"title": "Updated Event", "starts_at": DATETIME_2025_05_03.isoformat(), "ends_at": DATETIME_2025_05_04.isoformat(), "team_id": TEAM_ID_1, "event_type_id": EVENT_TYPE_ID_2, "notes": "Updated notes", "is_active": False}
 
 # =============================
 # FIXTURES
@@ -58,14 +45,14 @@ async def test_get_all_events_for_schedule_none_exist(async_client, seed_schedul
 
 async def test_get_all_events_for_schedule_success(async_client, seed_for_events_tests):
     response = await async_client.get(f"/schedules/{SCHEDULE_ID_2}/events")
-    assert_list_200(response, expected_length=3)
+    assert_list_response(response, expected_length=3)
     response_json = response.json()
     print(f"GET all events for schedule response_json: {json.dumps(response_json, indent=4)}")
     response_dict = {e["event"]["id"]: e for e in response_json}
-    assert set(_filter_timestamp_keys(response_dict[EVENT_ID_1].keys())) == EVENTS_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_dict[EVENT_ID_1].keys())) == EVENTS_RESPONSE_KEYS
     assert set(response_dict[EVENT_ID_1]["event"].keys()) == EVENT_RESPONSE_KEYS
     for ea in response_dict[EVENT_ID_1]["event_assignments"]:
-        assert set(_filter_timestamp_keys(ea.keys())) == EVENT_ASSIGNMENTS_RESPONSE_KEYS
+        assert set(_filter_excluded_keys(ea.keys())) == EVENT_ASSIGNMENTS_RESPONSE_KEYS
 
     assert response_dict[EVENT_ID_1]["event"]["id"] is not None
     assert response_dict[EVENT_ID_1]["event"]["schedule_id"] == SCHEDULE_ID_2
@@ -99,7 +86,7 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
     assert parse_to_utc(response_json["event"]["starts_at"]) == DATETIME_2025_05_01
     assert parse_to_utc(response_json["event"]["ends_at"]) == DATETIME_2025_05_02
     
-    assert_single_item_200(response, expected_item={
+    assert_single_item_response(response, expected_item={
         "event": {
             "id": EVENT_ID_1,
             "title": None,
@@ -147,7 +134,7 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
                 "is_active": True,
             }
         ]
-    })
+    }, additional_keys_to_exclude=["starts_at", "ends_at"])
 
 # =============================
 # INSERT EVENT FOR SCHEDULE
@@ -177,10 +164,10 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
     response = await async_client.post(f"/schedules/{SCHEDULE_ID_2}/events", json=VALID_INSERT_PAYLOAD)
     assert response.status_code == status.HTTP_201_CREATED
     response_json = response.json()
-    assert set(_filter_timestamp_keys(response_json.keys())) == EVENTS_RESPONSE_KEYS
-    assert set(_filter_timestamp_keys(response_json["event"].keys())) == EVENT_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_json.keys())) == EVENTS_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_json["event"].keys())) == EVENT_RESPONSE_KEYS
     for ea in response_json["event_assignments"]:
-        assert set(_filter_timestamp_keys(ea.keys())) == EVENT_ASSIGNMENTS_RESPONSE_KEYS
+        assert set(_filter_excluded_keys(ea.keys())) == EVENT_ASSIGNMENTS_RESPONSE_KEYS
 
     assert response_json["event"]["id"] is not None
     assert response_json["event"]["schedule_id"] == SCHEDULE_ID_2

@@ -1,9 +1,10 @@
 import json
 from fastapi import status, Response
 from datetime import datetime, timezone
+from collections.abc import KeysView, ValuesView, ItemsView
 
 def conditional_seed(indices, data, seed_func):
-    """Conditionally seed data only if indices are provided (non-empty list)"""
+    """Conditionally seed data only if indices are provided (non-empty list). Assumes indices are valid for the provided data."""
     if indices:
         items = [data[i] for i in indices]
         seed_func(items)
@@ -15,68 +16,62 @@ def assert_empty_list_200(response: Response) -> None:
     assert len(response.json()) == 0
     assert response.json() == []
     
-def assert_list_200(response: Response, expected_length: int) -> None:
+def assert_list_response(response: Response, expected_length: int, status_code: int = status.HTTP_200_OK) -> None:
     """Assert that a response is a list and returns a 200 OK status code."""
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status_code
     assert isinstance(response.json(), list)
     assert len(response.json()) == expected_length
 
-def assert_list_201(response: Response, expected_length: int) -> None:
-    """Assert that a response is a list and returns a 201 CREATED status code."""
-    assert response.status_code == status.HTTP_201_CREATED
-    assert isinstance(response.json(), list)
-    assert len(response.json()) == expected_length
-
-def _filter_timestamp_keys(data, additional_keys_to_exclude=None):
-    """Recursively filter out specified keys from dictionaries and lists at any nesting level."""
-    keys_to_exclude = ["created_at", "updated_at"]
-    if additional_keys_to_exclude is not None:
-        keys_to_exclude.extend(additional_keys_to_exclude)
+def assert_single_item_response(response: Response, expected_item: dict, status_code: int = status.HTTP_200_OK, additional_keys_to_exclude: list[str] = None) -> None:
+    """Assert that a response is a single item and returns the specified status code. Additional keys to exclude can be provided."""
+    keys_to_exclude = _keys_to_exclude(additional_keys_to_exclude)
+    if status_code == status.HTTP_201_CREATED:
+        keys_to_exclude.append("id")
     
-    # Handle dict_keys and other set-like views (dict_keys, dict_values, etc.)
-    # These are iterable but not dict/list/set/str/bytes
-    if hasattr(data, '__iter__') and not isinstance(data, (str, bytes, dict, list, set)):
-        # Check if all items are hashable (indicating it's a set-like view)
-        try:
-            # Try to convert to set and filter - this works for dict_keys, dict_values, etc.
-            return {k for k in data if k not in keys_to_exclude}
-        except (TypeError, ValueError):
-            # If conversion fails (e.g., unhashable items), fall through to other handling
-            pass
+    assert response.status_code == status_code
+    response_json = response.json()
+    assert isinstance(response_json, dict)
+    filtered_response = _filter_excluded_keys(response_json, additional_keys_to_exclude=keys_to_exclude)
+    if filtered_response != expected_item:
+        print(json.dumps(debug_dict_difference(filtered_response, expected_item), indent=4))
+    assert filtered_response == expected_item
+
+def parse_to_utc(dt_str: str) -> datetime:
+    """Parse ISO datetime string and convert to UTC. The database may return datetimes in different timezones, so we normalize to UTC."""
+    dt_str_normalized = dt_str.replace("Z", "+00:00")
+    dt = datetime.fromisoformat(dt_str_normalized)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+def _filter_excluded_keys(data, additional_keys_to_exclude=None):
+    """Recursively filter out specified keys from dictionaries and lists at any nesting level."""
+    keys_to_exclude = _keys_to_exclude(additional_keys_to_exclude)
+    
+    # Handle set-like views (dict_keys, dict_values, etc.)
+    if isinstance(data, (KeysView, ValuesView, ItemsView)):
+        return {k for k in data if k not in keys_to_exclude}
     
     if isinstance(data, dict):
         return {
-            k: _filter_timestamp_keys(v, keys_to_exclude)
+            k: _filter_excluded_keys(v, keys_to_exclude)
             for k, v in data.items()
             if k not in keys_to_exclude
         }
     elif isinstance(data, set):
         return {k for k in data if k not in keys_to_exclude}
     elif isinstance(data, list):
-        return [_filter_timestamp_keys(item, keys_to_exclude) for item in data]
+        return [_filter_excluded_keys(item, keys_to_exclude) for item in data]
     else:
         return data
 
-def assert_single_item_200(response: Response, expected_item: dict) -> None:
-    """Assert that a response is a single item and returns a 200 OK status code."""
-    assert response.status_code == status.HTTP_200_OK
-    response_json = response.json()
-    assert isinstance(response_json, dict)
-    filtered_response = _filter_timestamp_keys(response_json, additional_keys_to_exclude=["starts_at", "ends_at"])
-    print(json.dumps(find_dict_difference(filtered_response, expected_item), indent=4))
-    assert filtered_response == expected_item
+def _keys_to_exclude(additional_keys_to_exclude: list[str] | None = None) -> list[str]:
+    keys_to_exclude = ["created_at", "updated_at"]
+    if additional_keys_to_exclude is not None:
+        keys_to_exclude.extend(additional_keys_to_exclude)
+    return keys_to_exclude
 
-def assert_single_item_201(response: Response, expected_item: dict) -> None:
-    """Assert that a response is a single item and returns a 201 CREATED status code."""
-    assert response.status_code == status.HTTP_201_CREATED
-    response_json = response.json()
-    assert isinstance(response_json, dict)
-    assert response_json["id"] is not None
-    filtered_response = _filter_timestamp_keys(response_json, additional_keys_to_exclude=["id", "starts_at", "ends_at"])
-    print(json.dumps(find_dict_difference(filtered_response, expected_item), indent=4))
-    assert filtered_response == expected_item
-
-def find_dict_difference(dict1: dict, dict2: dict) -> dict:
+def debug_dict_difference(dict1: dict, dict2: dict) -> dict:
     """Find the difference between two dictionaries, handling nested objects and arrays.
     
     Returns only value mismatches and missing keys at any nesting level.
@@ -201,11 +196,3 @@ def find_dict_difference(dict1: dict, dict2: dict) -> dict:
         diff["dict2"].update(mismatch2)
     
     return diff
-
-def parse_to_utc(dt_str: str) -> datetime:
-    """Parse ISO datetime string and convert to UTC. The database may return datetimes in different timezones, so we normalize to UTC."""
-    dt_str_normalized = dt_str.replace("Z", "+00:00")
-    dt = datetime.fromisoformat(dt_str_normalized)
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)

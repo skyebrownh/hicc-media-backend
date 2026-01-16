@@ -4,8 +4,8 @@ from sqlmodel import select, func
 
 from app.db.models import TeamUser
 from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_200, assert_single_item_200, assert_single_item_201, conditional_seed,
-    _filter_timestamp_keys
+    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
+    _filter_excluded_keys
 )
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, TEAM_ID_3
 
@@ -23,10 +23,10 @@ async def test_get_all_teams_none_exist(async_client):
 async def test_get_all_teams_success(async_client, seed_teams, test_teams_data):
     seed_teams(test_teams_data[:3])
     response = await async_client.get("/teams")
-    assert_list_200(response, expected_length=3)
+    assert_list_response(response, expected_length=3)
     response_json = response.json()
     response_dict = {t["id"]: t for t in response_json}
-    assert set(_filter_timestamp_keys(response_dict[TEAM_ID_1].keys())) == TEAMS_RESPONSE_KEYS
+    assert set(_filter_excluded_keys(response_dict[TEAM_ID_1].keys())) == TEAMS_RESPONSE_KEYS
     assert response_dict[TEAM_ID_1]["name"] == "Team 1"
     assert response_dict[TEAM_ID_2]["id"] is not None
     assert response_dict[TEAM_ID_2]["code"] == "team_2"
@@ -46,7 +46,7 @@ async def test_get_single_team_error_cases(async_client, id, expected_status):
 async def test_get_single_team_success(async_client, seed_teams, test_teams_data):
     seed_teams([test_teams_data[0]])
     response = await async_client.get(f"/teams/{TEAM_ID_1}")
-    assert_single_item_200(response, expected_item={
+    assert_single_item_response(response, expected_item={
         "id": TEAM_ID_1,
         "name": "Team 1",
         "code": "team_1",
@@ -70,7 +70,7 @@ async def test_insert_team_error_cases(async_client, seed_teams, test_teams_data
 
 async def test_insert_team_success(async_client):
     response = await async_client.post("/teams", json={"name": "New Team", "code": "new_team"})
-    assert_single_item_201(response, expected_item={"name": "New Team", "code": "new_team", "is_active": True})
+    assert_single_item_response(response, expected_item={"name": "New Team", "code": "new_team", "is_active": True}, status_code=status.HTTP_201_CREATED)
 
 # =============================
 # UPDATE TEAM

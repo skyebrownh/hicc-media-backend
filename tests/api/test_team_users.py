@@ -3,7 +3,7 @@ from fastapi import status
 from sqlmodel import select
 
 from app.db.models import TeamUser
-from tests.utils.helpers import assert_empty_list_200, assert_list_200, assert_single_item_201, conditional_seed
+from tests.utils.helpers import assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, USER_ID_1, USER_ID_2
 
 pytestmark = pytest.mark.asyncio
@@ -37,7 +37,7 @@ async def test_get_users_for_team_none_exist(async_client, seed_teams, test_team
 
 async def test_get_users_for_team_success(async_client, seed_for_team_users_tests):
     response = await async_client.get(f"/teams/{TEAM_ID_1}/users")
-    assert_list_200(response, expected_length=2)
+    assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {tu["user_id"]: tu for tu in response_json}
     assert set(response_dict[USER_ID_1].keys()) == TEAM_USERS_RESPONSE_KEYS
@@ -69,7 +69,7 @@ async def test_insert_team_user_success(async_client, seed_teams, seed_users, te
     seed_teams([test_teams_data[1]])
     seed_users([test_users_data[0]])
     response = await async_client.post(f"/teams/{TEAM_ID_2}/users", json={"user_id": USER_ID_1})
-    assert_single_item_201(response, expected_item={"team_id": TEAM_ID_2, "user_id": USER_ID_1, "is_active": True})
+    assert_single_item_response(response, expected_item={"team_id": TEAM_ID_2, "user_id": USER_ID_1, "is_active": True}, status_code=status.HTTP_201_CREATED)
 
 # =============================
 # UPDATE TEAM USER

@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
 
-from tests.utils.helpers import assert_empty_list_200, assert_list_200
+from tests.utils.helpers import assert_empty_list_200, assert_list_response
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, ROLE_ID_1, ROLE_ID_2, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
 
 pytestmark = pytest.mark.asyncio
@@ -36,7 +36,7 @@ async def test_get_roles_for_user_none_exist(async_client, seed_users, test_user
 
 async def test_get_roles_for_user_success(async_client, seed_for_user_roles_tests):
     response = await async_client.get(f"/users/{USER_ID_1}/roles")
-    assert_list_200(response, expected_length=2)
+    assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {ur["role_id"]: ur for ur in response_json}
     assert set(response_dict[ROLE_ID_1].keys()) == USER_ROLES_RESPONSE_KEYS
@@ -66,7 +66,7 @@ async def test_get_users_for_role_none_exist(async_client, seed_roles, test_role
 
 async def test_get_users_for_role_success(async_client, seed_for_user_roles_tests):
     response = await async_client.get(f"/roles/{ROLE_ID_1}/users")
-    assert_list_200(response, expected_length=2)
+    assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {ur["user_id"]: ur for ur in response_json}
     assert set(response_dict[USER_ID_1].keys()) == USER_ROLES_RESPONSE_KEYS
