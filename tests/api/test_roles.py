@@ -3,10 +3,7 @@ from fastapi import status
 from sqlmodel import select, func
 
 from app.db.models import UserRole
-from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
-    _filter_excluded_keys
-)
+from tests.utils.helpers import assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed, assert_keys_match
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_3, ROLE_ID_1, ROLE_ID_2, ROLE_ID_3, USER_ID_1, USER_ID_2
 
 pytestmark = pytest.mark.asyncio
@@ -27,7 +24,7 @@ async def test_get_all_roles_success(async_client, seed_roles, test_roles_data):
     assert_list_response(response, expected_length=3)
     response_json = response.json()
     response_dict = {r["id"]: r for r in response_json}
-    assert set(_filter_excluded_keys(response_dict[ROLE_ID_1].keys())) == ROLES_RESPONSE_KEYS
+    assert_keys_match(response_dict[ROLE_ID_1], ROLES_RESPONSE_KEYS)
     assert response_dict[ROLE_ID_1]["name"] == "ProPresenter"
     assert response_dict[ROLE_ID_2]["id"] is not None
     assert response_dict[ROLE_ID_2]["code"] == "sound"

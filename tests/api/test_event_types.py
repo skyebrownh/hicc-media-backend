@@ -1,10 +1,7 @@
 import pytest
 from fastapi import status
 
-from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
-    _filter_excluded_keys
-)
+from tests.utils.helpers import assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed, assert_keys_match
 from tests.utils.constants import BAD_ID_0000, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2, EVENT_TYPE_ID_3
 
 pytestmark = pytest.mark.asyncio
@@ -24,7 +21,7 @@ async def test_get_all_event_types_success(async_client, seed_event_types, test_
     assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {et["id"]: et for et in response_json}
-    assert set(_filter_excluded_keys(response_dict[EVENT_TYPE_ID_1].keys())) == EVENT_TYPES_RESPONSE_KEYS
+    assert_keys_match(response_dict[EVENT_TYPE_ID_1], EVENT_TYPES_RESPONSE_KEYS)
     assert response_dict[EVENT_TYPE_ID_1]["name"] == "Service"
     assert response_dict[EVENT_TYPE_ID_2]["id"] is not None
     assert response_dict[EVENT_TYPE_ID_2]["code"] == "rehearsal"
@@ -59,7 +56,7 @@ async def test_get_single_event_type_success(async_client, seed_event_types, tes
     ([], {"name": "Incomplete Type"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Type", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([2], {"name": "Duplicate Code", "code": "new_type"}, status.HTTP_409_CONFLICT), # duplicate event_type_code
-    ([], {"id": BAD_ID_0000, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # event_type_id not allowed in payload
+    ([], {"id": BAD_ID_0000, "name": "ID Not Allowed", "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # event_type.id not allowed in payload
 ])
 async def test_insert_event_type_error_cases(async_client, seed_event_types, test_event_types_data, type_indices, payload, expected_status):
     conditional_seed(type_indices, test_event_types_data, seed_event_types)
@@ -103,9 +100,13 @@ async def test_update_event_type_success(async_client, seed_event_types, test_ev
 # =============================
 # DELETE EVENT TYPE
 # =============================
-async def test_delete_event_type_error_cases(async_client):
-    response = await async_client.delete("/event_types/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+@pytest.mark.parametrize("id, expected_status", [
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # event type not found
+])
+async def test_delete_event_type_error_cases(async_client, id, expected_status):
+    response = await async_client.delete(f"/event_types/{id}")
+    assert response.status_code == expected_status
 
 async def test_delete_event_type_success(async_client, seed_event_types, test_event_types_data):
     seed_event_types([test_event_types_data[0]])

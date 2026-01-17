@@ -3,10 +3,7 @@ from fastapi import status
 from sqlmodel import select, func
 
 from app.db.models import Event, EventAssignment
-from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
-    _filter_excluded_keys
-)
+from tests.utils.helpers import  assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed, assert_keys_match
 from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_TYPE_ID_1
 
 pytestmark = pytest.mark.asyncio
@@ -39,7 +36,7 @@ async def test_get_all_schedules_success(async_client, seed_schedules, test_sche
     assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {s["id"]: s for s in response_json}
-    assert set(_filter_excluded_keys(response_dict[SCHEDULE_ID_1].keys())) == SCHEDULES_RESPONSE_KEYS
+    assert_keys_match(response_dict[SCHEDULE_ID_1], SCHEDULES_RESPONSE_KEYS)
     assert response_dict[SCHEDULE_ID_1]["month"] == 1
     assert response_dict[SCHEDULE_ID_1]["year"] == 2025
     assert response_dict[SCHEDULE_ID_2]["id"] is not None
@@ -115,7 +112,7 @@ async def test_get_schedule_grid_success(async_client, seed_for_schedules_tests)
     ({}), # empty payload
     ({ "month": 13, "year": 2025}), # invalid month - violates check constraint
     ({ "month": 5, "year": "two thousand twenty four"}), # invalid year
-    ({ "id": BAD_ID_0000, "month": 5, "year": 2025}), # schedule_id not allowed in payload
+    ({ "id": BAD_ID_0000, "month": 5, "year": 2025}), # schedule.id not allowed in payload
 ])
 async def test_insert_schedule_error_cases(async_client, payload):
     response = await async_client.post("/schedules", json=payload)
@@ -158,9 +155,13 @@ async def test_update_schedule_success(async_client, seed_schedules, test_schedu
 # =============================
 # DELETE SCHEDULE
 # =============================
-async def test_delete_schedule_error_cases(async_client):
-    response = await async_client.delete("/schedules/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+@pytest.mark.parametrize("id, expected_status", [
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # schedule not found
+])
+async def test_delete_schedule_error_cases(async_client, id, expected_status):
+    response = await async_client.delete(f"/schedules/{id}")
+    assert response.status_code == expected_status
 
 async def test_delete_schedule_success(async_client, seed_schedules, test_schedules_data):
     seed_schedules([test_schedules_data[0]])

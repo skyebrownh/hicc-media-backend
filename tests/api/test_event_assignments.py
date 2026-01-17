@@ -37,7 +37,7 @@ async def test_get_all_event_assignments_for_event_success(async_client, seed_fo
     assert_list_response(response, expected_length=2)
     response_json = response.json()
 
-    # shape assertions
+    # shape assertions - manual since shape is complex and not easily tested with assert_keys_match
     assert all("id" in ea for ea in response_json)
     assert all("event_id" in ea for ea in response_json)
     assert all("role_id" in ea for ea in response_json)

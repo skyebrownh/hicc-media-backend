@@ -36,6 +36,11 @@ def assert_single_item_response(response: Response, expected_item: dict, status_
         print(json.dumps(debug_dict_difference(filtered_response, expected_item), indent=4))
     assert filtered_response == expected_item
 
+def assert_keys_match(actual: dict, expected_keys: set[str]) -> None:
+    """Assert that the keys of the actual dictionary match the expected keys."""
+    filtered_actual = _filter_excluded_keys(actual)
+    assert set(filtered_actual.keys()) == expected_keys
+
 def parse_to_utc(dt_str: str) -> datetime:
     """Parse ISO datetime string and convert to UTC. The database may return datetimes in different timezones, so we normalize to UTC."""
     dt_str_normalized = dt_str.replace("Z", "+00:00")

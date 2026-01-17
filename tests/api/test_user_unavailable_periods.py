@@ -23,7 +23,7 @@ VALID_PAYLOAD_2 = {"starts_at": STARTS_AT_2, "ends_at": ENDS_AT_2}
     (USER_ID_1, {"starts_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (ends_at)
     (USER_ID_1, {"starts_at": "invalid-datetime", "ends_at": ENDS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
     (USER_ID_1, {"starts_at": ENDS_AT, "ends_at": STARTS_AT}, status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
-    (USER_ID_1, {"id": BAD_ID_0000, **VALID_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    (USER_ID_1, {"id": BAD_ID_0000, **VALID_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # user_unavailable_period.id not allowed in payload
 ])
 async def test_insert_user_unavailable_period_error_cases(async_client, seed_users, test_users_data, user_id, payload, expected_status):
     seed_users([test_users_data[0]])
@@ -54,7 +54,7 @@ async def test_insert_user_unavailable_period_success(async_client, seed_users, 
     (USER_ID_1, [{"starts_at": STARTS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields (ends_at)
     (USER_ID_1, [{"starts_at": "invalid-datetime", "ends_at": ENDS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
     (USER_ID_1, [{"starts_at": ENDS_AT, "ends_at": STARTS_AT}], status.HTTP_422_UNPROCESSABLE_CONTENT), # violates check constraint
-    (USER_ID_1, [{"id": BAD_ID_0000, **VALID_PAYLOAD}], status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    (USER_ID_1, [{"id": BAD_ID_0000, **VALID_PAYLOAD}], status.HTTP_422_UNPROCESSABLE_CONTENT), # user_unavailable_period.id not allowed in payload
 ])
 async def test_insert_user_unavailable_periods_bulk_error_cases(async_client, seed_users, test_users_data, user_id, payload, expected_status):
     seed_users([test_users_data[0]])
@@ -127,10 +127,13 @@ async def test_update_user_unavailable_period_success(async_client, seed_users, 
 # =============================
 # DELETE USER UNAVAILABLE PERIOD
 # =============================
-async def test_delete_user_unavailable_period_error_cases(async_client):
-    """Test DELETE user unavailable period error cases (422)"""
-    response = await async_client.delete("/user_availability/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+@pytest.mark.parametrize("id, expected_status", [
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # user unavailable period not found
+])
+async def test_delete_user_unavailable_period_error_cases(async_client, id, expected_status):
+    response = await async_client.delete(f"/user_availability/{id}")
+    assert response.status_code == expected_status
 
 async def test_delete_user_unavailable_period_success(async_client, get_test_db_session, seed_user_unavailable_periods, seed_users, test_user_unavailable_periods_data, test_users_data):
     seed_users([test_users_data[0]])

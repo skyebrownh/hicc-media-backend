@@ -3,7 +3,7 @@ from fastapi import status
 from sqlmodel import select
 
 from app.db.models import TeamUser
-from tests.utils.helpers import assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed
+from tests.utils.helpers import assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed, assert_keys_match
 from tests.utils.constants import BAD_ID_0000, TEAM_ID_1, TEAM_ID_2, USER_ID_1, USER_ID_2
 
 pytestmark = pytest.mark.asyncio
@@ -40,7 +40,7 @@ async def test_get_users_for_team_success(async_client, seed_for_team_users_test
     assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {tu["user_id"]: tu for tu in response_json}
-    assert set(response_dict[USER_ID_1].keys()) == TEAM_USERS_RESPONSE_KEYS
+    assert_keys_match(response_dict[USER_ID_1], TEAM_USERS_RESPONSE_KEYS)
     assert all(tu["team_id"] == TEAM_ID_1 for tu in response_json)
     assert {tu["user_id"] for tu in response_json} == {USER_ID_1, USER_ID_2}
     team_users_dict = {tu["user_id"]: tu for tu in response_json}
@@ -91,7 +91,6 @@ async def test_update_team_user_error_cases(async_client, seed_teams, seed_users
 
 @pytest.mark.parametrize("payload, unchanged_fields", [
     ({"is_active": False}, {}), # full update
-    # ({"is_active": False}, {}), # partial update (is_active only)
 ])
 async def test_update_team_user_success(async_client, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data, payload, unchanged_fields):
     seed_teams([test_teams_data[0]])
@@ -108,13 +107,17 @@ async def test_update_team_user_success(async_client, seed_teams, seed_users, se
 # =============================
 # DELETE TEAM USER
 # =============================
-async def test_delete_team_user_error_cases(async_client, seed_teams, seed_users, test_teams_data, test_users_data):
+@pytest.mark.parametrize("team_id, user_id, expected_status", [
+    ("invalid-uuid-format", USER_ID_1, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (BAD_ID_0000, USER_ID_1, status.HTTP_404_NOT_FOUND), # team not found
+    (TEAM_ID_1, "invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (TEAM_ID_1, BAD_ID_0000, status.HTTP_404_NOT_FOUND), # user not found
+])
+async def test_delete_team_user_error_cases(async_client, seed_teams, seed_users, test_teams_data, test_users_data, team_id, user_id, expected_status):
     seed_teams([test_teams_data[0]])
     seed_users([test_users_data[0]])
-    response1 = await async_client.delete(f"/teams/invalid-uuid-format/users/{USER_ID_1}")
-    assert response1.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-    response2 = await async_client.delete(f"/teams/{TEAM_ID_1}/users/invalid-uuid-format")
-    assert response2.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    response = await async_client.delete(f"/teams/{team_id}/users/{user_id}")
+    assert response.status_code == expected_status
 
 async def test_delete_team_user_success(async_client, get_test_db_session, seed_teams, seed_users, seed_team_users, test_teams_data, test_users_data, test_team_users_data):
     seed_teams([test_teams_data[0]])

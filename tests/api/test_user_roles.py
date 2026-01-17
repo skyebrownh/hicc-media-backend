@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
 
-from tests.utils.helpers import assert_empty_list_200, assert_list_response
+from tests.utils.helpers import assert_empty_list_200, assert_list_response, assert_keys_match
 from tests.utils.constants import BAD_ID_0000, USER_ID_1, USER_ID_2, USER_ID_3, ROLE_ID_1, ROLE_ID_2, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2
 
 pytestmark = pytest.mark.asyncio
@@ -39,7 +39,7 @@ async def test_get_roles_for_user_success(async_client, seed_for_user_roles_test
     assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {ur["role_id"]: ur for ur in response_json}
-    assert set(response_dict[ROLE_ID_1].keys()) == USER_ROLES_RESPONSE_KEYS
+    assert_keys_match(response_dict[ROLE_ID_1], USER_ROLES_RESPONSE_KEYS)
     assert all(ur["user_id"] == USER_ID_1 for ur in response_json)
     assert {ur["role_id"] for ur in response_json} == {ROLE_ID_1, ROLE_ID_2}
     assert {ur["proficiency_level_id"] for ur in response_json} == {PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2}
@@ -69,7 +69,7 @@ async def test_get_users_for_role_success(async_client, seed_for_user_roles_test
     assert_list_response(response, expected_length=2)
     response_json = response.json()
     response_dict = {ur["user_id"]: ur for ur in response_json}
-    assert set(response_dict[USER_ID_1].keys()) == USER_ROLES_RESPONSE_KEYS
+    assert_keys_match(response_dict[USER_ID_1], USER_ROLES_RESPONSE_KEYS)
     assert all(ur["role_id"] == ROLE_ID_1 for ur in response_json)
     assert {ur["user_id"] for ur in response_json} == {USER_ID_1, USER_ID_2}
     assert all(ur["proficiency_level_id"] == PROFICIENCY_LEVEL_ID_1 for ur in response_json)
@@ -100,7 +100,6 @@ async def test_update_user_role_error_cases(async_client, seed_proficiency_level
 
 @pytest.mark.parametrize("payload, unchanged_fields", [
     ({"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, {}), # full update
-    # ({"proficiency_level_id": PROFICIENCY_LEVEL_ID_2}, {}), # partial update (proficiency_level_id only)
 ])
 async def test_update_user_role_success(async_client, seed_proficiency_levels, seed_users, seed_roles, seed_user_roles, test_proficiency_levels_data, test_users_data, test_roles_data, test_user_roles_data, payload, unchanged_fields):
     seed_proficiency_levels(test_proficiency_levels_data[:2])

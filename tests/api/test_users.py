@@ -3,10 +3,7 @@ from fastapi import status
 from sqlmodel import select, func
 
 from app.db.models import TeamUser, UserRole
-from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
-    _filter_excluded_keys
-)
+from tests.utils.helpers import  assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed, assert_keys_match
 from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, USER_ID_3, PROFICIENCY_LEVEL_ID_3
 
 pytestmark = pytest.mark.asyncio
@@ -27,7 +24,7 @@ async def test_get_all_users_success(async_client, seed_users, test_users_data):
     assert_list_response(response, expected_length=3)
     response_json = response.json()
     response_dict = {u["id"]: u for u in response_json}
-    assert set(_filter_excluded_keys(response_dict[USER_ID_1].keys())) == USERS_RESPONSE_KEYS
+    assert_keys_match(response_dict[USER_ID_1], USERS_RESPONSE_KEYS)
     assert response_dict[USER_ID_1]["first_name"] == "Alice"
     assert response_dict[USER_ID_2]["id"] is not None
     assert response_dict[USER_ID_2]["email"] == "bob@example.com"
@@ -64,7 +61,7 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
     ({}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ({ "first_name": "Incomplete"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ({ "first_name": 123, "last_name": True, "phone": 555, "email": 999}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
-    ({ "id": BAD_ID_0000, "first_name": "ID Not Allowed", "last_name": "ID", "phone": "555-6666", "email": "id_not_allowed@example.com"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # user_id not allowed in payload
+    ({ "id": BAD_ID_0000, "first_name": "ID Not Allowed", "last_name": "ID", "phone": "555-6666", "email": "id_not_allowed@example.com"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # user.id not allowed in payload
 ])
 async def test_insert_user_error_cases(async_client, payload, expected_status):
     response = await async_client.post("/users", json=payload)
@@ -119,9 +116,13 @@ async def test_update_user_success(async_client, seed_users, test_users_data, pa
 # =============================
 # DELETE USER
 # =============================
-async def test_delete_user_error_cases(async_client):
-    response = await async_client.delete("/users/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+@pytest.mark.parametrize("id, expected_status", [
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # user not found
+])
+async def test_delete_user_error_cases(async_client, id, expected_status):
+    response = await async_client.delete(f"/users/{id}")
+    assert response.status_code == expected_status
 
 async def test_delete_user_success(async_client, seed_users, test_users_data):
     seed_users([test_users_data[0]])

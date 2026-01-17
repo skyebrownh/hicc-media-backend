@@ -4,10 +4,7 @@ from fastapi import status
 from sqlmodel import select, func
 
 from app.db.models import EventAssignment
-from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_response, assert_single_item_response, parse_to_utc, conditional_seed,
-    _filter_excluded_keys
-)
+from tests.utils.helpers import  assert_empty_list_200, assert_list_response, assert_single_item_response, parse_to_utc, conditional_seed, assert_keys_match
 from tests.utils.constants import (
     BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, EVENT_TYPE_ID_1, EVENT_TYPE_ID_2,
     EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, TEAM_ID_1, USER_ID_1, ROLE_ID_1, ROLE_ID_2, EVENT_ASSIGNMENT_ID_1, EVENT_ASSIGNMENT_ID_2,
@@ -49,10 +46,10 @@ async def test_get_all_events_for_schedule_success(async_client, seed_for_events
     response_json = response.json()
     print(f"GET all events for schedule response_json: {json.dumps(response_json, indent=4)}")
     response_dict = {e["event"]["id"]: e for e in response_json}
-    assert set(_filter_excluded_keys(response_dict[EVENT_ID_1].keys())) == EVENTS_RESPONSE_KEYS
-    assert set(response_dict[EVENT_ID_1]["event"].keys()) == EVENT_RESPONSE_KEYS
+    assert_keys_match(response_dict[EVENT_ID_1], EVENTS_RESPONSE_KEYS)
+    assert_keys_match(response_dict[EVENT_ID_1]["event"], EVENT_RESPONSE_KEYS)
     for ea in response_dict[EVENT_ID_1]["event_assignments"]:
-        assert set(_filter_excluded_keys(ea.keys())) == EVENT_ASSIGNMENTS_RESPONSE_KEYS
+        assert_keys_match(ea, EVENT_ASSIGNMENTS_RESPONSE_KEYS)
 
     assert response_dict[EVENT_ID_1]["event"]["id"] is not None
     assert response_dict[EVENT_ID_1]["event"]["schedule_id"] == SCHEDULE_ID_2
@@ -144,7 +141,7 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
     (SCHEDULE_ID_2, {}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     (SCHEDULE_ID_2, {"title": "New Event"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     (SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": "invalid-datetime"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid format in payload
-    (SCHEDULE_ID_2, {"id": EVENT_ID_1, **VALID_INSERT_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # extra fields not allowed
+    (SCHEDULE_ID_2, {"id": EVENT_ID_1, **VALID_INSERT_PAYLOAD}, status.HTTP_422_UNPROCESSABLE_CONTENT), # event.id not allowed
     (SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "starts_at": DATETIME_2025_05_03.isoformat()}, status.HTTP_422_UNPROCESSABLE_CONTENT), # starts_at is before ends_at
     (SCHEDULE_ID_2, {**VALID_INSERT_PAYLOAD, "event_type_id": BAD_ID_0000}, status.HTTP_409_CONFLICT), # foreign key violation (event_type doesn't exist)
 ])
@@ -164,10 +161,10 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
     response = await async_client.post(f"/schedules/{SCHEDULE_ID_2}/events", json=VALID_INSERT_PAYLOAD)
     assert response.status_code == status.HTTP_201_CREATED
     response_json = response.json()
-    assert set(_filter_excluded_keys(response_json.keys())) == EVENTS_RESPONSE_KEYS
-    assert set(_filter_excluded_keys(response_json["event"].keys())) == EVENT_RESPONSE_KEYS
+    assert_keys_match(response_json, EVENTS_RESPONSE_KEYS)
+    assert_keys_match(response_json["event"], EVENT_RESPONSE_KEYS)
     for ea in response_json["event_assignments"]:
-        assert set(_filter_excluded_keys(ea.keys())) == EVENT_ASSIGNMENTS_RESPONSE_KEYS
+        assert_keys_match(ea, EVENT_ASSIGNMENTS_RESPONSE_KEYS)
 
     assert response_json["event"]["id"] is not None
     assert response_json["event"]["schedule_id"] == SCHEDULE_ID_2
@@ -228,9 +225,13 @@ async def test_update_event_success(async_client, seed_schedules, seed_event_typ
 # =============================
 # DELETE EVENT
 # =============================
-async def test_delete_event_error_cases(async_client):
-    response = await async_client.delete("/events/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+@pytest.mark.parametrize("id, expected_status", [
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # event not found
+])
+async def test_delete_event_error_cases(async_client, id, expected_status):
+    response = await async_client.delete(f"/events/{id}")
+    assert response.status_code == expected_status
 
 async def test_delete_event_success(async_client, seed_events, seed_event_types, seed_schedules, test_events_data, test_event_types_data, test_schedules_data):
     seed_event_types([test_event_types_data[0]])

@@ -1,10 +1,7 @@
 import pytest
 from fastapi import status
 
-from tests.utils.helpers import (
-    assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed,
-    _filter_excluded_keys
-)
+from tests.utils.helpers import assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed, assert_keys_match
 from tests.utils.constants import BAD_ID_0000, PROFICIENCY_LEVEL_ID_1, PROFICIENCY_LEVEL_ID_2, PROFICIENCY_LEVEL_ID_3
 
 pytestmark = pytest.mark.asyncio
@@ -25,7 +22,7 @@ async def test_get_all_proficiency_levels_success(async_client, seed_proficiency
     assert_list_response(response, expected_length=3)
     response_json = response.json()
     response_dict = {pl["id"]: pl for pl in response_json}
-    assert set(_filter_excluded_keys(response_dict[PROFICIENCY_LEVEL_ID_1].keys())) == PROFICIENCY_LEVELS_RESPONSE_KEYS
+    assert_keys_match(response_dict[PROFICIENCY_LEVEL_ID_1], PROFICIENCY_LEVELS_RESPONSE_KEYS)
     assert response_dict[PROFICIENCY_LEVEL_ID_1]["name"] == "Novice"
     assert response_dict[PROFICIENCY_LEVEL_ID_2]["id"] is not None
     assert response_dict[PROFICIENCY_LEVEL_ID_2]["code"] == "proficient"
@@ -64,7 +61,7 @@ async def test_get_single_proficiency_level_success(async_client, seed_proficien
     ([], {"name": "Incomplete Proficiency Level"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ([], {"name": "Bad Proficiency Level", "rank": "not_an_int", "code": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
     ([0], {"name": "Duplicate Code", "rank": 6, "code": "novice"}, status.HTTP_409_CONFLICT), # duplicate proficiency_level_code
-    ([], {"id": BAD_ID_0000, "name": "ID Not Allowed", "rank": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # proficiency_level_id not allowed in payload
+    ([], {"id": BAD_ID_0000, "name": "ID Not Allowed", "rank": 7, "code": "id_not_allowed"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # proficiency_level.id not allowed in payload
 ])
 async def test_insert_proficiency_level_error_cases(async_client, seed_proficiency_levels, test_proficiency_levels_data, proficiency_level_indices, payload, expected_status):
     conditional_seed(proficiency_level_indices, test_proficiency_levels_data, seed_proficiency_levels)
@@ -108,9 +105,13 @@ async def test_update_proficiency_level_success(async_client, seed_proficiency_l
 # =============================
 # DELETE PROFICIENCY LEVEL
 # =============================
-async def test_delete_proficiency_level_error_cases(async_client):
-    response = await async_client.delete("/proficiency_levels/invalid-uuid-format")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+@pytest.mark.parametrize("id, expected_status", [
+    ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
+    (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # proficiency level not found
+])
+async def test_delete_proficiency_level_error_cases(async_client, id, expected_status):
+    response = await async_client.delete(f"/proficiency_levels/{id}")
+    assert response.status_code == expected_status
 
 async def test_delete_proficiency_level_success(async_client, seed_proficiency_levels, test_proficiency_levels_data):
     seed_proficiency_levels([test_proficiency_levels_data[0]])
