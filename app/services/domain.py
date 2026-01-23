@@ -61,11 +61,14 @@ def create_role_with_user_roles(session: Session, payload: RoleCreate) -> Role:
         session.flush()  # Flush to get the ID before creating UserRole records
 
         # Create user_roles for this new role for every user
+        new_user_roles = []
+        users = session.exec(select(User)).all()
         untrained_proficiency_level = session.exec(select(ProficiencyLevel).where(ProficiencyLevel.code == "untrained")).first()
         proficiency_level_id = untrained_proficiency_level.id if untrained_proficiency_level else None
-        for user in session.exec(select(User)).all():
-            session.add(UserRole(user_id=user.id, role_id=role.id, proficiency_level_id=proficiency_level_id))
+        for user in users:
+            new_user_roles.append(UserRole(user_id=user.id, role_id=role.id, proficiency_level_id=proficiency_level_id))
 
+        session.add_all(new_user_roles)
         session.commit()
         session.refresh(role)
         return role
@@ -83,11 +86,14 @@ def create_user_with_user_roles(session: Session, payload: UserCreate) -> User:
         session.flush()  # Flush to get the ID before creating UserRole records
 
         # Create user_roles for this new user for every role
+        new_user_roles = []
+        roles = session.exec(select(Role)).all()
         untrained_proficiency_level = session.exec(select(ProficiencyLevel).where(ProficiencyLevel.code == "untrained")).first()
         proficiency_level_id = untrained_proficiency_level.id if untrained_proficiency_level else None
-        for role in session.exec(select(Role)).all():
-            session.add(UserRole(user_id=user.id, role_id=role.id, proficiency_level_id=proficiency_level_id))
+        for role in roles:
+            new_user_roles.append(UserRole(user_id=user.id, role_id=role.id, proficiency_level_id=proficiency_level_id))
 
+        session.add_all(new_user_roles)
         session.commit()
         session.refresh(user)
         return user
