@@ -9,7 +9,7 @@ from tests.utils.constants import BAD_ID_0000, ROLE_ID_1, ROLE_ID_2, USER_ID_1, 
 pytestmark = pytest.mark.asyncio
 
 USERS_RESPONSE_KEYS = {"id", "first_name", "last_name", "email", "phone", "is_active"}
-VALID_UPDATE_PAYLOAD = {"first_name": "Updated First Name", "last_name": "Updated Last Name", "email": "updated@example.com", "phone": "555-7777", "is_active": False}
+VALID_UPDATE_PAYLOAD = {"first_name": "Updated First Name", "last_name": "Updated Last Name", "email": "updated@example.com", "phone": "+12345557777", "is_active": False}
 
 # =============================
 # GET ALL USERS
@@ -28,7 +28,7 @@ async def test_get_all_users_success(async_client, seed_users, test_users_data):
     assert response_dict[USER_ID_1]["first_name"] == "Alice"
     assert response_dict[USER_ID_2]["id"] is not None
     assert response_dict[USER_ID_2]["email"] == "bob@example.com"
-    assert response_dict[USER_ID_3]["phone"] == "555-3333"
+    assert response_dict[USER_ID_3]["phone"] == "+12345553333"
     assert response_dict[USER_ID_3]["is_active"] is True
 
 # =============================
@@ -50,7 +50,7 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
         "first_name": "Alice",
         "last_name": "Smith",
         "email": "alice@example.com",
-        "phone": "555-1111",
+        "phone": "+12345551111",
         "is_active": True
     })
 
@@ -61,6 +61,8 @@ async def test_get_single_user_success(async_client, seed_users, test_users_data
     ({}, status.HTTP_422_UNPROCESSABLE_CONTENT), # empty payload
     ({ "first_name": "Incomplete"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # missing required fields
     ({ "first_name": 123, "last_name": True, "phone": 555, "email": 999}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    ({ "first_name": "Test", "last_name": "User", "phone": "555-9999", "email": "invalid-email"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid email format
+    ({ "first_name": "Test", "last_name": "User", "phone": "invalid-phone-number", "email": "test@example.com"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid phone number
     ({ "id": BAD_ID_0000, "first_name": "ID Not Allowed", "last_name": "ID", "phone": "555-6666", "email": "id_not_allowed@example.com"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # user.id not allowed in payload
 ])
 async def test_insert_user_error_cases(async_client, payload, expected_status):
@@ -70,8 +72,8 @@ async def test_insert_user_error_cases(async_client, payload, expected_status):
 async def test_insert_user_success(async_client, get_test_db_session, seed_roles, seed_proficiency_levels, test_roles_data, test_proficiency_levels_data):
     seed_proficiency_levels([test_proficiency_levels_data[2]]) # Untrained proficiency level
     seed_roles(test_roles_data[:2])
-    response = await async_client.post("/users", json={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com"})
-    assert_single_item_response(response, expected_item={"first_name": "New", "last_name": "User", "phone": "555-4444", "email": "newuser@example.com", "is_active": True}, status_code=status.HTTP_201_CREATED)
+    response = await async_client.post("/users", json={"first_name": "New", "last_name": "User", "phone": "+12345554444", "email": "newuser@example.com"})
+    assert_single_item_response(response, expected_item={"first_name": "New", "last_name": "User", "phone": "+12345554444", "email": "newuser@example.com", "is_active": True}, status_code=status.HTTP_201_CREATED)
 
     # Verify user_roles were created for this new user
     user_id = response.json()["id"]
@@ -91,6 +93,8 @@ async def test_insert_user_success(async_client, get_test_db_session, seed_roles
     ("invalid-uuid-format", VALID_UPDATE_PAYLOAD, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     (USER_ID_1, {}, status.HTTP_400_BAD_REQUEST), # empty payload
     (USER_ID_1, {"first_name": 12345}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid data types
+    (USER_ID_1, {"email": "invalid-email"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid email format
+    (USER_ID_1, {"phone": "invalid-phone-number"}, status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid phone number
     (USER_ID_1, {"first_name": "Invalid", "id": USER_ID_2}, status.HTTP_422_UNPROCESSABLE_CONTENT), # non-updatable field
 ])
 async def test_update_user_error_cases(async_client, seed_users, test_users_data, user_id, payload, expected_status):
@@ -100,8 +104,8 @@ async def test_update_user_error_cases(async_client, seed_users, test_users_data
 
 @pytest.mark.parametrize("payload, unchanged_fields", [
     (VALID_UPDATE_PAYLOAD, {}), # full update
-    ({"is_active": False}, {"first_name": "Alice", "last_name": "Smith", "email": "alice@example.com", "phone": "555-1111"}), # partial update (is_active only)
-    ({"first_name": "Partially Updated User"}, {"last_name": "Smith", "email": "alice@example.com", "phone": "555-1111", "is_active": True}), # partial update (first_name only)
+    ({"is_active": False}, {"first_name": "Alice", "last_name": "Smith", "email": "alice@example.com", "phone": "+12345551111"}), # partial update (is_active only)
+    ({"first_name": "Partially Updated User"}, {"last_name": "Smith", "email": "alice@example.com", "phone": "+12345551111", "is_active": True}), # partial update (first_name only)
 ])
 async def test_update_user_success(async_client, seed_users, test_users_data, payload, unchanged_fields):
     seed_users([test_users_data[0]])

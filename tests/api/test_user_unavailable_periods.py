@@ -41,7 +41,7 @@ async def test_insert_user_unavailable_period_success(async_client, seed_users, 
         "user_first_name": "Alice",
         "user_last_name": "Smith",
         "user_email": "alice@example.com",
-        "user_phone": "555-1111",
+        "user_phone": "+12345551111",
         "user_is_active": True
     }, status_code=status.HTTP_201_CREATED, additional_keys_to_exclude=["starts_at", "ends_at"])
 

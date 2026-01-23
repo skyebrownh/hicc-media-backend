@@ -11,9 +11,9 @@ from tests.utils.constants import *
 
 @pytest.fixture
 def test_users_data():
-    user_1 = User(id=USER_ID_1, first_name="Alice", last_name="Smith", phone="555-1111", email="alice@example.com")
-    user_2 = User(id=USER_ID_2, first_name="Bob", last_name="Jones", phone="555-2222", email="bob@example.com")
-    user_3 = User(id=USER_ID_3, first_name="Carol", last_name="Lee", phone="555-3333", email=None)
+    user_1 = User(id=USER_ID_1, first_name="Alice", last_name="Smith", phone="+12345551111", email="alice@example.com")
+    user_2 = User(id=USER_ID_2, first_name="Bob", last_name="Jones", phone="+12345552222", email="bob@example.com")
+    user_3 = User(id=USER_ID_3, first_name="Carol", last_name="Lee", phone="+12345553333", email=None)
     return [user_1, user_2, user_3]
 
 @pytest.fixture

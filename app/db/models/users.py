@@ -1,18 +1,40 @@
+import phonenumbers
 from uuid import UUID, uuid4
 from typing import TYPE_CHECKING
-from pydantic import ConfigDict
+from pydantic import ConfigDict, EmailStr, field_validator
+from pydantic_core import PydanticCustomError
 from sqlmodel import SQLModel, Field, Relationship, Column, TIMESTAMP
 from datetime import datetime, timezone
 
 if TYPE_CHECKING:
     from app.db.models import UserRole, UserUnavailablePeriod
 
+def normalize_phone_number(value) -> str:
+    """Normalize phone number to E164 format."""
+    if not isinstance(value, str):
+        raise PydanticCustomError("invalid_phone_number", f"Invalid phone number: {value}")
+
+    try:
+        parsed = phonenumbers.parse(value, None) if value.startswith("+") else phonenumbers.parse(value, "US")
+
+        if not phonenumbers.is_valid_number(parsed):
+            raise PydanticCustomError("invalid_phone_number", f"Invalid phone number: {value}")
+
+        return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+    except phonenumbers.NumberParseException:
+        raise PydanticCustomError("invalid_phone_number", f"Invalid phone number: {value}")
+
 class UserBase(SQLModel):
     first_name: str
     last_name: str
-    email: str | None = Field(default=None)
+    email: EmailStr | None = Field(default=None)
     phone: str
     is_active: bool = Field(default=True)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def parse_phone(cls, value) -> str:
+        return normalize_phone_number(value)
 
 class User(UserBase, table=True):
     __tablename__ = "users"
@@ -40,6 +62,13 @@ class UserUpdate(SQLModel):
     # user.id is used to update the user
     first_name: str | None = None
     last_name: str | None = None
-    email: str | None = None
+    email: EmailStr | None = None
     phone: str | None = None
     is_active: bool | None = None
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def parse_phone(cls, value) -> str | None:
+        if value is None:
+            return None
+        return normalize_phone_number(value)
