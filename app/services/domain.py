@@ -18,7 +18,7 @@ from app.db.models import (
 
 from app.utils.helpers import require_non_empty_payload
 from app.utils.exceptions import ConflictError, CheckConstraintError, EmptyPayloadError
-from app.services.queries import select_unavailable_users_for_event
+from app.services.queries import select_unavailable_users_for_month
 
 # =============================
 # CREATE OBJECT
@@ -150,9 +150,12 @@ def update_team_user(session: Session, payload: TeamUserUpdate, team_user: TeamU
 # =============================
 def get_schedule_grid_from_schedule(session: Session, schedule: Schedule) -> ScheduleGridPublic:
     schedule_grid_events = []
+
+    unavailable_users = select_unavailable_users_for_month(session=session, month=schedule.month, year=schedule.year)
+    unavailable_users = [] if unavailable_users is None else unavailable_users
+
     for event in schedule.events:
-        unavailable_users = select_unavailable_users_for_event(session=session, event_id=event.id)
-        unavailable_users = [] if unavailable_users is None else unavailable_users
+        event_unavailable_users = [ua for ua in unavailable_users if ua.starts_at < event.ends_at and ua.ends_at > event.starts_at]
         schedule_grid_events.append(
             EventWithAssignmentsAndAvailabilityPublic(
                 event=EventPublic.from_objects(
@@ -166,7 +169,7 @@ def get_schedule_grid_from_schedule(session: Session, schedule: Schedule) -> Sch
                 availability=[
                     UserUnavailablePeriodEmbeddedPublic(
                         user_id=ua.user.id, user_first_name=ua.user.first_name, user_last_name=ua.user.last_name,
-                    ) for ua in unavailable_users
+                    ) for ua in event_unavailable_users
                 ],
             )
         )
@@ -179,7 +182,6 @@ def create_event_with_default_assignment_slots(session: Session, payload: EventC
     new_event = Event(schedule_id=schedule.id, **payload.model_dump())
     active_roles = session.exec(select(Role).where(Role.is_active == True)).all()
     for role in active_roles:
-        # TODO: Set is_applicable and requirement_level
         new_event.event_assignments.append(EventAssignment(event_id=new_event.id, role_id=role.id))
     try:
         session.add(new_event)

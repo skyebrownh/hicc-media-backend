@@ -1,4 +1,6 @@
 from uuid import UUID
+from datetime import datetime, timezone
+from calendar import monthrange
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 
@@ -40,15 +42,17 @@ def select_full_event_assignment(session: Session, event_assignment_id: UUID) ->
         )
     ).one_or_none()
 
-def select_unavailable_users_for_event(session: Session, event_id: UUID) -> list[User]:
-    event = session.exec(
-        select(Event)
-        .where(Event.id == event_id)
-    ).one()
-
+def select_unavailable_users_for_month(session: Session, month: int, year: int) -> list[UserUnavailablePeriod]:
+    # Calculate the start and end of the month in UTC
+    month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+    _, last_day = monthrange(year, month)
+    month_end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+    
+    # Find all periods that overlap with the month
+    # A period overlaps if: starts_at < month_end AND ends_at > month_start
     return session.exec(
         select(UserUnavailablePeriod)
-        .where(UserUnavailablePeriod.starts_at < event.ends_at)
-        .where(UserUnavailablePeriod.ends_at > event.starts_at)
+        .where(UserUnavailablePeriod.starts_at < month_end)
+        .where(UserUnavailablePeriod.ends_at > month_start)
         .options(selectinload(UserUnavailablePeriod.user))
     ).all()
