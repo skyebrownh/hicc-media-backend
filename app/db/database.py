@@ -26,4 +26,4 @@ async def close_db(app: FastAPI):
     Close the database engine during application shutdown.
     """
     if hasattr(app.state, 'db_engine') and app.state.db_engine:
-        await app.state.db_engine.dispose()
+        app.state.db_engine.dispose()
