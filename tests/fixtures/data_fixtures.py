@@ -75,7 +75,7 @@ def test_schedules_data():
 def test_events_data():
     event_1 = Event(id=EVENT_ID_1, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=DATETIME_2025_05_01, ends_at=DATETIME_2025_05_02)
     event_2 = Event(id=EVENT_ID_2, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=DATETIME_2025_05_02, ends_at=DATETIME_2025_05_03)
-    event_3 = Event(id=EVENT_ID_3, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=DATETIME_2025_05_03, ends_at=DATETIME_2025_05_04)
+    event_3 = Event(id=EVENT_ID_3, schedule_id=SCHEDULE_ID_2, event_type_id=EVENT_TYPE_ID_1, starts_at=DATETIME_2025_05_03, ends_at=DATETIME_2025_05_04, team_id=TEAM_ID_1)
     return [event_1, event_2, event_3]
 
 @pytest.fixture

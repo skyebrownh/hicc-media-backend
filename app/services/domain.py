@@ -52,6 +52,17 @@ def update_object(session: Session, payload: SQLModel, object: SQLModel) -> SQLM
         raise ConflictError(f"{object.__class__.__name__} update violates a constraint") from e
 
 # =============================
+# DELETE OBJECT
+# =============================
+def delete_object(session: Session, object: SQLModel) -> None:
+    try:
+        session.delete(object)
+        session.commit()
+    except IntegrityError as e:
+        session.rollback()
+        raise ConflictError(f"{object.__class__.__name__} deletion violates a constraint") from e
+
+# =============================
 # CREATE ROLE WITH USER ROLES
 # =============================
 def create_role_with_user_roles(session: Session, payload: RoleCreate) -> Role:

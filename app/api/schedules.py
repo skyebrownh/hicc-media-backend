@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic
 from app.utils.dependencies import SessionDep, ScheduleDep, ScheduleWithEventsAndAssignmentsDep
-from app.services.domain import update_object, get_schedule_grid_from_schedule, create_object
+from app.services.domain import update_object, get_schedule_grid_from_schedule, create_object, delete_object
 
 router = APIRouter(prefix="/schedules")
 
@@ -22,8 +22,6 @@ def get_schedule_grid(session: SessionDep, schedule: ScheduleWithEventsAndAssign
 @router.post("", response_model=Schedule, status_code=status.HTTP_201_CREATED)
 def post_schedule(payload: ScheduleCreate, session: SessionDep):
     return create_object(session, payload, Schedule, "schedule_check_month")
-    
-# TODO: Generate events for a schedule - using a service
 
 @router.patch("/{id}", response_model=Schedule)
 def patch_schedule(payload: ScheduleUpdate, session: SessionDep, schedule: ScheduleDep):
@@ -31,6 +29,5 @@ def patch_schedule(payload: ScheduleUpdate, session: SessionDep, schedule: Sched
 
 @router.delete("/{id}")
 def delete_schedule(session: SessionDep, schedule: ScheduleDep):
-    session.delete(schedule)
-    session.commit()
+    delete_object(session, schedule)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

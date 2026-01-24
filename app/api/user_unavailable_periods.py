@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, Response
 
 from app.db.models import UserUnavailablePeriodCreate, UserUnavailablePeriodUpdate, UserUnavailablePeriodPublic
 from app.utils.dependencies import SessionDep, UserWithUserRolesForUnavailablePeriodsDep, UserUnavailablePeriodDep
-from app.services.domain import create_user_unavailable_period, create_user_unavailable_periods_bulk, update_user_unavailable_period
+from app.services.domain import create_user_unavailable_period, create_user_unavailable_periods_bulk, update_user_unavailable_period, delete_object
 
 router = APIRouter()
 
@@ -20,6 +20,5 @@ def patch_user_unavailable_period(payload: UserUnavailablePeriodUpdate, session:
 
 @router.delete("/user_availability/{id}")
 def delete_user_unavailable_period(session: SessionDep, user_unavailable_period: UserUnavailablePeriodDep):
-    session.delete(user_unavailable_period)
-    session.commit()
+    delete_object(session, user_unavailable_period)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

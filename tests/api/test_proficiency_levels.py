@@ -108,8 +108,13 @@ async def test_update_proficiency_level_success(async_client, seed_proficiency_l
 @pytest.mark.parametrize("id, expected_status", [
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # proficiency level not found
+    (PROFICIENCY_LEVEL_ID_1, status.HTTP_409_CONFLICT), # proficiency level has references to other objects
 ])
-async def test_delete_proficiency_level_error_cases(async_client, id, expected_status):
+async def test_delete_proficiency_level_error_cases(async_client, seed_roles, test_roles_data, seed_users, test_users_data, seed_proficiency_levels, test_proficiency_levels_data, seed_user_roles, test_user_roles_data, id, expected_status):
+    seed_roles([test_roles_data[0]])
+    seed_users([test_users_data[0]])
+    seed_proficiency_levels([test_proficiency_levels_data[0]])
+    seed_user_roles([test_user_roles_data[0]])
     response = await async_client.delete(f"/proficiency_levels/{id}")
     assert response.status_code == expected_status
 

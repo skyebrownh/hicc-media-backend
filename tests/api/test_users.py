@@ -123,8 +123,11 @@ async def test_update_user_success(async_client, seed_users, test_users_data, pa
 @pytest.mark.parametrize("id, expected_status", [
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # user not found
+    (USER_ID_1, status.HTTP_409_CONFLICT), # user has references to other objects
 ])
-async def test_delete_user_error_cases(async_client, id, expected_status):
+async def test_delete_user_error_cases(async_client, seed_users, test_users_data, seed_user_unavailable_periods, test_user_unavailable_periods_data, id, expected_status):
+    seed_users([test_users_data[0]])
+    seed_user_unavailable_periods([test_user_unavailable_periods_data[0]])
     response = await async_client.delete(f"/users/{id}")
     assert response.status_code == expected_status
 

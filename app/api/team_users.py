@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, Response
 
 from app.db.models import TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPublic
 from app.utils.dependencies import SessionDep, TeamWithTeamUsersDep, TeamForTeamUsersDep, TeamUserDep
-from app.services.domain import create_team_user_for_team, update_team_user
+from app.services.domain import create_team_user_for_team, update_team_user, delete_object
 
 router = APIRouter()
 
@@ -23,6 +23,5 @@ def patch_team_user(payload: TeamUserUpdate, session: SessionDep, team_user: Tea
 
 @router.delete("/teams/{team_id}/users/{user_id}")
 def delete_team_user(session: SessionDep, team_user: TeamUserDep):
-    session.delete(team_user)
-    session.commit()
+    delete_object(session, team_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

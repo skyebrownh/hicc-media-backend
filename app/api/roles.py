@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from app.db.models import Role, RoleCreate, RoleUpdate
 from app.utils.dependencies import SessionDep, RoleDep
-from app.services.domain import create_role_with_user_roles, update_object
+from app.services.domain import create_role_with_user_roles, update_object, delete_object
 
 router = APIRouter(prefix="/roles")
 
@@ -25,6 +25,5 @@ def patch_role(payload: RoleUpdate, session: SessionDep, role: RoleDep):
 
 @router.delete("/{id}")
 def delete_role(session: SessionDep, role: RoleDep):
-    session.delete(role)
-    session.commit()
+    delete_object(session, role)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from app.db.models import User, UserCreate, UserUpdate
 from app.utils.dependencies import SessionDep, UserDep
-from app.services.domain import create_user_with_user_roles, update_object
+from app.services.domain import create_user_with_user_roles, update_object, delete_object
 
 router = APIRouter(prefix="/users")
 
@@ -25,6 +25,5 @@ def patch_user(payload: UserUpdate, session: SessionDep, user: UserDep):
 
 @router.delete("/{id}")
 def delete_user(session: SessionDep, user: UserDep):
-    session.delete(user)
-    session.commit()
+    delete_object(session, user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

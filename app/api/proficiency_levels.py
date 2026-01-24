@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from app.db.models import ProficiencyLevel, ProficiencyLevelCreate, ProficiencyLevelUpdate 
 from app.utils.dependencies import SessionDep, ProficiencyLevelDep
-from app.services.domain import create_object, update_object
+from app.services.domain import create_object, update_object, delete_object
 
 router = APIRouter(prefix="/proficiency_levels")
 
@@ -25,6 +25,5 @@ def patch_proficiency_level(payload: ProficiencyLevelUpdate, session: SessionDep
 
 @router.delete("/{id}")
 def delete_proficiency_level(session: SessionDep, proficiency_level: ProficiencyLevelDep):
-    session.delete(proficiency_level)
-    session.commit()
+    delete_object(session, proficiency_level)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

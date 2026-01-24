@@ -103,8 +103,12 @@ async def test_update_event_type_success(async_client, seed_event_types, test_ev
 @pytest.mark.parametrize("id, expected_status", [
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # event type not found
+    (EVENT_TYPE_ID_1, status.HTTP_409_CONFLICT), # event type has references to other objects
 ])
-async def test_delete_event_type_error_cases(async_client, id, expected_status):
+async def test_delete_event_type_error_cases(async_client, seed_event_types, test_event_types_data, seed_schedules, test_schedules_data, seed_events, test_events_data, id, expected_status):
+    seed_event_types([test_event_types_data[0]])
+    seed_schedules([test_schedules_data[1]])
+    seed_events([test_events_data[0]])
     response = await async_client.delete(f"/event_types/{id}")
     assert response.status_code == expected_status
 

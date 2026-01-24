@@ -4,7 +4,7 @@ from sqlmodel import select, func
 
 from app.db.models import Event, EventAssignment
 from tests.utils.helpers import  assert_empty_list_200, assert_list_response, assert_single_item_response, conditional_seed, assert_keys_match
-from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_TYPE_ID_1
+from tests.utils.constants import BAD_ID_0000, SCHEDULE_ID_1, SCHEDULE_ID_2, ROLE_ID_1, ROLE_ID_2, USER_ID_1, USER_ID_2, EVENT_ID_1, EVENT_ID_2, EVENT_ID_3, EVENT_TYPE_ID_1, TEAM_ID_1
 
 pytestmark = pytest.mark.asyncio
 
@@ -14,8 +14,9 @@ SCHEDULES_RESPONSE_KEYS = {"id", "month", "year", "notes", "is_active"}
 # FIXTURES
 # =============================
 @pytest.fixture
-def seed_for_schedules_tests(seed_roles, seed_users, seed_schedules, seed_event_types, seed_events, seed_event_assignments, seed_user_unavailable_periods, test_roles_data, test_users_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data, test_user_unavailable_periods_data):
+def seed_for_schedules_tests(seed_roles, seed_teams, seed_users, seed_schedules, seed_event_types, seed_events, seed_event_assignments, seed_user_unavailable_periods, test_roles_data, test_teams_data, test_users_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data, test_user_unavailable_periods_data):
     seed_roles(test_roles_data[:2])
+    seed_teams([test_teams_data[0]])
     seed_users(test_users_data[:2])
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])
@@ -92,6 +93,7 @@ async def test_get_schedule_grid_success(async_client, seed_for_schedules_tests)
     assert events_dict[EVENT_ID_1]["event"]["event_type_id"] == EVENT_TYPE_ID_1
     assert events_dict[EVENT_ID_1]["event"]["team_id"] is None
     assert events_dict[EVENT_ID_2]["event"]["id"] == EVENT_ID_2
+    assert events_dict[EVENT_ID_3]["event"]["team_id"] == TEAM_ID_1
     assert len(events_dict[EVENT_ID_1]["event_assignments"]) == 2
     event_assignments_dict = {ea["role_id"]: ea for ea in events_dict[EVENT_ID_1]["event_assignments"]}
     assert event_assignments_dict[ROLE_ID_1]["role_id"] == ROLE_ID_1
@@ -186,8 +188,8 @@ async def test_delete_schedule_success(async_client, seed_schedules, test_schedu
     ([0, 1, 2], [0, 1, 2], 3, 3), # Multiple events, multiple event_assignments to cascade delete
 ])
 async def test_delete_schedule_cascade(
-    async_client, get_test_db_session, seed_schedules, seed_roles, seed_users, seed_event_types, seed_events, seed_event_assignments,
-    test_schedules_data, test_roles_data, test_users_data, test_event_types_data, test_events_data, test_event_assignments_data,
+    async_client, get_test_db_session, seed_schedules, seed_roles, seed_teams, seed_users, seed_event_types, seed_events, seed_event_assignments,
+    test_schedules_data, test_roles_data, test_teams_data, test_users_data, test_event_types_data, test_events_data, test_event_assignments_data,
     event_indices, event_assignment_indices, expected_count_events_before, expected_count_event_assignments_before
 ):
     # Seed parent
@@ -195,6 +197,7 @@ async def test_delete_schedule_cascade(
 
     # Seed child records based on parameters
     seed_roles(test_roles_data[:2])
+    seed_teams([test_teams_data[0]])
     seed_users([test_users_data[0]])
     seed_event_types([test_event_types_data[0]])
     conditional_seed(event_indices, test_events_data, seed_events)

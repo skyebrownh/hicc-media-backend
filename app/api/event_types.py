@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from app.db.models import EventType, EventTypeCreate, EventTypeUpdate
 from app.utils.dependencies import SessionDep, EventTypeDep
-from app.services.domain import create_object, update_object
+from app.services.domain import create_object, update_object, delete_object
 
 router = APIRouter(prefix="/event_types")
 
@@ -25,6 +25,5 @@ def patch_event_type(payload: EventTypeUpdate, session: SessionDep, event_type: 
 
 @router.delete("/{id}")
 def delete_event_type(session: SessionDep, event_type: EventTypeDep):
-    session.delete(event_type)
-    session.commit()
+    delete_object(session, event_type)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

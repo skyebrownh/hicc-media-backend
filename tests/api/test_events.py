@@ -24,8 +24,9 @@ VALID_UPDATE_PAYLOAD = {"title": "Updated Event", "starts_at": DATETIME_2025_05_
 # FIXTURES
 # =============================
 @pytest.fixture
-def seed_for_events_tests(seed_users, seed_roles, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_users_data, test_roles_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data):
+def seed_for_events_tests(seed_users, seed_teams, seed_roles, seed_schedules, seed_event_types, seed_events, seed_event_assignments, test_users_data, test_teams_data, test_roles_data, test_schedules_data, test_event_types_data, test_events_data, test_event_assignments_data):
     seed_users([test_users_data[0]])
+    seed_teams([test_teams_data[0]])
     seed_roles(test_roles_data[:2])
     seed_schedules([test_schedules_data[1]])
     seed_event_types([test_event_types_data[0]])
@@ -56,7 +57,7 @@ async def test_get_all_events_for_schedule_success(async_client, seed_for_events
     assert response_dict[EVENT_ID_2]["event"]["event_type_id"] == EVENT_TYPE_ID_1
     assert parse_to_utc(response_dict[EVENT_ID_2]["event"]["starts_at"]) == DATETIME_2025_05_02
     assert parse_to_utc(response_dict[EVENT_ID_3]["event"]["ends_at"]) == DATETIME_2025_05_04
-    assert response_dict[EVENT_ID_3]["event"]["team_id"] is None
+    assert response_dict[EVENT_ID_3]["event"]["team_id"] == TEAM_ID_1
     event_assignments_dict = {ea["role_id"]: ea for ea in response_dict[EVENT_ID_1]["event_assignments"]}
     assert event_assignments_dict[ROLE_ID_1]["id"] is not None
     assert event_assignments_dict[ROLE_ID_1]["role_id"] == ROLE_ID_1

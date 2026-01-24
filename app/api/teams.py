@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from app.db.models import Team, TeamCreate, TeamUpdate
 from app.utils.dependencies import SessionDep, TeamDep
-from app.services.domain import create_object, update_object
+from app.services.domain import create_object, update_object, delete_object
 
 router = APIRouter(prefix="/teams")
 
@@ -25,6 +25,5 @@ def patch_team(payload: TeamUpdate, session: SessionDep, team: TeamDep):
 
 @router.delete("/{id}")
 def delete_team(session: SessionDep, team: TeamDep):
-    session.delete(team)
-    session.commit()
+    delete_object(session, team)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

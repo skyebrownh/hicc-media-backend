@@ -3,7 +3,7 @@ from fastapi import APIRouter, status, Response
 from app.db.models import EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic
 from app.utils.dependencies import SessionDep, ScheduleForEventsDep, EventDep, EventWithFullHierarchyDep
 from app.services.builders import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event
-from app.services.domain import update_object, create_event_with_default_assignment_slots
+from app.services.domain import update_object, create_event_with_default_assignment_slots, delete_object
 
 router = APIRouter()
 
@@ -28,6 +28,5 @@ def patch_event(payload: EventUpdate, session: SessionDep, event: EventDep):
 
 @router.delete("/events/{id}")
 def delete_event(session: SessionDep, event: EventDep):
-    session.delete(event)
-    session.commit()
+    delete_object(session, event)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

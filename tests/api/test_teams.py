@@ -105,8 +105,13 @@ async def test_update_team_success(async_client, seed_teams, test_teams_data, pa
 @pytest.mark.parametrize("id, expected_status", [
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # invalid UUID format
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # team not found
+    (TEAM_ID_1, status.HTTP_409_CONFLICT), # team has references to other objects
 ])
-async def test_delete_team_error_cases(async_client, id, expected_status):
+async def test_delete_team_error_cases(async_client, seed_schedules, test_schedules_data, seed_event_types, test_event_types_data, seed_teams, test_teams_data, seed_events, test_events_data, id, expected_status):
+    seed_schedules([test_schedules_data[1]])
+    seed_event_types([test_event_types_data[0]])
+    seed_teams([test_teams_data[0]])
+    seed_events([test_events_data[2]])
     response = await async_client.delete(f"/teams/{id}")
     assert response.status_code == expected_status
 

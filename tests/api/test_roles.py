@@ -122,8 +122,14 @@ async def test_update_role_success(async_client, seed_roles, test_roles_data, pa
 @pytest.mark.parametrize("id, expected_status", [
     (BAD_ID_0000, status.HTTP_404_NOT_FOUND), # Role not present
     ("invalid-uuid-format", status.HTTP_422_UNPROCESSABLE_CONTENT), # Invalid UUID format
+    (ROLE_ID_1, status.HTTP_409_CONFLICT), # role has references to other objects
 ])
-async def test_delete_role_error_cases(async_client, id, expected_status):
+async def test_delete_role_error_cases(async_client, seed_roles, test_roles_data, seed_event_types, test_event_types_data, seed_schedules, test_schedules_data, seed_events, test_events_data, seed_event_assignments, test_event_assignments_data, id, expected_status):
+    seed_event_types([test_event_types_data[0]])
+    seed_schedules([test_schedules_data[1]])
+    seed_roles([test_roles_data[0]])
+    seed_events([test_events_data[1]])
+    seed_event_assignments([test_event_assignments_data[2]])
     response = await async_client.delete(f"/roles/{id}")
     assert response.status_code == expected_status
 
