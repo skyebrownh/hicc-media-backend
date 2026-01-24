@@ -9,6 +9,7 @@ import csv
 import calendar
 from datetime import date, time, datetime, timezone, timedelta
 from sqlmodel import create_engine, Session
+
 from app.settings import settings
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
 
@@ -58,22 +59,22 @@ def create_teams():
 
 def create_users():
     users = [
-        {"first_name": "Johnathan", "last_name": "Vaughn", "email": None, "phone": "2026413546", "is_active": True},
-        {"first_name": "Antoinette", "last_name": "Pitts", "email": None, "phone": "2702685127", "is_active": False},
-        {"first_name": "Jaime", "last_name": "Boyd", "email": None, "phone": "2702722896", "is_active": True},
-        {"first_name": "Michael", "last_name": "Hudson", "email": "mhud32@gmail.com", "phone": "2708728388", "is_active": True},
-        {"first_name": "William", "last_name": "Gilmore", "email": None, "phone": "2705055383", "is_active": True},
-        {"first_name": "Skye", "last_name": "Brown", "email": "skye.brownh@gmail.com", "phone": "2703008405", "is_active": True},
-        {"first_name": "Horace", "last_name": "Dillard", "email": None, "phone": "2703196555", "is_active": True},
-        {"first_name": "Andrew", "last_name": "Roach", "email": None, "phone": "5126399960", "is_active": False},
-        {"first_name": "Gary", "last_name": "Elias Sr", "email": None, "phone": "2703175566", "is_active": True},
-        {"first_name": "Vivian", "last_name": "Robinson", "email": None, "phone": "9312188779", "is_active": True},
-        {"first_name": "Frank", "last_name": "Anderson", "email": None, "phone": "2702689679", "is_active": True},
-        {"first_name": "Marcus", "last_name": "Pitts", "email": "marcuspitts25@gmail.com", "phone": "2705067988", "is_active": True},
-        {"first_name": "Mario", "last_name": "Hodge", "email": None, "phone": "2703006425", "is_active": True},
-        {"first_name": "Alexis", "last_name": "Williams", "email": None, "phone": "5023782871", "is_active": True},
-        {"first_name": "Harry", "last_name": "Parent", "email": None, "phone": "2703178092", "is_active": True},
-        {"first_name": "Jarrell", "last_name": "Russell", "email": None, "phone": "2703199324", "is_active": True},
+        {"first_name": "Johnathan", "last_name": "Vaughn", "email": None, "phone": "+12026413546", "is_active": True},
+        {"first_name": "Antoinette", "last_name": "Pitts", "email": None, "phone": "+12702685127", "is_active": False},
+        {"first_name": "Jaime", "last_name": "Boyd", "email": None, "phone": "+12702722896", "is_active": True},
+        {"first_name": "Michael", "last_name": "Hudson", "email": "mhud32@gmail.com", "phone": "+12708728388", "is_active": True},
+        {"first_name": "William", "last_name": "Gilmore", "email": None, "phone": "+12705055383", "is_active": True},
+        {"first_name": "Skye", "last_name": "Brown", "email": "skye.brownh@gmail.com", "phone": "+12703008405", "is_active": True},
+        {"first_name": "Horace", "last_name": "Dillard", "email": None, "phone": "+12703196555", "is_active": True},
+        {"first_name": "Andrew", "last_name": "Roach", "email": None, "phone": "+15126399960", "is_active": False},
+        {"first_name": "Gary", "last_name": "Elias Sr", "email": None, "phone": "+12703175566", "is_active": True},
+        {"first_name": "Vivian", "last_name": "Robinson", "email": None, "phone": "+19312188779", "is_active": True},
+        {"first_name": "Frank", "last_name": "Anderson", "email": None, "phone": "+12702689679", "is_active": True},
+        {"first_name": "Marcus", "last_name": "Pitts", "email": "marcuspitts25@gmail.com", "phone": "+12705067988", "is_active": True},
+        {"first_name": "Mario", "last_name": "Hodge", "email": None, "phone": "+12703006425", "is_active": True},
+        {"first_name": "Alexis", "last_name": "Williams", "email": None, "phone": "+15023782871", "is_active": True},
+        {"first_name": "Harry", "last_name": "Parent", "email": None, "phone": "+12703178092", "is_active": True},
+        {"first_name": "Jarrell", "last_name": "Russell", "email": None, "phone": "+12703199324", "is_active": True},
     ]
     return [User(**user) for user in users]
 
@@ -260,13 +261,13 @@ def create_user_unavailable_periods(users: list[User]):
         reader = csv.reader(file)
         next(reader) # Skip the header row
         for row in reader:
-            user_first_name, date_csv = row
+            user_first_name, starts_at_csv, ends_at_csv = row
             user = next((user for user in users if user.first_name == user_first_name), None)
             if user:
                 user_unavailable_periods.append(UserUnavailablePeriod(
                     user_id=user.id,
-                    starts_at=datetime.strptime(date_csv, '%Y-%m-%d').date(),
-                    ends_at=datetime.strptime(date_csv, '%Y-%m-%d').date() + timedelta(days=1), # ends_at is exclusive
+                    starts_at=datetime.strptime(starts_at_csv, '%Y-%m-%d').date(),
+                    ends_at=datetime.strptime(ends_at_csv, '%Y-%m-%d').date(),
                 ))
     return user_unavailable_periods
 
