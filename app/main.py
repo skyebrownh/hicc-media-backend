@@ -1,9 +1,11 @@
 import logging
 from fastapi import FastAPI, Request, status, Depends
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import text
 from contextlib import asynccontextmanager
 
+from app.settings import settings
 from app.utils.dependencies import verify_api_key, get_db_session, SessionDep
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
@@ -30,6 +32,16 @@ app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_api_key), Depends(
 
 # Register exception handlers
 register_exception_handlers(app)
+
+# Add CORS middleware
+if settings.cors_allowed_origins_list:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allowed_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Health check endpoint
 @app.get("/health")

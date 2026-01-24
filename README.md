@@ -4,10 +4,10 @@ StewardHQ is a people-centric platform for managing team scheduling, availabilit
 
 ## Architecture
 
--   [Fast API](https://fastapi.tiangolo.com/) - Python web framework
--   [Railway](https://railway.com/) - Hosting an infrastructure
-    -   [Postgres](https://www.postgresql.org/) - Database
-    -   [Redis](https://redis.io/) - Cache (coming soon)
+- [Fast API](https://fastapi.tiangolo.com/) - Python web framework
+- [Railway](https://railway.com/) - Hosting an infrastructure
+    - [Postgres](https://www.postgresql.org/) - Database
+    - [Redis](https://redis.io/) - Cache (coming soon)
 
 ## Getting Started / Installation
 
@@ -21,6 +21,7 @@ StewardHQ is a people-centric platform for managing team scheduling, availabilit
         - `FAST_API_KEY` – API key used for `x-api-key` header authentication
         - `RAILWAY_DB_URL` – Remote database connection string
         - `LOCAL_TEST_DB_URL` – Local database connection string used for tests
+        - `CORS_ALLOWED_ORIGINS` - Comma-separated list of allowed origins
 4. Run tests (optional)
     ```bash
     uv run pytest
@@ -29,13 +30,14 @@ StewardHQ is a people-centric platform for managing team scheduling, availabilit
     ```bash
     uv run fastapi dev app/main.py
     ```
+
     - Server is running on [localhost:8000](http://localhost:8000)
     - Docs are available at [localhost:8000/docs](http://localhost:8000/docs)
 
 ## Roadmap
 
--   [x] Design the data model and seed historical data
--   [x] Implement FastAPI routes for MVP business logic
--   [x] Implement unit and integration testing
--   [ ] Implement Redis as a cache
--   [ ] Implement a schedule generation engine with rule- and constraint-based assignment logic
+- [x] Design the data model and seed historical data
+- [x] Implement FastAPI routes for MVP business logic
+- [x] Implement unit and integration testing
+- [ ] Implement Redis as a cache
+- [ ] Implement a schedule generation engine with rule- and constraint-based assignment logic
