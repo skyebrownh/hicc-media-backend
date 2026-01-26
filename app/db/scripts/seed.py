@@ -7,24 +7,36 @@ sys.path.insert(0, str(project_root))
 
 import csv
 import calendar
-from datetime import date, time, datetime, timezone, timedelta
-from sqlmodel import create_engine, Session
+from zoneinfo import ZoneInfo
+from datetime import date, time, datetime
+from sqlmodel import create_engine, Session, text
 
 from app.settings import settings
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
 
+TZ_LOCAL = ZoneInfo("America/New_York")
+TZ_UTC = ZoneInfo("UTC")
+TABLES = ["event_assignments", "user_unavailable_periods", "team_users", "user_roles", "events", "schedules", "roles", "proficiency_levels", "event_types", "teams", "users"]
+
 engine = create_engine(settings.railway_db_url)
+
+def truncate_all():
+    with Session(engine) as session:
+        for table in TABLES:
+            session.exec(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
+        session.commit()
+    print("All tables truncated successfully")
 
 def create_roles():
     roles = [
         {"name": "ProPresenter", "code": "propresenter", "order": 10},
         {"name": "Sound", "code": "sound", "order": 20},
-        {"name": "Lighting", "code": "lighting", "order": 30},
+        {"name": "Lighting", "code": "lighting", "order": 30, "is_active": False},
         {"name": "Camera Director", "code": "camera_director", "order": 40},
         {"name": "Main Camera 1", "code": "main_camera_1", "order": 50},
         {"name": "Main Camera 2", "code": "main_camera_2", "order": 60},
         {"name": "Mobile Camera 3", "code": "mobile_camera_3", "order": 70},
-        {"name": "Mobile Camera 4", "code": "mobile_camera_4", "order": 80},
+        {"name": "Mobile Camera 4", "code": "mobile_camera_4", "order": 80, "is_active": False},
         {"name": "On Call", "code": "on_call", "order": 90},
     ]
     return [Role(**role) for role in roles]
@@ -150,10 +162,13 @@ def create_events(schedules: list[Schedule], event_types: list[EventType], teams
     def generate_events_for_month(year: int, month: int, weekday_map: dict[int, dict[str, str | time]]):
         for weekday, times in weekday_map.items():
             for d in get_weekday_dates(year, month, {weekday}):
+                local_start = datetime.combine(d, times["start"]).replace(tzinfo=TZ_LOCAL)
+                local_end = datetime.combine(d, times["end"]).replace(tzinfo=TZ_LOCAL)
+
                 yield {
                     "date": d,
-                    "starts_at": datetime.combine(d, times["start"], tzinfo=timezone.utc),
-                    "ends_at": datetime.combine(d, times["end"], tzinfo=timezone.utc),
+                    "starts_at": local_start.astimezone(TZ_UTC),
+                    "ends_at": local_end.astimezone(TZ_UTC),
                     "weekday": weekday,
                     "event_type": times["type"],
                 }
@@ -205,8 +220,10 @@ def create_events(schedules: list[Schedule], event_types: list[EventType], teams
             schedule = next((schedule for schedule in schedules if schedule.year == event_date.year and schedule.month == event_date.month), None)
             team = next((team for team in teams if team.code == team_csv), None)
             title = f"{special_event_type.name.title()} - {event_date.strftime('%a %Y-%m-%d')}"
-            starts_at = datetime.combine(event_date, start_time, tzinfo=timezone.utc)
-            ends_at = datetime.combine(event_date, end_time, tzinfo=timezone.utc)
+            local_start = datetime.combine(event_date, start_time).replace(tzinfo=TZ_LOCAL)
+            local_end = datetime.combine(event_date, end_time).replace(tzinfo=TZ_LOCAL)
+            starts_at = local_start.astimezone(TZ_UTC)
+            ends_at = local_end.astimezone(TZ_UTC)
 
             events.append(Event(
                 schedule_id=schedule.id,
@@ -308,4 +325,5 @@ def seed_data():
         print("Data seeded successfully")
 
 if __name__ == "__main__":
+    truncate_all()
     seed_data()
