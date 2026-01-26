@@ -5,7 +5,7 @@ from app.db.models import Role, RoleCreate, RoleUpdate
 from app.utils.dependencies import SessionDep, RoleDep
 from app.services.domain import create_role_with_user_roles, update_object, delete_object
 
-router = APIRouter(prefix="/roles")
+router = APIRouter(prefix="/roles", tags=["roles"])
 
 @router.get("", response_model=list[Role])
 def get_all_roles(session: SessionDep):

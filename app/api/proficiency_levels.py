@@ -5,7 +5,7 @@ from app.db.models import ProficiencyLevel, ProficiencyLevelCreate, ProficiencyL
 from app.utils.dependencies import SessionDep, ProficiencyLevelDep
 from app.services.domain import create_object, update_object, delete_object
 
-router = APIRouter(prefix="/proficiency_levels")
+router = APIRouter(prefix="/proficiency_levels", tags=["proficiency_levels"])
 
 @router.get("", response_model=list[ProficiencyLevel])
 def get_all_proficiency_levels(session: SessionDep):

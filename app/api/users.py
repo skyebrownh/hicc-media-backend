@@ -5,7 +5,7 @@ from app.db.models import User, UserCreate, UserUpdate
 from app.utils.dependencies import SessionDep, UserDep
 from app.services.domain import create_user_with_user_roles, update_object, delete_object
 
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("", response_model=list[User])
 def get_all_users(session: SessionDep):

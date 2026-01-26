@@ -5,7 +5,7 @@ from app.db.models import Team, TeamCreate, TeamUpdate
 from app.utils.dependencies import SessionDep, TeamDep
 from app.services.domain import create_object, update_object, delete_object
 
-router = APIRouter(prefix="/teams")
+router = APIRouter(prefix="/teams", tags=["teams"])
 
 @router.get("", response_model=list[Team])
 def get_all_teams(session: SessionDep):

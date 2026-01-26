@@ -4,7 +4,7 @@ from app.db.models import UserUnavailablePeriodCreate, UserUnavailablePeriodUpda
 from app.utils.dependencies import SessionDep, UserWithUserRolesForUnavailablePeriodsDep, UserUnavailablePeriodDep
 from app.services.domain import create_user_unavailable_period, create_user_unavailable_periods_bulk, update_user_unavailable_period, delete_object
 
-router = APIRouter()
+router = APIRouter(tags=["user_unavailable_periods"])
 
 @router.post("/users/{user_id}/availability", response_model=UserUnavailablePeriodPublic, status_code=status.HTTP_201_CREATED)
 def post_user_unavailable_period(user: UserWithUserRolesForUnavailablePeriodsDep, payload: UserUnavailablePeriodCreate, session: SessionDep):

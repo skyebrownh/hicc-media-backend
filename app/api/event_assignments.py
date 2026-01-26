@@ -4,7 +4,7 @@ from app.db.models import EventAssignmentUpdate, EventAssignmentPublic
 from app.utils.dependencies import SessionDep, EventWithFullHierarchyForAssignmentsDep, EventAssignmentDep
 from app.services.domain import get_event_assignments_from_event, update_event_assignment
 
-router = APIRouter()
+router = APIRouter(tags=["event_assignments"])
 
 # Event Assignments are inserted when a new event is created - no direct route
 # Event Assignments are cascade deleted when the event is deleted - no direct route
