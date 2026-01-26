@@ -5,7 +5,7 @@ from app.utils.dependencies import SessionDep, ScheduleForEventsDep, EventDep, E
 from app.services.builders import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event
 from app.services.domain import update_object, create_event_with_default_assignment_slots, delete_object
 
-router = APIRouter()
+router = APIRouter(tags=["events"])
 
 @router.get("/schedules/{schedule_id}/events", response_model=list[EventWithAssignmentsPublic])
 def get_events_for_schedule(schedule: ScheduleForEventsDep):

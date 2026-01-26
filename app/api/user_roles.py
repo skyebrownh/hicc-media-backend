@@ -4,7 +4,7 @@ from app.db.models import UserRoleUpdate, UserRolePublic
 from app.utils.dependencies import UserWithUserRolesDep, SessionDep, RoleWithUserRolesDep, UserRoleDep
 from app.services.domain import update_user_role
 
-router = APIRouter()
+router = APIRouter(tags=["user_roles"])
 
 # User roles are not created or deleted directly through an API endpoint - they are created when a user or role is created (same with delete)
 

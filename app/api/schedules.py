@@ -5,7 +5,7 @@ from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGrid
 from app.utils.dependencies import SessionDep, ScheduleDep, ScheduleWithEventsAndAssignmentsDep
 from app.services.domain import update_object, get_schedule_grid_from_schedule, create_object, delete_object
 
-router = APIRouter(prefix="/schedules")
+router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 @router.get("", response_model=list[Schedule])
 def get_all_schedules(session: SessionDep):

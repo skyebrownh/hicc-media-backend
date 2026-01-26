@@ -4,7 +4,7 @@ from app.db.models import TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPubl
 from app.utils.dependencies import SessionDep, TeamWithTeamUsersDep, TeamForTeamUsersDep, TeamUserDep
 from app.services.domain import create_team_user_for_team, update_team_user, delete_object
 
-router = APIRouter()
+router = APIRouter(tags=["team_users"])
 
 @router.get("/teams/{team_id}/users", response_model=list[TeamUserPublic])
 def get_team_users_for_team(team: TeamWithTeamUsersDep):
