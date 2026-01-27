@@ -13,7 +13,7 @@ class EventAssignmentBase(SQLModel):
     # is_applicable: bool - whether the role is applicable to the event
     is_applicable: bool = Field(default=True)
     # requirement_level: RequirementLevel - importance to fill the role for the event
-    requirement_level: RequirementLevel = Field(default=RequirementLevel.REQUIRED, sa_column=Column(SAEnum(RequirementLevel, name="requirement_level")))
+    requirement_level: RequirementLevel = Field(default=RequirementLevel.required, sa_column=Column(SAEnum(RequirementLevel, name="requirement_level")))
     assigned_user_id: UUID | None = Field(default=None, sa_column=Column(ForeignKey("users.id"), index=True, nullable=True))
     is_active: bool = Field(default=True)
 
