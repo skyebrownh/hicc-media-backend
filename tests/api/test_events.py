@@ -63,7 +63,7 @@ async def test_get_all_events_for_schedule_success(async_client, seed_for_events
     assert event_assignments_dict[ROLE_ID_1]["role_id"] == ROLE_ID_1
     assert event_assignments_dict[ROLE_ID_1]["role_name"] == "ProPresenter"
     assert event_assignments_dict[ROLE_ID_1]["is_applicable"] is True
-    assert event_assignments_dict[ROLE_ID_1]["requirement_level"] == "REQUIRED"
+    assert event_assignments_dict[ROLE_ID_1]["requirement_level"] == "required"
     assert event_assignments_dict[ROLE_ID_1]["assigned_user_id"] == USER_ID_1
     assert event_assignments_dict[ROLE_ID_1]["assigned_user_first_name"] == "Alice"
 
@@ -112,7 +112,7 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
                 "role_order": 10,
                 "role_code": "propresenter",
                 "is_applicable": True,
-                "requirement_level": "REQUIRED",
+                "requirement_level": "required",
                 "assigned_user_id": USER_ID_1,
                 "assigned_user_first_name": "Alice",
                 "assigned_user_last_name": "Smith",
@@ -125,7 +125,7 @@ async def test_get_single_event_success(async_client, seed_for_events_tests):
                 "role_order": 20,
                 "role_code": "sound",
                 "is_applicable": True,
-                "requirement_level": "REQUIRED",
+                "requirement_level": "required",
                 "assigned_user_id": None,
                 "assigned_user_first_name": None,
                 "assigned_user_last_name": None,
@@ -177,7 +177,7 @@ async def test_insert_event_for_schedule_success(async_client, seed_schedules, s
     assert event_assignments_dict[ROLE_ID_1]["role_id"] == ROLE_ID_1
     assert event_assignments_dict[ROLE_ID_1]["role_name"] == "ProPresenter"
     assert event_assignments_dict[ROLE_ID_1]["is_applicable"] is True
-    assert event_assignments_dict[ROLE_ID_1]["requirement_level"] == "REQUIRED"
+    assert event_assignments_dict[ROLE_ID_1]["requirement_level"] == "required"
     assert event_assignments_dict[ROLE_ID_1]["assigned_user_id"] is None
     assert event_assignments_dict[ROLE_ID_1]["assigned_user_first_name"] is None
 

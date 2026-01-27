@@ -45,6 +45,7 @@ class EventAssignmentUpdate(SQLModel):
     model_config = ConfigDict(extra="forbid")
     # event_assignment.id is used to update the event assignment
     # event_assignment.event_id is not updatable, delete and recreate if needed
+    is_applicable: bool | None = None
     requirement_level: RequirementLevel | None = None
     assigned_user_id: UUID | None = None
     is_active: bool | None = None
