@@ -239,7 +239,11 @@ def update_event_assignment(session: Session, payload: EventAssignmentUpdate, ev
             setattr(event_assignment, key, value)
         session.commit()
         session.refresh(event_assignment)
-        proficiency_level = next((ur.proficiency_level for ur in event_assignment.assigned_user.user_roles if ur.role_id == event_assignment.role_id), None)
+
+        if event_assignment.assigned_user:
+            proficiency_level = next((ur.proficiency_level for ur in event_assignment.assigned_user.user_roles if ur.role_id == event_assignment.role_id), None)
+        else:
+            proficiency_level = None
         return EventAssignmentPublic.from_objects(
             event_assignment=event_assignment,
             event=event_assignment.event,

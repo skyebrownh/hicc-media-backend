@@ -6,6 +6,7 @@ from sqlmodel import text
 from contextlib import asynccontextmanager
 
 from app.settings import settings
+from app.utils.helpers import TAGS_METADATA
 from app.utils.dependencies import verify_api_key, get_db_session, SessionDep
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
@@ -28,64 +29,14 @@ async def lifespan(app: FastAPI):
     await close_db(app)
 
 # Create the FastAPI application with the defined lifespan, global dependencies, and metadata
-tags_metadata = [
-    {
-        "name": "health",
-        "description": "Health check endpoint that verifies application and database connectivity",
-    },
-    {
-        "name": "roles",
-        "description": "Role are the skills/positions that can be assigned to users and identify slots for event assignments",
-    },
-    {
-        "name": "proficiency_levels",
-        "description": "Proficiency levels are the levels of expertise for a role",
-    },
-    {
-        "name": "event_types",
-        "description": "Event types are the types of events that can be created",
-    },
-    {
-        "name": "teams",
-        "description": "Teams are groups of users that work together on events",
-    },
-    {
-        "name": "users",
-        "description": "Users are the people who work on events",
-    },
-    {
-        "name": "team_users",
-        "description": "Team users are the users who are part of a team",
-    },
-    {
-        "name": "user_roles",
-        "description": "User roles are the roles that a user has",
-    },
-    {
-        "name": "schedules",
-        "description": "Schedules are the time periods that events can be assigned to (month-long)",
-    },
-    {
-        "name": "events",
-        "description": "Events are the individual occurrences within a schedule",
-    },
-    {
-        "name": "event_assignments",
-        "description": "Event assignments are the assignments of a user to a role for an event",
-    },
-    {
-        "name": "user_unavailable_periods",
-        "description": "User unavailable periods are the time periods that a user is unavailable",
-    },
-]
-
 app = FastAPI(
     title="StewardHQ API",
     description="API powering StewardHQ's scheduling, availability, and team management platform",
     version="1.0.0",
-    openapi_tags=tags_metadata,
+    openapi_tags=TAGS_METADATA,
     lifespan=lifespan, 
-    dependencies=[Depends(verify_api_key), Depends(get_db_session)]
+    dependencies=[Depends(verify_api_key), Depends(get_db_session)],
+    swagger_ui_parameters={"persistAuthorization": True}
 )
 
 # Register exception handlers

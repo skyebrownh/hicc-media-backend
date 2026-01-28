@@ -3,22 +3,22 @@ from typing import AsyncGenerator, Annotated
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from fastapi import Request, HTTPException, status, Depends
+from fastapi.security import APIKeyHeader
 
 from app.settings import settings
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedule, TeamUser, UserRole, Event, EventAssignment, UserUnavailablePeriod
 from app.utils.helpers import raise_exception_if_not_found
 from app.services.queries import select_schedule_with_events_and_assignments, select_event_with_full_hierarchy, select_full_event_assignment
 
-def verify_api_key(request: Request) -> None:
-    """
-    Dependency to verify API key from request headers.
-    
-    Checks for 'x-api-key' header and validates it against the configured
-    API key. Raises HTTPException if the key is missing or invalid.
-    """
-    api_key = request.headers.get("x-api-key")
+api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
 
-    if not api_key or api_key.strip() != settings.fast_api_key:
+def verify_api_key(api_key: str = Depends(api_key_header)) -> None:
+    """
+    Dependency to verify API key from API key header.
+    
+    Validates the API key against the configured API key. Raises HTTPException if the key is missing or invalid.
+    """
+    if not api_key or api_key != settings.fast_api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Unauthorized: Invalid or missing API Key"
