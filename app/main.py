@@ -21,10 +21,19 @@ from app.api import (
 setup_logging()
 logger = logging.getLogger(__name__)
 
+def log_settings():
+    if settings.env != "production":
+        logger.warning("Running in NON-PRODUCTION mode: %s", settings.env)
+    else:
+        logger.info("Running in PRODUCTION mode")
+
+    logger.info(f"Settings: {settings.model_dump_json(indent=4)}")
+
 # Define the lifespan event to manage startup and shutdown tasks, such as database connections
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_db(app)
+    log_settings()
     yield
     await close_db(app)
 

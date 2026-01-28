@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -11,16 +12,16 @@ from zoneinfo import ZoneInfo
 from datetime import date, time, datetime
 from sqlmodel import create_engine, Session, text
 
-from app.settings import settings
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, TeamUser, UserRole, Schedule, Event, EventAssignment, UserUnavailablePeriod
 
 TZ_LOCAL = ZoneInfo("America/New_York")
 TZ_UTC = ZoneInfo("UTC")
 TABLES = ["event_assignments", "user_unavailable_periods", "team_users", "user_roles", "events", "schedules", "roles", "proficiency_levels", "event_types", "teams", "users"]
 
-engine = create_engine(settings.railway_db_url)
+engine = create_engine(os.getenv("DATABASE_URL"))
 
 def truncate_all():
+    print("Truncating all tables...")
     with Session(engine) as session:
         for table in TABLES:
             session.exec(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
@@ -225,15 +226,16 @@ def create_events(schedules: list[Schedule], event_types: list[EventType], teams
             starts_at = local_start.astimezone(TZ_UTC)
             ends_at = local_end.astimezone(TZ_UTC)
 
-            events.append(Event(
-                schedule_id=schedule.id,
-                starts_at=starts_at,
-                ends_at=ends_at,
-                team_id=team.id if team else None,
-                event_type_id=special_event_type.id,
-                title=title,
-                notes=notes,
-            ))
+            if schedule:
+                events.append(Event(
+                    schedule_id=schedule.id,
+                    starts_at=starts_at,
+                    ends_at=ends_at,
+                    team_id=team.id if team else None,
+                    event_type_id=special_event_type.id,
+                    title=title,
+                    notes=notes,
+                ))
 
     # Update exception Tuesday night midweek service for Thanksgiving week as service, not special event
     update_event = next((event for event in events if event.starts_at.date() == date(2025, 11, 25)), None)
@@ -289,6 +291,7 @@ def create_user_unavailable_periods(users: list[User]):
     return user_unavailable_periods
 
 def seed_data():
+    print("Seeding data...")
     with Session(engine) as session:
         roles = create_roles()
         proficiency_levels = create_proficiency_levels()

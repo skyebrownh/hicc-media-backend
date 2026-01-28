@@ -1,5 +1,5 @@
+import os
 from logging.config import fileConfig
-
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
@@ -7,7 +7,6 @@ from alembic import context
 
 from sqlmodel import SQLModel
 from app.db.models import *
-from app.settings import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -16,7 +15,7 @@ config = context.config
 # Override the sqlalchemy.url with the actual database URL from settings
 url = config.get_main_option("sqlalchemy.url")
 if not url or url == "DB_URL":
-    config.set_main_option("sqlalchemy.url", settings.railway_db_url)
+    config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

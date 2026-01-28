@@ -2,7 +2,9 @@ from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 import logging
+import traceback
 
+from app.settings import settings
 from app.utils.exceptions import ConflictError, CheckConstraintError, EmptyPayloadError, NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -67,7 +69,7 @@ def register_exception_handlers(app: FastAPI):
         These are intentional exceptions (e.g., 404, 401) that should be
         returned to the client as-is.
         """
-        logger.warning(f"HTTPException: {exc.detail}")
+        logger.error(f"HTTPException: {exc.detail}")
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
@@ -80,7 +82,7 @@ def register_exception_handlers(app: FastAPI):
         
         Returns validation errors to help clients fix their request format.
         """
-        logger.warning(f"RequestValidationError: {exc.errors()}")
+        logger.error(f"RequestValidationError: {exc.errors()}")
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": exc.errors(), "body": exc.body},
@@ -94,8 +96,18 @@ def register_exception_handlers(app: FastAPI):
         Logs the full exception with stack trace internally but returns a
         generic error message to clients to avoid exposing implementation details.
         """
-        logger.error(f"Unhandled Exception: {str(exc)}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "An internal error occurred"},
-        )
+        logger.exception(f"Unhandled Exception: {str(exc)}")
+
+        if settings.env != "production":
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "detail": str(exc),
+                    "traceback": traceback.format_exc()
+                },
+            )
+        else:
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "An internal error occurred"},
+            )
