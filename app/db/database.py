@@ -14,7 +14,7 @@ async def connect_db(app: FastAPI):
     so FastAPI can properly handle startup failures.
     """
     try:
-        app.state.db_engine = create_engine(settings.railway_db_url)
+        app.state.db_engine = create_engine(settings.database_url)
         logger.info("Database engine created successfully")
     except Exception as e:
         logger.error(f"Failed to connect to database: {str(e)}")
