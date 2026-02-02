@@ -14,7 +14,12 @@ from alembic.config import Config
 from alembic import command
 
 from app.main import app
-from app.utils.dependencies import get_db_session
+from app.utils.dependencies import (
+    get_db_session,
+    require_admin,
+    verify_clerk_token,
+    RequireAdminDep,
+)
 from app.settings import settings
 
 TEST_SCHEMA = "test_schema"
@@ -32,6 +37,22 @@ async def _noop_lifespan(_app):
 def disable_app_lifespan():
     """Disable the app's lifespan for testing"""
     app.router.lifespan_context = _noop_lifespan
+
+# =============================
+# BYPASS ADMIN AUTH
+# =============================
+@pytest.fixture(scope="session", autouse=True)
+def bypass_auth():
+    """Bypass authentication for testing"""
+    app.dependency_overrides[verify_clerk_token] = lambda: {
+        "sub": "test_user",
+        "public_metadata": {"role": "admin"}
+    }
+    app.dependency_overrides[require_admin] = lambda: None
+    # Routes use dependencies=[Depends(RequireAdminDep)]; FastAPI uses the Annotated type as the override key
+    app.dependency_overrides[RequireAdminDep] = lambda: None
+    yield
+    app.dependency_overrides.clear()
 
 # =============================
 # ASYNC CLIENT FIXTURES
@@ -123,5 +144,5 @@ async def async_client(test_db_engine, request):
     async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as client:
         yield client
     
-    # Clean up dependency override after test
-    app.dependency_overrides.clear()
+    # Remove only the session override so auth bypass (from bypass_auth) is preserved for other tests
+    app.dependency_overrides.pop(get_db_session, None)

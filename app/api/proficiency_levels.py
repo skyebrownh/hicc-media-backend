@@ -1,8 +1,8 @@
-from fastapi import APIRouter, status, Response
+from fastapi import APIRouter, status, Response, Depends
 from sqlmodel import select
 
 from app.db.models import ProficiencyLevel, ProficiencyLevelCreate, ProficiencyLevelUpdate 
-from app.utils.dependencies import SessionDep, ProficiencyLevelDep
+from app.utils.dependencies import SessionDep, ProficiencyLevelDep, require_admin
 from app.services.domain import create_object, update_object, delete_object
 
 router = APIRouter(prefix="/proficiency_levels", tags=["proficiency_levels"])
@@ -15,15 +15,15 @@ def get_all_proficiency_levels(session: SessionDep):
 def get_single_proficiency_level(proficiency_level: ProficiencyLevelDep):
     return proficiency_level
 
-@router.post("", response_model=ProficiencyLevel, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProficiencyLevel, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def post_proficiency_level(payload: ProficiencyLevelCreate, session: SessionDep):
     return create_object(session, payload, ProficiencyLevel)
 
-@router.patch("/{id}", response_model=ProficiencyLevel)
+@router.patch("/{id}", response_model=ProficiencyLevel, dependencies=[Depends(require_admin)])
 def patch_proficiency_level(payload: ProficiencyLevelUpdate, session: SessionDep, proficiency_level: ProficiencyLevelDep):
     return update_object(session, payload, proficiency_level)
 
-@router.delete("/{id}")
+@router.delete("/{id}", dependencies=[Depends(require_admin)])
 def delete_proficiency_level(session: SessionDep, proficiency_level: ProficiencyLevelDep):
     delete_object(session, proficiency_level)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,7 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.db.models import EventAssignmentUpdate, EventAssignmentPublic
-from app.utils.dependencies import SessionDep, EventWithFullHierarchyForAssignmentsDep, EventAssignmentDep
+from app.utils.dependencies import SessionDep, EventWithFullHierarchyForAssignmentsDep, EventAssignmentDep, require_admin
 from app.services.domain import get_event_assignments_from_event, update_event_assignment
 
 router = APIRouter(tags=["event_assignments"])
@@ -13,6 +13,6 @@ router = APIRouter(tags=["event_assignments"])
 def get_assignments_by_event(event: EventWithFullHierarchyForAssignmentsDep):
     return get_event_assignments_from_event(event)
 
-@router.patch("/assignments/{id}", response_model=EventAssignmentPublic)
+@router.patch("/assignments/{id}", response_model=EventAssignmentPublic, dependencies=[Depends(require_admin)])
 def patch_event_assignment(payload: EventAssignmentUpdate, session: SessionDep, event_assignment: EventAssignmentDep):
     return update_event_assignment(session, payload, event_assignment)

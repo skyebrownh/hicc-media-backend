@@ -17,16 +17,22 @@ StewardHQ is a people-centric platform for managing team scheduling, availabilit
     uv sync
     ```
 3. Configure environment variables
-    - `.env`
+    - `.env.local`
         - `FAST_API_KEY` – API key used for `x-api-key` header authentication
-        - `RAILWAY_DB_URL` – Remote database connection string
+        - `DATABASE_URL` – Database connection string
         - `LOCAL_TEST_DB_URL` – Local database connection string used for tests
         - `CORS_ALLOWED_ORIGINS` - Comma-separated list of allowed origins
+        - `ENV` - environment (e.g. development, staging, prod)
+        - `LOG_LEVEL` - logging level (e.g. DEBUG, INFO, ERROR)
+        - `CLERK_JWKS_URL` - Clerk Auth JWKS URL for decoding JWTs
+        - `CLERK_ISSUER_URL` - Clerk Auth Issuer URL for verifying JWTs
+    - Ensure environment variables are loaded: `export $(cat .env.local | xargs)`
 4. Run tests (optional)
     ```bash
     uv run pytest
     ```
 5. Run dev server
+
     ```bash
     uv run fastapi dev app/main.py
     ```
