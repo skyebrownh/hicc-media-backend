@@ -1,5 +1,4 @@
-from jwt import PyJWKClient
-from jose import jwt
+import jwt
 from uuid import UUID
 from typing import AsyncGenerator, Annotated
 from sqlmodel import Session, select
@@ -12,7 +11,7 @@ from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedul
 from app.utils.helpers import raise_exception_if_not_found
 from app.services.queries import select_schedule_with_events_and_assignments, select_event_with_full_hierarchy, select_full_event_assignment
 
-jwks_client = PyJWKClient(settings.clerk_jwks_url)
+jwks_client = jwt.PyJWKClient(settings.clerk_jwks_url)
 
 api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
 bearer_token_header = HTTPBearer(auto_error=False)
@@ -52,7 +51,7 @@ def verify_clerk_token(bearer_token: HTTPAuthorizationCredentials | None = Depen
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Invalid token")
-    except jwt.JWTError as e:
+    except jwt.PyJWTError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Unauthorized: {str(e)}")
     
     return payload
