@@ -1,7 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.db.models import UserRoleUpdate, UserRolePublic
-from app.utils.dependencies import UserWithUserRolesDep, SessionDep, RoleWithUserRolesDep, UserRoleDep
+from app.utils.dependencies import UserWithUserRolesDep, SessionDep, RoleWithUserRolesDep, UserRoleDep, require_admin
 from app.services.domain import update_user_role
 
 router = APIRouter(tags=["user_roles"])
@@ -23,6 +23,6 @@ def get_users_for_role(role: RoleWithUserRolesDep):
         for ur in role.user_roles
     ]
 
-@router.patch("/users/{user_id}/roles/{role_id}", response_model=UserRolePublic)
+@router.patch("/users/{user_id}/roles/{role_id}", response_model=UserRolePublic, dependencies=[Depends(require_admin)])
 def patch_user_role(payload: UserRoleUpdate, session: SessionDep, user_role: UserRoleDep):
     return update_user_role(session, payload, user_role)

@@ -1,18 +1,22 @@
+import jwt
 from uuid import UUID
 from typing import AsyncGenerator, Annotated
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from fastapi import Request, HTTPException, status, Depends
-from fastapi.security import APIKeyHeader
+from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredentials
 
 from app.settings import settings
 from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedule, TeamUser, UserRole, Event, EventAssignment, UserUnavailablePeriod
 from app.utils.helpers import raise_exception_if_not_found
 from app.services.queries import select_schedule_with_events_and_assignments, select_event_with_full_hierarchy, select_full_event_assignment
 
-api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
+jwks_client = jwt.PyJWKClient(settings.clerk_jwks_url)
 
-def verify_api_key(api_key: str = Depends(api_key_header)) -> None:
+api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
+bearer_token_header = HTTPBearer(auto_error=False)
+
+def verify_api_key(api_key: str | None = Depends(api_key_header)) -> None:
     """
     Dependency to verify API key from API key header.
     
@@ -24,7 +28,45 @@ def verify_api_key(api_key: str = Depends(api_key_header)) -> None:
             detail="Unauthorized: Invalid or missing API Key"
         )
 
-APIKeyDep = Annotated[str, Depends(verify_api_key)]
+def verify_clerk_token(bearer_token: HTTPAuthorizationCredentials | None = Depends(bearer_token_header)) -> dict:
+    """
+    Dependency to verify Clerk token from bearer token header.
+    
+    Validates the Clerk token against the configured JWKS. Raises HTTPException if the token is missing or invalid.
+    """
+    if not bearer_token:
+        return {}
+    
+    try:
+        token = bearer_token.credentials
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            issuer=settings.clerk_issuer_url,
+            audience=settings.clerk_audience
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Invalid token")
+    except jwt.PyJWTError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Unauthorized: {str(e)}")
+    
+    return payload
+
+ClerkTokenDep = Annotated[dict, Depends(verify_clerk_token)]
+
+def require_admin(clerk_token: ClerkTokenDep) -> None:
+    """
+    Dependency to require admin access. Raises HTTPException if the user does not have the admin role.
+    """
+    if not clerk_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Invalid or missing Clerk Token")
+    if clerk_token.get("public_metadata", {}).get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden: Admin access required")
+    return None
 
 async def get_db_session(request: Request) -> AsyncGenerator[Session, None]:
     """
