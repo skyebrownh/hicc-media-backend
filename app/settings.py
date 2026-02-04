@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     log_level: str = Field(..., validation_alias=AliasChoices("LOG_LEVEL"))
     clerk_jwks_url: str = Field(..., validation_alias=AliasChoices("CLERK_JWKS_URL"))
     clerk_issuer_url: str = Field(..., validation_alias=AliasChoices("CLERK_ISSUER_URL"))
+    clerk_audience: str = Field(..., validation_alias=AliasChoices("CLERK_AUDIENCE"))
 
     @computed_field
     @property

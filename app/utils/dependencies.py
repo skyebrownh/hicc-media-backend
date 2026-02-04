@@ -1,4 +1,4 @@
-import requests
+from jwt import PyJWKClient
 from jose import jwt
 from uuid import UUID
 from typing import AsyncGenerator, Annotated
@@ -12,7 +12,7 @@ from app.db.models import Role, ProficiencyLevel, EventType, Team, User, Schedul
 from app.utils.helpers import raise_exception_if_not_found
 from app.services.queries import select_schedule_with_events_and_assignments, select_event_with_full_hierarchy, select_full_event_assignment
 
-JWKS = requests.get(settings.clerk_jwks_url).json()
+jwks_client = PyJWKClient(settings.clerk_jwks_url)
 
 api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
 bearer_token_header = HTTPBearer(auto_error=False)
@@ -39,9 +39,21 @@ def verify_clerk_token(bearer_token: HTTPAuthorizationCredentials | None = Depen
         return {}
     
     try:
-        payload = jwt.decode(bearer_token.credentials, JWKS, algorithms=["RS256"], issuer=settings.clerk_issuer_url, audience="stewardhq-web")
+        token = bearer_token.credentials
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            issuer=settings.clerk_issuer_url,
+            audience=settings.clerk_audience
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Invalid token")
     except jwt.JWTError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Unauthorized: Invalid or missing Clerk Token: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Unauthorized: {str(e)}")
     
     return payload
 
@@ -51,8 +63,11 @@ def require_admin(clerk_token: ClerkTokenDep) -> None:
     """
     Dependency to require admin access. Raises HTTPException if the user does not have the admin role.
     """
+    if not clerk_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Invalid or missing Clerk Token")
     if clerk_token.get("public_metadata", {}).get("role") != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden: Admin access required")
+    return None
 
 async def get_db_session(request: Request) -> AsyncGenerator[Session, None]:
     """

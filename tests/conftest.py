@@ -17,8 +17,7 @@ from app.main import app
 from app.utils.dependencies import (
     get_db_session,
     require_admin,
-    verify_clerk_token,
-    RequireAdminDep,
+    verify_clerk_token
 )
 from app.settings import settings
 
@@ -49,8 +48,6 @@ def bypass_auth():
         "public_metadata": {"role": "admin"}
     }
     app.dependency_overrides[require_admin] = lambda: None
-    # Routes use dependencies=[Depends(RequireAdminDep)]; FastAPI uses the Annotated type as the override key
-    app.dependency_overrides[RequireAdminDep] = lambda: None
     yield
     app.dependency_overrides.clear()
 
