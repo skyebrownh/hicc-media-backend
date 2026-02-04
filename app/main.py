@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from app.settings import settings
 from app.utils.helpers import TAGS_METADATA
-from app.utils.dependencies import verify_api_key, get_db_session, verify_clerk_token, SessionDep
+from app.utils.dependencies import verify_api_key, get_db_session, get_optional_bearer_token, SessionDep
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
 from app.db.database import connect_db, close_db
@@ -44,7 +44,7 @@ app = FastAPI(
     version="1.0.0",
     openapi_tags=TAGS_METADATA,
     lifespan=lifespan, 
-    dependencies=[Depends(verify_api_key), Depends(verify_clerk_token), Depends(get_db_session)],
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)],
     swagger_ui_parameters={"persistAuthorization": True}
 )
 
