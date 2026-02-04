@@ -28,7 +28,13 @@ def verify_api_key(api_key: str | None = Depends(api_key_header)) -> None:
             detail="Unauthorized: Invalid or missing API Key"
         )
 
-def verify_clerk_token(bearer_token: HTTPAuthorizationCredentials | None = Depends(bearer_token_header)) -> dict:
+def get_optional_bearer_token(bearer_token: HTTPAuthorizationCredentials | None = Depends(bearer_token_header)) -> HTTPAuthorizationCredentials | None:
+    """
+    Dependency to get optional bearer token from bearer token header. Returns the bearer token if it is present, otherwise returns None.
+    """
+    return bearer_token
+
+def verify_clerk_token(bearer_token: HTTPAuthorizationCredentials | None = Depends(get_optional_bearer_token)) -> dict:
     """
     Dependency to verify Clerk token from bearer token header.
     

@@ -17,6 +17,7 @@ from app.main import app
 from app.utils.dependencies import (
     get_db_session,
     require_admin,
+    get_optional_bearer_token,
     verify_clerk_token
 )
 from app.settings import settings
@@ -43,6 +44,7 @@ def disable_app_lifespan():
 @pytest.fixture(scope="session", autouse=True)
 def bypass_auth():
     """Bypass authentication for testing"""
+    app.dependency_overrides[get_optional_bearer_token] = lambda: None
     app.dependency_overrides[verify_clerk_token] = lambda: {
         "sub": "test_user",
         "public_metadata": {"role": "admin"}
