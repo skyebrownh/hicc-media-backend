@@ -1,6 +1,6 @@
 import logging
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import text
 from contextlib import asynccontextmanager
@@ -64,7 +64,7 @@ if settings.cors_allowed_origins_list:
 @app.options("/{full_path:path}")
 def options_handler(full_path: str, _: Request):
     logger.info(f"Handling OPTIONS request for {full_path}")
-    return JSONResponse(status_code=status.HTTP_200_OK)
+    return Response(status_code=status.HTTP_200_OK)
 
 # Health check endpoint
 @app.get("/health", tags=["health"], dependencies=default_depends())
