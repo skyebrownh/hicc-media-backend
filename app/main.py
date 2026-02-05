@@ -1,5 +1,5 @@
 import logging
-from fastapi import FastAPI, Request, status, Depends
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import text
@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from app.settings import settings
 from app.utils.helpers import TAGS_METADATA
-from app.utils.dependencies import verify_api_key, get_db_session, get_optional_bearer_token, SessionDep
+from app.utils.dependencies import default_depends, SessionDep
 from app.utils.logging_config import setup_logging
 from app.utils.exception_handlers import register_exception_handlers
 from app.db.database import connect_db, close_db
@@ -60,8 +60,14 @@ if settings.cors_allowed_origins_list:
         allow_headers=["*"],
     )
 
+# Handle OPTIONS
+@app.options("/{full_path:path}")
+def options_handler(full_path: str, _: Request):
+    logger.info(f"Handling OPTIONS request for {full_path}")
+    return JSONResponse(status_code=status.HTTP_200_OK)
+
 # Health check endpoint
-@app.get("/health", tags=["health"], dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)])
+@app.get("/health", tags=["health"], dependencies=default_depends())
 def health(_: Request, session: SessionDep):
     """
     Health check endpoint that verifies application and database connectivity.
