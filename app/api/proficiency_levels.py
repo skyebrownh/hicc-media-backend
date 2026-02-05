@@ -2,10 +2,14 @@ from fastapi import APIRouter, status, Response, Depends
 from sqlmodel import select
 
 from app.db.models import ProficiencyLevel, ProficiencyLevelCreate, ProficiencyLevelUpdate 
-from app.utils.dependencies import SessionDep, ProficiencyLevelDep, require_admin
+from app.utils.dependencies import SessionDep, ProficiencyLevelDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
 from app.services.domain import create_object, update_object, delete_object
 
-router = APIRouter(prefix="/proficiency_levels", tags=["proficiency_levels"])
+router = APIRouter(
+    prefix="/proficiency_levels", 
+    tags=["proficiency_levels"], 
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
+)
 
 @router.get("", response_model=list[ProficiencyLevel])
 def get_all_proficiency_levels(session: SessionDep):

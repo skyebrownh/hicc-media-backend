@@ -3,7 +3,7 @@ from uuid import UUID
 from typing import AsyncGenerator, Annotated
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
-from fastapi import Request, HTTPException, status, Depends
+from fastapi import Request, HTTPException, status, Depends, Security
 from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredentials
 
 from app.settings import settings
@@ -16,22 +16,28 @@ jwks_client = jwt.PyJWKClient(settings.clerk_jwks_url)
 api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
 bearer_token_header = HTTPBearer(auto_error=False)
 
-def verify_api_key(api_key: str | None = Depends(api_key_header)) -> None:
+def verify_api_key(request: Request, api_key: str | None = Security(api_key_header)) -> None:
     """
     Dependency to verify API key from API key header.
     
     Validates the API key against the configured API key. Raises HTTPException if the key is missing or invalid.
     """
+    if request.method == "OPTIONS":
+        return
+
     if not api_key or api_key != settings.fast_api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Unauthorized: Invalid or missing API Key"
         )
 
-def get_optional_bearer_token(bearer_token: HTTPAuthorizationCredentials | None = Depends(bearer_token_header)) -> HTTPAuthorizationCredentials | None:
+def get_optional_bearer_token(request: Request, bearer_token: HTTPAuthorizationCredentials | None = Security(bearer_token_header)) -> HTTPAuthorizationCredentials | None:
     """
     Dependency to get optional bearer token from bearer token header. Returns the bearer token if it is present, otherwise returns None.
     """
+    if request.method == "OPTIONS":
+        return None
+    
     return bearer_token
 
 def verify_clerk_token(bearer_token: HTTPAuthorizationCredentials | None = Depends(get_optional_bearer_token)) -> dict:
@@ -81,6 +87,9 @@ async def get_db_session(request: Request) -> AsyncGenerator[Session, None]:
     Each request uses its own session from the engine. The session is
     automatically closed when the request completes.
     """
+    if request.method == "OPTIONS":
+        return
+    
     with Session(request.app.state.db_engine) as session:
         yield session
 

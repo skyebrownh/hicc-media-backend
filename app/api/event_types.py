@@ -2,10 +2,14 @@ from fastapi import APIRouter, status, Response, Depends
 from sqlmodel import select
 
 from app.db.models import EventType, EventTypeCreate, EventTypeUpdate
-from app.utils.dependencies import SessionDep, EventTypeDep, require_admin
+from app.utils.dependencies import SessionDep, EventTypeDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
 from app.services.domain import create_object, update_object, delete_object
 
-router = APIRouter(prefix="/event_types", tags=["event_types"])
+router = APIRouter(
+    prefix="/event_types", 
+    tags=["event_types"], 
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
+)
 
 @router.get("", response_model=list[EventType])
 def get_all_event_types(session: SessionDep):

@@ -2,10 +2,14 @@ from fastapi import APIRouter, status, Response, Depends
 from sqlmodel import select
 
 from app.db.models import Schedule, ScheduleCreate, ScheduleUpdate, ScheduleGridPublic
-from app.utils.dependencies import SessionDep, ScheduleDep, ScheduleWithEventsAndAssignmentsDep, require_admin
+from app.utils.dependencies import SessionDep, ScheduleDep, ScheduleWithEventsAndAssignmentsDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
 from app.services.domain import update_object, get_schedule_grid_from_schedule, create_object, delete_object
 
-router = APIRouter(prefix="/schedules", tags=["schedules"])
+router = APIRouter(
+    prefix="/schedules", 
+    tags=["schedules"], 
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
+)
 
 @router.get("", response_model=list[Schedule])
 def get_all_schedules(session: SessionDep):
