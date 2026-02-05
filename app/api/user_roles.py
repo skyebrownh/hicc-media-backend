@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends
 
 from app.db.models import UserRoleUpdate, UserRolePublic
-from app.utils.dependencies import UserWithUserRolesDep, SessionDep, RoleWithUserRolesDep, UserRoleDep, require_admin
+from app.utils.dependencies import UserWithUserRolesDep, SessionDep, RoleWithUserRolesDep, UserRoleDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
 from app.services.domain import update_user_role
 
-router = APIRouter(tags=["user_roles"])
+router = APIRouter(
+    tags=["user_roles"], 
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
+)
 
 # User roles are not created or deleted directly through an API endpoint - they are created when a user or role is created (same with delete)
 

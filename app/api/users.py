@@ -2,10 +2,14 @@ from fastapi import APIRouter, status, Response, Depends
 from sqlmodel import select
 
 from app.db.models import User, UserCreate, UserUpdate
-from app.utils.dependencies import SessionDep, UserDep, require_admin
+from app.utils.dependencies import SessionDep, UserDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
 from app.services.domain import create_user_with_user_roles, update_object, delete_object
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(
+    prefix="/users", 
+    tags=["users"], 
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
+)
 
 @router.get("", response_model=list[User])
 def get_all_users(session: SessionDep):

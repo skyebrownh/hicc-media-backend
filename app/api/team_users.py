@@ -1,10 +1,13 @@
 from fastapi import APIRouter, status, Response, Depends
 
 from app.db.models import TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserPublic
-from app.utils.dependencies import SessionDep, TeamWithTeamUsersDep, TeamForTeamUsersDep, TeamUserDep, require_admin
+from app.utils.dependencies import SessionDep, TeamWithTeamUsersDep, TeamForTeamUsersDep, TeamUserDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
 from app.services.domain import create_team_user_for_team, update_team_user, delete_object
 
-router = APIRouter(tags=["team_users"])
+router = APIRouter(
+    tags=["team_users"], 
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
+)
 
 @router.get("/teams/{team_id}/users", response_model=list[TeamUserPublic])
 def get_team_users_for_team(team: TeamWithTeamUsersDep):

@@ -1,11 +1,14 @@
 from fastapi import APIRouter, status, Response, Depends
 
 from app.db.models import EventCreate, EventUpdate, EventPublic, EventWithAssignmentsPublic
-from app.utils.dependencies import SessionDep, ScheduleForEventsDep, EventDep, EventWithFullHierarchyDep, require_admin
+from app.utils.dependencies import SessionDep, ScheduleForEventsDep, EventDep, EventWithFullHierarchyDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
 from app.services.builders import build_events_with_assignments_from_schedule, build_events_with_assignments_from_event
 from app.services.domain import update_object, create_event_with_default_assignment_slots, delete_object
 
-router = APIRouter(tags=["events"])
+router = APIRouter(
+    tags=["events"], 
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
+)
 
 @router.get("/schedules/{schedule_id}/events", response_model=list[EventWithAssignmentsPublic])
 def get_events_for_schedule(schedule: ScheduleForEventsDep):

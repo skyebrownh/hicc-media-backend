@@ -43,8 +43,7 @@ app = FastAPI(
     description="API powering StewardHQ's scheduling, availability, and team management platform",
     version="1.0.0",
     openapi_tags=TAGS_METADATA,
-    lifespan=lifespan, 
-    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)],
+    lifespan=lifespan,
     swagger_ui_parameters={"persistAuthorization": True}
 )
 
@@ -62,7 +61,7 @@ if settings.cors_allowed_origins_list:
     )
 
 # Health check endpoint
-@app.get("/health", tags=["health"])
+@app.get("/health", tags=["health"], dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)])
 def health(_: Request, session: SessionDep):
     """
     Health check endpoint that verifies application and database connectivity.

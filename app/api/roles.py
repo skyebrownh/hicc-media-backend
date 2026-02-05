@@ -2,10 +2,14 @@ from fastapi import APIRouter, status, Response, Depends
 from sqlmodel import select
 
 from app.db.models import Role, RoleCreate, RoleUpdate
-from app.utils.dependencies import SessionDep, RoleDep, require_admin
+from app.utils.dependencies import SessionDep, RoleDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
 from app.services.domain import create_role_with_user_roles, update_object, delete_object
 
-router = APIRouter(prefix="/roles", tags=["roles"])
+router = APIRouter(
+    prefix="/roles", 
+    tags=["roles"], 
+    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
+)
 
 @router.get("", response_model=list[Role])
 def get_all_roles(session: SessionDep):
