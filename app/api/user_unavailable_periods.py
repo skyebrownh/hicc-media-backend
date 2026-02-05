@@ -1,18 +1,15 @@
-from fastapi import APIRouter, status, Response, Depends
+from fastapi import APIRouter, status, Response
 
 from app.db.models import UserUnavailablePeriodCreate, UserUnavailablePeriodUpdate, UserUnavailablePeriodPublic
-from app.utils.dependencies import SessionDep, UserWithUserRolesForUnavailablePeriodsDep, UserUnavailablePeriodDep, require_admin, verify_api_key, get_optional_bearer_token, get_db_session
+from app.utils.dependencies import SessionDep, UserWithUserRolesForUnavailablePeriodsDep, UserUnavailablePeriodDep, default_depends_with_admin
 from app.services.domain import create_user_unavailable_period, create_user_unavailable_periods_bulk, update_user_unavailable_period, delete_object
 
-router = APIRouter(
-    tags=["user_unavailable_periods"], 
-    dependencies=[Depends(verify_api_key), Depends(get_optional_bearer_token), Depends(get_db_session)]
-)
+router = APIRouter(tags=["user_unavailable_periods"])
 
 @router.post("/users/{user_id}/availability", 
     response_model=UserUnavailablePeriodPublic, 
     status_code=status.HTTP_201_CREATED, 
-    dependencies=[Depends(require_admin)]
+    dependencies=default_depends_with_admin()
 )
 def post_user_unavailable_period(
     user: UserWithUserRolesForUnavailablePeriodsDep, 
@@ -24,7 +21,7 @@ def post_user_unavailable_period(
 @router.post("/users/{user_id}/availability/bulk", 
     response_model=list[UserUnavailablePeriodPublic], 
     status_code=status.HTTP_201_CREATED, 
-    dependencies=[Depends(require_admin)]
+    dependencies=default_depends_with_admin()
 )
 def post_user_unavailable_periods_bulk(
     user: UserWithUserRolesForUnavailablePeriodsDep, 
@@ -35,7 +32,7 @@ def post_user_unavailable_periods_bulk(
 
 @router.patch("/user_availability/{id}", 
     response_model=UserUnavailablePeriodPublic, 
-    dependencies=[Depends(require_admin)]
+    dependencies=default_depends_with_admin()
 )
 def patch_user_unavailable_period(
     payload: UserUnavailablePeriodUpdate, 
@@ -44,7 +41,7 @@ def patch_user_unavailable_period(
 ):
     return update_user_unavailable_period(session, payload, user_unavailable_period)
 
-@router.delete("/user_availability/{id}", dependencies=[Depends(require_admin)])
+@router.delete("/user_availability/{id}", dependencies=default_depends_with_admin())
 def delete_user_unavailable_period(session: SessionDep, user_unavailable_period: UserUnavailablePeriodDep):
     delete_object(session, user_unavailable_period)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

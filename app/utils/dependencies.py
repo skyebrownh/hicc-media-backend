@@ -95,6 +95,16 @@ async def get_db_session(request: Request) -> AsyncGenerator[Session, None]:
 
 SessionDep = Annotated[Session, Depends(get_db_session)]
 
+def default_depends():
+    return [
+        Depends(verify_api_key),
+        Depends(get_optional_bearer_token),
+        Depends(get_db_session)
+    ]
+
+def default_depends_with_admin():
+    return default_depends() + [Depends(require_admin)]
+
 def require_role(id: UUID, session: SessionDep) -> Role:
     role = session.get(Role, id)
     raise_exception_if_not_found(role, Role)
